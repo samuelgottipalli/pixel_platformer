@@ -1,0 +1,21 @@
+{
+  "profile_name": "msf",
+  "current_level": 0,
+  "player": {
+    "x": 1579.567654435772,
+    "y": 592,
+    "health": 57,
+    "lives": 3,
+    "coins": 29,
+    "score": 1650,
+    "weapon_level": 3,
+    "keys": [
+      [
+        255,
+        0,
+        0
+      ]
+    ],
+    "max_jumps": 2
+  }
+}
