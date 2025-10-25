@@ -1,0 +1,21 @@
+{
+  "profile_name": "Sum",
+  "current_level": 1,
+  "player": {
+    "x": 231.56765443577245,
+    "y": 592.8,
+    "health": 70,
+    "lives": 1,
+    "coins": 17,
+    "score": 1670,
+    "weapon_level": 3,
+    "keys": [
+      [
+        255,
+        0,
+        0
+      ]
+    ],
+    "max_jumps": 2
+  }
+}
