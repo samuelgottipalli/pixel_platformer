@@ -1,5 +1,5 @@
 """
-Level loader - loads levels from JSON files or creates default levels
+Level loader - loads Act 1 levels
 """
 import json
 import os
@@ -10,13 +10,7 @@ class LevelLoader:
     
     @staticmethod
     def load_from_file(filename):
-        """
-        Load level from JSON file
-        Args:
-            filename: JSON file path
-        Returns:
-            Level data dictionary
-        """
+        """Load level from JSON file"""
         try:
             filepath = os.path.join(LEVELS_DIR, filename)
             with open(filepath, 'r') as f:
@@ -27,12 +21,7 @@ class LevelLoader:
             
     @staticmethod
     def save_to_file(level_data, filename):
-        """
-        Save level to JSON file
-        Args:
-            level_data: Level data dictionary
-            filename: Output JSON file path
-        """
+        """Save level to JSON file"""
         try:
             os.makedirs(LEVELS_DIR, exist_ok=True)
             filepath = os.path.join(LEVELS_DIR, filename)
@@ -46,21 +35,23 @@ class LevelLoader:
     @staticmethod
     def create_default_levels():
         """Create Act 1 levels (Free version)"""
+        from levels.act1_levels_complete import get_act1_levels_2_to_6
         from levels.act1_levels_design import get_act1_levels
         
         levels = []
         
-        # Get Level 0 (Tutorial) and Level 1
+        # Get Level 0 (Tutorial) and Level 1 from act1_levels_design
         act1_base = get_act1_levels()
         levels.extend(act1_base)  # Levels 0-1
         
-        # Add levels 2-6 from act1_levels_complete
-        try:
-            from levels.act1_levels_complete import get_act1_levels_2_to_6
-            act1_expanded = get_act1_levels_2_to_6()
-            levels.extend(act1_expanded)
-        except ImportError:
-            print("⚠️  act1_levels_complete not found, using demo levels")
+        # Get Levels 2-6 from act1_levels_complete
+        act1_expanded = get_act1_levels_2_to_6()
+        levels.extend(act1_expanded)  # Levels 2-6 (includes boss)
         
-        print(f"✓ Loaded {len(levels)} levels")
+        print(f"✓ Loaded {len(levels)} levels for Act 1")
+        for i, level in enumerate(levels):
+            width = level['width']
+            theme = level.get('theme', 'UNKNOWN')
+            print(f"  Level {i}: {width}px, {theme}")
+        
         return levels

@@ -1,61 +1,4 @@
-    levels.append(level_3)
-    
-    # ============================================================
-    # LEVEL 4: "DEEP DIVE" (20 minutes, 9500px)
-    # ============================================================
-    # Theme: Underground caverns with water features
-    
-    level_4 = {
-        'width': 9500,
-        'height': 720,
-        'theme': 'SCIFI',
-        'spawn_x': 100,
-        'spawn_y': 500,
-        'time_limit': 'medium',
-        'tiles': [
-            # === AREA 1: SURFACE (0-1500) ===
-            *[{'x': i * TILE_SIZE, 'y': 640, 'solid': True} for i in range(50)],
-            *[{'x': 400 + i * TILE_SIZE, 'y': 550, 'solid': True} for i in range(8)],
-            *[{'x': 800 + i * TILE_SIZE, 'y': 480, 'solid': True} for i in range(8)],
-            
-            # === AREA 2: DESCENT (1500-2800) ===
-            # Spiral descent
-            *[{'x': 1500 + i * 100, 'y': 640 - i * 40, 'solid': True} for i in range(14)],
-            *[{'x': 1532 + i * 100, 'y': 640 - i * 40, 'solid': True} for i in range(14)],
-            
-            # === AREA 3: CAVE SYSTEMS (2800-5000) ===
-            # Complex cave floor
-            *[{'x': 2800 + i * TILE_SIZE, 'y': 640, 'solid': True} for i in range(70)],
-            # Cave ceiling (varies height)
-            *[{'x': 2800 + i * 64, 'y': 350 - (i % 5) * 30, 'solid': True} for i in range(35)],
-            # Stalactites (hang from ceiling - represented as tall blocks)
-            *[{'x': 3000 + i * 200, 'y': 350, 'solid': True} for i in range(10)],
-            *[{'x': 3000 + i * 200, 'y': 382, 'solid': True} for i in range(10)],
-            # Platforms in caves
-            *[{'x': 3200 + (i % 6) * 150, 'y': 550 - (i // 6) * 60, 'solid': True} for i in range(24)],
-            *[{'x': 3232 + (i % 6) * 150, 'y': 550 - (i // 6) * 60, 'solid': True} for i in range(24)],
-            
-            # === AREA 4: UNDERGROUND LAKE (5000-6500) ===
-            # Water level simulation (lower platforms)
-            *[{'x': 5000 + i * TILE_SIZE, 'y': 680, 'solid': True} for i in range(50)],  # Water floor
-            # Islands in lake
-            *[{'x': 5200, 'y': 600, 'solid': True}],
-            *[{'x': 5232, 'y': 600, 'solid': True}],
-            *[{'x': 5500, 'y': 580, 'solid': True}],
-            *[{'x': 5532, 'y': 580, 'solid': True}],
-            *[{'x': 5800, 'y': 600, 'solid': True}],
-            *[{'x': 5832, 'y': 600, 'solid': True}],
-            *[{'x': 6100, 'y': 580, 'solid': True}],
-            *[{'x': 6132, 'y': 580, 'solid': True}],
-            
-            # === AREA 5: CRYSTAL CAVERNS (6500-8000) ===
-            *[{'x': 6500 + i * TILE_SIZE, 'y': 640, 'solid': True} for i in range(50)],
-            # Crystal formations (platforms at various heights)
-            *[{'x': 6700 + i * 180, 'y': 550 - i * 25, 'solid': True} for i in range(15)],
-            *[{'x': 6732 + i * 180, 'y': 550 - i * 25, 'solid': True} for i in range(15)],
-            # Tall crystal pillars
-            *[{'x': 7200, 'y': 640 - i * TILE_SIZE, 'solid': True} for i in range(8)],
-            *[{'x': """
+"""
 Act 1 - Levels 2-6 Complete Designs
 Each level is 8000-10000px wide for 15-20 minutes of gameplay
 Ready to add to level_loader.py
@@ -349,6 +292,64 @@ def get_act1_levels_2_to_6():
             {'x': 8850, 'y': 230, 'dest': 4}
         ]
     }
+    levels.append(level_3)
+    
+    # ============================================================
+    # LEVEL 4: "DEEP DIVE" (20 minutes, 9500px)
+    # ============================================================
+    # Theme: Underground caverns with water features
+    
+    level_4 = {
+        'width': 9500,
+        'height': 720,
+        'theme': 'SCIFI',
+        'spawn_x': 100,
+        'spawn_y': 500,
+        'time_limit': 'medium',
+        'tiles': [
+            # === AREA 1: SURFACE (0-1500) ===
+            *[{'x': i * TILE_SIZE, 'y': 640, 'solid': True} for i in range(50)],
+            *[{'x': 400 + i * TILE_SIZE, 'y': 550, 'solid': True} for i in range(8)],
+            *[{'x': 800 + i * TILE_SIZE, 'y': 480, 'solid': True} for i in range(8)],
+            
+            # === AREA 2: DESCENT (1500-2800) ===
+            # Spiral descent
+            *[{'x': 1500 + i * 100, 'y': 640 - i * 40, 'solid': True} for i in range(14)],
+            *[{'x': 1532 + i * 100, 'y': 640 - i * 40, 'solid': True} for i in range(14)],
+            
+            # === AREA 3: CAVE SYSTEMS (2800-5000) ===
+            # Complex cave floor
+            *[{'x': 2800 + i * TILE_SIZE, 'y': 640, 'solid': True} for i in range(70)],
+            # Cave ceiling (varies height)
+            *[{'x': 2800 + i * 64, 'y': 350 - (i % 5) * 30, 'solid': True} for i in range(35)],
+            # Stalactites (hang from ceiling - represented as tall blocks)
+            *[{'x': 3000 + i * 200, 'y': 350, 'solid': True} for i in range(10)],
+            *[{'x': 3000 + i * 200, 'y': 382, 'solid': True} for i in range(10)],
+            # Platforms in caves
+            *[{'x': 3200 + (i % 6) * 150, 'y': 550 - (i // 6) * 60, 'solid': True} for i in range(24)],
+            *[{'x': 3232 + (i % 6) * 150, 'y': 550 - (i // 6) * 60, 'solid': True} for i in range(24)],
+            
+            # === AREA 4: UNDERGROUND LAKE (5000-6500) ===
+            # Water level simulation (lower platforms)
+            *[{'x': 5000 + i * TILE_SIZE, 'y': 680, 'solid': True} for i in range(50)],  # Water floor
+            # Islands in lake
+            *[{'x': 5200, 'y': 600, 'solid': True}],
+            *[{'x': 5232, 'y': 600, 'solid': True}],
+            *[{'x': 5500, 'y': 580, 'solid': True}],
+            *[{'x': 5532, 'y': 580, 'solid': True}],
+            *[{'x': 5800, 'y': 600, 'solid': True}],
+            *[{'x': 5832, 'y': 600, 'solid': True}],
+            *[{'x': 6100, 'y': 580, 'solid': True}],
+            *[{'x': 6132, 'y': 580, 'solid': True}],
+            
+            # === AREA 5: CRYSTAL CAVERNS (6500-8000) ===
+            *[{'x': 6500 + i * TILE_SIZE, 'y': 640, 'solid': True} for i in range(50)],
+            # Crystal formations (platforms at various heights)
+            *[{'x': 6700 + i * 180, 'y': 550 - i * 25, 'solid': True} for i in range(15)],
+            *[{'x': 6732 + i * 180, 'y': 550 - i * 25, 'solid': True} for i in range(15)],
+            # Tall crystal pillars
+            *[{'x': 7200, 'y': 640 - i * TILE_SIZE, 'solid': True} for i in range(8)],
+            # *[{'x': """
             *[{'x': 7200, 'y': 640 - i * TILE_SIZE, 'solid': True} for i in range(8)],
             *[{'x': 7500, 'y': 640 - i * TILE_SIZE, 'solid': True} for i in range(10)],
             
@@ -433,7 +434,7 @@ def get_act1_levels_2_to_6():
             {'x': 9350, 'y': 10, 'dest': 5}
         ]
     }
-    levels.append(level_4)
+    levels.append(level_4)   
     
     # ============================================================
     # LEVEL 5: "CONVERGENCE" (20 minutes, 10000px)

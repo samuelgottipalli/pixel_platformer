@@ -180,3 +180,78 @@ class Menu:
         inst = self.font_small.render("Press ENTER to return to menu", True, GRAY)
         surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 
                            SCREEN_HEIGHT // 2 + 100))
+        
+
+    def draw_difficulty_select(self, surface, selection):
+        """
+        Draw difficulty selection screen
+        Args:
+            surface: Pygame surface
+            selection: Currently selected difficulty (0=Easy, 1=Normal, 2=Hard)
+        """
+        surface.fill((0, 0, 0))  # BLACK
+        
+        # Title
+        title = self.font_large.render("SELECT DIFFICULTY", True, (0, 255, 255))  # CYAN
+        surface.blit(title, (640 - title.get_width() // 2, 100))
+        
+        # Difficulty options with descriptions
+        difficulties = [
+            ("EASY", "5 Lives • More Resources • Forgiving", (0, 255, 0)),      # GREEN
+            ("NORMAL", "3 Lives • Balanced Challenge", (255, 255, 255)),        # WHITE
+            ("HARD", "1 Life • Extreme Challenge • 2x Score", (255, 0, 0))     # RED
+        ]
+        
+        y_start = 250
+        for i, (name, desc, color) in enumerate(difficulties):
+            # Highlight selected
+            text_color = (255, 255, 0) if i == selection else color  # YELLOW if selected
+            
+            # Difficulty name
+            name_text = self.font_large.render(name, True, text_color)
+            surface.blit(name_text, (640 - name_text.get_width() // 2, y_start + i * 120))
+            
+            # Description
+            desc_text = self.font_small.render(desc, True, (200, 200, 200))  # GRAY
+            surface.blit(desc_text, (640 - desc_text.get_width() // 2, y_start + i * 120 + 50))
+            
+            # Selection indicator
+            if i == selection:
+                indicator = self.font_medium.render(">>>", True, (255, 255, 0))  # YELLOW
+                surface.blit(indicator, (200, y_start + i * 120 + 10))
+                surface.blit(indicator, (1000, y_start + i * 120 + 10))
+        
+        # Instructions
+        inst = self.font_small.render("Arrow Keys to Select • ENTER to Continue • ESC to Go Back", 
+                                    True, (100, 100, 100))  # GRAY
+        surface.blit(inst, (640 - inst.get_width() // 2, 600))
+
+    def draw_victory(self, surface, score):
+        """
+        Draw victory/game complete screen
+        Args:
+            surface: Pygame surface
+            score: Final score
+        """
+        surface.fill((0, 0, 0))  # BLACK
+        
+        # Victory text
+        victory = self.font_large.render("VICTORY!", True, (255, 215, 0))  # GOLD
+        surface.blit(victory, (640 - victory.get_width() // 2, 200))
+        
+        # Congratulations
+        congrats = self.font_medium.render("You completed Act 1!", True, (255, 255, 255))  # WHITE
+        surface.blit(congrats, (640 - congrats.get_width() // 2, 300))
+        
+        # Score
+        score_text = self.font_medium.render(f"Final Score: {score}", True, (0, 255, 255))  # CYAN
+        surface.blit(score_text, (640 - score_text.get_width() // 2, 380))
+        
+        # Message
+        msg = self.font_small.render("Your progress has been saved to the hall of champions!", 
+                                    True, (200, 200, 200))  # GRAY
+        surface.blit(msg, (640 - msg.get_width() // 2, 460))
+        
+        # Continue
+        cont = self.font_small.render("Press ENTER to return to menu", True, (100, 100, 100))  # GRAY
+        surface.blit(cont, (640 - cont.get_width() // 2, 550))

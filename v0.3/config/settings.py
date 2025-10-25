@@ -31,6 +31,14 @@ SHOOT_BASE_COOLDOWN = 30  # frames
 MELEE_DURATION = 20       # frames
 MELEE_RANGE = 32
 
+# Weapon Upgrade Costs
+WEAPON_UPGRADE_COSTS = {
+    1: 20,   # Level 1 -> 2: 20 coins
+    2: 50,   # Level 2 -> 3: 50 coins
+    3: 100,  # Level 3 -> 4: 100 coins
+    4: 999   # Level 4 is max
+}
+
 # Difficulty Settings
 DIFFICULTY_MODIFIERS = {
     'EASY': {
