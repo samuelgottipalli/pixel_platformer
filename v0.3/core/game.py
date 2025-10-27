@@ -128,8 +128,10 @@ class Game:
                 self.profile_selection = (self.profile_selection - 1) % len(self.profiles)
             elif controls.check_key_event(event, controls.MENU_DOWN):
                 self.profile_selection = (self.profile_selection + 1) % len(self.profiles)
-            elif controls.check_key_event(event, controls.MENU_SELECT):
+            elif event.key == pygame.K_l:  # L key to load
                 self._load_selected_profile()
+            elif event.key == pygame.K_d:  # D key to delete
+                self._delete_selected_profile()
             elif controls.check_key_event(event, controls.MENU_BACK):
                 self.state = GameState.MENU
                 
@@ -159,6 +161,8 @@ class Game:
                 self.player_name = self.player_name[:-1]
             elif event.key == pygame.K_RETURN and len(self.player_name) > 0:
                 self._create_new_profile()
+            elif event.key == pygame.K_ESCAPE:
+                self.state = GameState.MENU
             elif event.unicode.isalnum() and len(self.player_name) < 15:
                 self.player_name += event.unicode
                 
@@ -605,3 +609,27 @@ class Game:
         """Draw particle effects"""
         for particle in self.particles:
             particle.draw(self.screen, self.camera.x, self.camera.y)
+    
+    def _delete_selected_profile(self):
+        """Delete the selected profile"""
+        if not self.profiles:
+            return
+            
+        profile = self.profiles[self.profile_selection]
+        
+        # Delete save file
+        SaveManager.delete_save(profile.name)
+        
+        # Delete profile
+        ProfileManager.delete_profile(profile.name)
+        
+        # Reload profiles
+        self.profiles = ProfileManager.load_profiles()
+        
+        # Adjust selection
+        if self.profile_selection >= len(self.profiles):
+            self.profile_selection = max(0, len(self.profiles) - 1)
+        
+        # If no profiles left, return to menu
+        if not self.profiles:
+            self.state = GameState.MENU

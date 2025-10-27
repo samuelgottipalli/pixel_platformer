@@ -3,7 +3,7 @@ Menu screens (main menu, character select, pause, game over)
 """
 import pygame
 from config.settings import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, YELLOW, CYAN, 
+    SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, YELLOW, CYAN, RED,
     GRAY, CHARACTER_COLORS
 )
 
@@ -138,29 +138,52 @@ class Menu:
             surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 400))
         else:
             # Display profiles
-            y_start = 200
+            # y_start = 200
+            y_start = 150
+            
             for i, profile in enumerate(profiles):
-                color = YELLOW if i == selection else WHITE
+                y = y_start + i * 100
+                
+                # Highlight selected
+                if i == selection:
+                    # Background highlight
+                    pygame.draw.rect(surface, (40, 40, 60), 
+                                   (150, y - 10, 980, 90))
+                    text_color = YELLOW
+                else:
+                    text_color = WHITE
                 
                 # Profile name and character
                 name_text = self.font_medium.render(
                     f"{profile.name} - Character {profile.character + 1}", 
-                    True, color
+                    True, text_color
                 )
-                surface.blit(name_text, (SCREEN_WIDTH // 2 - name_text.get_width() // 2, 
-                                        y_start + i * 80))
+                surface.blit(name_text, (200, y))
                 
                 # Stats
                 stats_text = self.font_small.render(
                     f"Score: {profile.total_score}  |  Levels: {profile.levels_completed}  |  Coins: {profile.coins_collected}",
-                    True, WHITE
+                    True, GRAY
                 )
-                surface.blit(stats_text, (SCREEN_WIDTH // 2 - stats_text.get_width() // 2, 
-                                         y_start + i * 80 + 35))
+                surface.blit(stats_text, (200, y + 35))
+                
+                # Buttons for selected profile
+                if i == selection:
+                    # Load button
+                    load_btn = self.font_small.render("[L] LOAD", True, CYAN)
+                    surface.blit(load_btn, (850, y + 10))
+                    
+                    # Delete button
+                    del_btn = self.font_small.render("[D] DELETE", True, RED)
+                    surface.blit(del_btn, (950, y + 10))
             
             # Instructions
-            inst = self.font_small.render("Arrow Keys + ENTER to select  |  ESC to go back", True, GRAY)
-            surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 550))
+            inst1 = self.font_small.render("Arrow Keys: Select  |  L: Load Game  |  D: Delete Save", True, GRAY)
+            inst2 = self.font_small.render("ESC: Back to Menu", True, GRAY)
+            surface.blit(inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, 550))
+            surface.blit(inst2, (SCREEN_WIDTH // 2 - inst2.get_width() // 2, 580))
+    
+    def draw_game_over(self, surface, score):
         """
         Draw game over screen
         Args:
@@ -169,14 +192,17 @@ class Menu:
         """
         surface.fill(BLACK)
         
-        text = self.font_large.render("GAME OVER", True, (255, 0, 0))
+        # Game Over text
+        text = self.font_large.render("GAME OVER", True, RED)
         surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 
                            SCREEN_HEIGHT // 2 - 100))
         
+        # Score
         score_text = self.font_medium.render(f"Final Score: {score}", True, WHITE)
         surface.blit(score_text, (SCREEN_WIDTH // 2 - score_text.get_width() // 2, 
                                  SCREEN_HEIGHT // 2))
         
+        # Instructions
         inst = self.font_small.render("Press ENTER to return to menu", True, GRAY)
         surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 
                            SCREEN_HEIGHT // 2 + 100))
