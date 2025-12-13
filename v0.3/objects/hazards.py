@@ -78,7 +78,9 @@ class Hazard:
         return pygame.Rect(self.x - 50, self.y - 100, self.width + 100, 100)
         
     def draw(self, surface, camera_x, camera_y):
-        """Render hazard to screen"""
+        """Render hazard with high-contrast patterns"""
+        from utils.textures import TextureManager
+        
         rect = pygame.Rect(
             self.x - camera_x, 
             self.y - camera_y,
@@ -87,35 +89,51 @@ class Hazard:
         )
         
         if self.type == HazardType.SPIKE.value:
-            # Draw spikes
+            # Draw spikes with WARNING pattern (diagonal stripes)
+            base = pygame.Rect(rect.x, rect.bottom - 8, rect.width, 8)
+            TextureManager.draw_diagonal_lines(surface, base, (100, 0, 0), (255, 255, 0), 
+                                            spacing=6, line_width=2)
+            
+            # Triangle spike
             points = [
                 (rect.left, rect.bottom),
                 (rect.centerx, rect.top),
                 (rect.right, rect.bottom)
             ]
             pygame.draw.polygon(surface, RED, points)
-            pygame.draw.polygon(surface, WHITE, points, 2)
+            pygame.draw.polygon(surface, (255, 255, 0), points, 3)  # Yellow outline
+            
+            # Add exclamation mark
+            pygame.draw.line(surface, WHITE, (rect.centerx, rect.top + 8), 
+                            (rect.centerx, rect.centery), 2)
+            pygame.draw.circle(surface, WHITE, (rect.centerx, rect.centery + 6), 2)
             
         elif self.type == HazardType.FALLING_BLOCK.value:
             color = GRAY if not self.falling else RED
-            pygame.draw.rect(surface, color, rect)
-            pygame.draw.rect(surface, WHITE, rect, 2)
+            # Checkered pattern
+            TextureManager.draw_checkered_rect(surface, rect, color, (150, 150, 150), check_size=8)
+            pygame.draw.rect(surface, WHITE, rect, 3)
             
             # Draw cracks if about to fall
             if not self.falling:
-                pygame.draw.line(surface, RED, 
-                               (rect.left + 8, rect.top), 
-                               (rect.left + 12, rect.bottom), 1)
-                pygame.draw.line(surface, RED, 
-                               (rect.right - 12, rect.top), 
-                               (rect.right - 8, rect.bottom), 1)
+                pygame.draw.line(surface, (255, 255, 0), 
+                            (rect.left + 8, rect.top), 
+                            (rect.left + 12, rect.bottom), 2)
+                pygame.draw.line(surface, (255, 255, 0), 
+                            (rect.right - 12, rect.top), 
+                            (rect.right - 8, rect.bottom), 2)
             
         elif self.type == HazardType.MOVING_PLATFORM.value:
-            pygame.draw.rect(surface, BLUE, rect)
-            pygame.draw.rect(surface, WHITE, rect, 2)
+            # Dotted pattern for moving platforms
+            TextureManager.draw_dotted_rect(surface, rect, BLUE, (150, 200, 255), 
+                                        dot_size=3, spacing=10)
+            pygame.draw.rect(surface, WHITE, rect, 3)
             
-            # Draw direction indicator
-            if self.direction > 0:
-                pygame.draw.line(surface, WHITE, 
-                               (rect.right - 8, rect.centery), 
-                               (rect.right - 4, rect.centery), 2)
+            # Arrow showing direction
+            arrow_x = rect.centerx + (self.direction * 8)
+            points = [
+                (arrow_x, rect.centery),
+                (arrow_x - self.direction * 6, rect.centery - 4),
+                (arrow_x - self.direction * 6, rect.centery + 4)
+            ]
+            pygame.draw.polygon(surface, WHITE, points)

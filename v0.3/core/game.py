@@ -69,6 +69,9 @@ class Game:
         # Input state tracking
         self.jump_pressed = False
         self.pause_pressed = False
+
+        # Mouse position
+        self.mouse_pos = pygame.mouse.get_pos()
         
     def run(self):
         """Main game loop"""
@@ -80,25 +83,134 @@ class Game:
             
         pygame.quit()
         
+    
+    def _handle_mouse_click(self):
+        """Handle mouse clicks on buttons"""
+        mouse_pressed = pygame.mouse.get_pressed()[0]
+        
+        if self.state == GameState.MENU:
+            idx = self.menu.check_button_click(self.menu.main_buttons, self.mouse_pos, mouse_pressed)
+            if idx >= 0:
+                self.menu_selection = idx
+                self._handle_menu_selection()
+        
+        elif self.state == GameState.PAUSED:
+            idx = self.menu.check_button_click(self.menu.pause_buttons, self.mouse_pos, mouse_pressed)
+            if idx >= 0:
+                self.pause_selection = idx
+                self._handle_pause_selection()
+        
+        elif self.state == GameState.CHAR_SELECT:
+            # Back button
+            if self.menu.back_button.is_clicked(self.mouse_pos, mouse_pressed):
+                self.state = GameState.MENU
+                return
+            
+            # Character buttons
+            for i, btn in enumerate(self.menu.char_buttons):
+                if btn.is_clicked(self.mouse_pos, mouse_pressed):
+                    self.char_selection = i
+                    break
+            
+            # Start button
+            if self.menu.start_button.is_clicked(self.mouse_pos, mouse_pressed):
+                if len(self.player_name) > 0:
+                    self._create_new_profile()
+        
+        elif self.state == GameState.PROFILE_SELECT:
+            # Back button
+            if self.menu.back_button.is_clicked(self.mouse_pos, mouse_pressed):
+                self.state = GameState.MENU
+                return
+            
+            if not self.profiles:
+                return
+            
+            # Check profile boxes and buttons
+            y_start = 150
+            for i in range(len(self.profiles)):
+                y = y_start + i * 100
+                
+                # Profile box click selects it
+                box = pygame.Rect(150, y - 10, 780, 90)
+                if box.collidepoint(self.mouse_pos):
+                    self.profile_selection = i
+                
+                # Load button (positioned at x=750)
+                load_btn = pygame.Rect(750, y + 10, 80, 40)
+                if load_btn.collidepoint(self.mouse_pos):
+                    self.profile_selection = i
+                    self._load_selected_profile()
+                    return
+                
+                # Delete button (positioned at x=840)
+                del_btn = pygame.Rect(840, y + 10, 80, 40)
+                if del_btn.collidepoint(self.mouse_pos):
+                    self.profile_selection = i
+                    self._delete_selected_profile()
+                    return
+        
+        elif self.state == GameState.DIFFICULTY_SELECT:
+            # Back button
+            if self.menu.back_button.is_clicked(self.mouse_pos, mouse_pressed):
+                self.state = GameState.MENU
+                return
+            
+            # Difficulty buttons
+            idx = self.menu.check_button_click(self.menu.difficulty_buttons, 
+                                            self.mouse_pos, mouse_pressed)
+            if idx >= 0:
+                self.difficulty_selection = idx
+                self._apply_difficulty_selection()
+            
+
     def _handle_events(self):
         """Handle pygame events"""
+        self.mouse_pos = pygame.mouse.get_pos()
+    
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-                
+            
+            # Mouse clicks
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self._handle_mouse_click()
+            
+            # Keyboard events
             if self.state == GameState.MENU:
                 self._handle_menu_events(event)
-            elif self.state == GameState.PROFILE_SELECT:
-                self._handle_profile_select_events(event)
             elif self.state == GameState.CHAR_SELECT:
                 self._handle_char_select_events(event)
+            elif self.state == GameState.PROFILE_SELECT:
+                self._handle_profile_select_events(event)
             elif self.state == GameState.PAUSED:
                 self._handle_pause_events(event)
             elif self.state == GameState.GAME_OVER:
                 self._handle_game_over_events(event)
             elif self.state == GameState.VICTORY:
                 self._handle_victory_events(event)
+            elif self.state == GameState.DIFFICULTY_SELECT:
+                self._handle_difficulty_select_events(event)
                 
+    def _handle_difficulty_select_events(self, event):
+        """Handle difficulty selection input"""
+        if event.type == pygame.KEYDOWN:
+            if controls.check_key_event(event, controls.MENU_UP):
+                self.difficulty_selection = (self.difficulty_selection - 1) % 3
+            elif controls.check_key_event(event, controls.MENU_DOWN):
+                self.difficulty_selection = (self.difficulty_selection + 1) % 3
+            elif controls.check_key_event(event, controls.MENU_SELECT):
+                self._apply_difficulty_selection()
+            elif event.key == pygame.K_ESCAPE:
+                self.state = GameState.MENU
+
+    def _apply_difficulty_selection(self):
+        """Apply selected difficulty and proceed to character select"""
+        difficulties = ['EASY', 'NORMAL', 'HARD']
+        self.difficulty = difficulties[self.difficulty_selection]
+        self.state = GameState.CHAR_SELECT
+        self.player_name = ""
+
     def _handle_menu_events(self, event):
         """Handle main menu input"""
         if event.type == pygame.KEYDOWN:
@@ -112,8 +224,8 @@ class Game:
     def _handle_menu_selection(self):
         """Handle menu option selection"""
         if self.menu_selection == 0:  # New Game
-            self.state = GameState.CHAR_SELECT
-            self.player_name = ""
+            self.state = GameState.DIFFICULTY_SELECT  # CHANGED FROM CHAR_SELECT
+            self.difficulty_selection = 1  # Default to Normal
         elif self.menu_selection == 1:  # Load Game
             if self.profiles:
                 self.state = GameState.PROFILE_SELECT
@@ -153,9 +265,9 @@ class Game:
     def _handle_char_select_events(self, event):
         """Handle character selection input"""
         if event.type == pygame.KEYDOWN:
-            if controls.check_key_event(event, controls.MENU_LEFT):
+            if event.key == pygame.K_LEFT:
                 self.char_selection = (self.char_selection - 1) % 4
-            elif controls.check_key_event(event, controls.MENU_RIGHT):
+            elif event.key == pygame.K_RIGHT:
                 self.char_selection = (self.char_selection + 1) % 4
             elif event.key == pygame.K_BACKSPACE:
                 self.player_name = self.player_name[:-1]
@@ -163,11 +275,14 @@ class Game:
                 self._create_new_profile()
             elif event.key == pygame.K_ESCAPE:
                 self.state = GameState.MENU
+            # Allow all alphanumeric including 'a' and 'd'
             elif event.unicode.isalnum() and len(self.player_name) < 15:
                 self.player_name += event.unicode
                 
     def _create_new_profile(self):
         """Create new player profile and start game"""
+        from utils.difficulty_manager import DifficultyManager
+        
         self.current_profile = PlayerProfile(
             name=self.player_name,
             character=self.char_selection,
@@ -178,8 +293,14 @@ class Game:
         self.profiles.append(self.current_profile)
         ProfileManager.save_profiles(self.profiles)
         
-        # Start game
+        # Initialize difficulty manager with selected difficulty
+        self.difficulty_manager = DifficultyManager(self.difficulty, len(self.levels))
+        
+        # Start game with difficulty-adjusted lives
+        lives = self.difficulty_manager.get_lives(0)
         self.player = Player(100, 100, self.char_selection)
+        self.player.lives = lives
+        
         self._load_level(0)
         self.state = GameState.PLAYING
         
@@ -479,7 +600,14 @@ class Game:
                 level_completed=True
             )
             ProfileManager.save_profiles(self.profiles)
-            
+        
+        # CHECK FOR VICTORY - Act 1 complete after Level 6 boss
+        if self.current_level_index == 6 and level_index > 6:
+            # Player beat the boss on level 6, game complete!
+            self._game_complete()
+            return
+        
+        # Otherwise, continue to next level
         self._load_level(level_index)
         
     def _save_game(self):
@@ -520,17 +648,20 @@ class Game:
     def _draw(self):
         """Draw current game state"""
         if self.state == GameState.MENU:
-            self.menu.draw_main_menu(self.screen, self.menu_selection)
+            self.menu.draw_main_menu(self.screen, self.menu_selection, self.mouse_pos)
+        elif self.state == GameState.DIFFICULTY_SELECT:
+            self.menu.draw_difficulty_select(self.screen, self.difficulty_selection, self.mouse_pos)
         elif self.state == GameState.PROFILE_SELECT:
-            self.menu.draw_profile_select(self.screen, self.profiles, self.profile_selection)
+            self.menu.draw_profile_select(self.screen, self.profiles, 
+                                        self.profile_selection, self.mouse_pos)
         elif self.state == GameState.CHAR_SELECT:
             self.menu.draw_char_select(self.screen, self.player_name, 
-                                      self.char_selection)
+                                    self.char_selection, self.mouse_pos)
         elif self.state == GameState.PLAYING:
             self._draw_game()
         elif self.state == GameState.PAUSED:
             self._draw_game()
-            self.menu.draw_pause_menu(self.screen, self.pause_selection)
+            self.menu.draw_pause_menu(self.screen, self.pause_selection, self.mouse_pos)
         elif self.state == GameState.GAME_OVER:
             self.menu.draw_game_over(self.screen, self.player.score)
         elif self.state == GameState.VICTORY:
@@ -561,15 +692,40 @@ class Game:
         self.hud.draw(self.screen, self.player, self.current_level_index)
         
     def _draw_tiles(self):
-        """Draw level tiles"""
+        """Draw level tiles with theme-based textures"""
         from utils.collision import is_rect_on_screen
+        from utils.textures import TextureManager
         
         for tile in self.level.tiles:
             if is_rect_on_screen(tile['rect'], self.camera.x, self.camera.y,
                                 SCREEN_WIDTH, SCREEN_HEIGHT):
                 rect = self.camera.apply_rect(tile['rect'])
-                pygame.draw.rect(self.screen, tile['color'], rect)
+                theme = tile.get('theme', 'SCIFI')
+                color = tile['color']
+                
+                # Different pattern per theme for easy identification
+                if theme == 'SCIFI':
+                    # Grid pattern for sci-fi
+                    TextureManager.draw_grid_rect(self.screen , rect, color, (200, 200, 200), grid_size=8)
+                elif theme == 'NATURE':
+                    # Diagonal lines for nature
+                    TextureManager.draw_diagonal_lines(self.screen, rect, color, (150, 200, 150), spacing=6)
+                elif theme == 'SPACE':
+                    # Dots for space
+                    TextureManager.draw_dotted_rect(self.screen, rect, color, (150, 150, 200), dot_size=2, spacing=8)
+                elif theme == 'UNDERGROUND':
+                    # Brick pattern for underground
+                    TextureManager.draw_brick_wall(self.screen, rect, (80, 60, 40), color)
+                elif theme == 'UNDERWATER':
+                    # Horizontal waves for underwater
+                    TextureManager.draw_striped_rect(self.screen, rect, color, (100, 150, 200), stripe_width=4, vertical=False)
+                else:
+                    # Default checkered
+                    TextureManager.draw_checkered_rect(self.screen, rect, color, (120, 120, 120), check_size=8)
+                
+                # Border
                 pygame.draw.rect(self.screen, WHITE, rect, 1)
+
                 
     def _draw_hazards(self):
         """Draw hazards"""

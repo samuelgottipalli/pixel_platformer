@@ -53,7 +53,6 @@ class LevelLoader:
         # Get Level 0 (Tutorial) and Level 1
         act1_base = get_act1_levels()
         levels.extend(act1_base)  # Levels 0-1
-        
         # Add levels 2-6 from act1_levels_complete
         try:
             from levels.act1_levels_complete import get_act1_levels_2_to_6
@@ -62,5 +61,20 @@ class LevelLoader:
         except ImportError:
             print("⚠️  act1_levels_complete not found, using demo levels")
         
+        levels = [LevelLoader.fix_spike_positions(level) for level in levels]
+        
         print(f"✓ Loaded {len(levels)} levels")
         return levels
+    
+    @staticmethod
+    def create_spike(x, ground_y=640):
+        """Create spike on top of ground"""
+        return {'x': x, 'y': ground_y - 32, 'type': 'spike', 'height': 32, 'width': 32}
+
+    @staticmethod
+    def fix_spike_positions(level_data):
+        """Fix spike positions to be on top of ground"""
+        for hazard in level_data.get('hazards', []):
+            if hazard['type'] == 'spike' and hazard.get('y', 0) >= 640:
+                hazard['y'] = 608  # Place on top of ground
+        return level_data

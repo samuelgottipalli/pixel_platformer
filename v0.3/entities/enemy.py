@@ -107,10 +107,12 @@ class Enemy:
         return pygame.Rect(self.x, self.y, self.width, self.height)
         
     def draw(self, surface, camera_x, camera_y):
-        """Render enemy to screen"""
+        """Render enemy to screen with distinct patterns"""
+        from utils.textures import TextureManager
+        
         if self.dead:
             return
-            
+        
         rect = pygame.Rect(
             self.x - camera_x, 
             self.y - camera_y, 
@@ -118,18 +120,25 @@ class Enemy:
             self.height
         )
         
-        # Color based on type
-        colors = {
-            EnemyType.GROUND.value: RED,
-            EnemyType.FLYING.value: CYAN,
-            EnemyType.TURRET.value: ORANGE
-        }
-        color = colors.get(self.type, RED)
+        # Different patterns per enemy type
+        if self.type == EnemyType.GROUND.value:
+            # GROUND: Horizontal stripes
+            TextureManager.draw_striped_rect(surface, rect, RED, (255, 100, 100), 
+                                            stripe_width=4, vertical=False)
+        elif self.type == EnemyType.FLYING.value:
+            # FLYING: Diagonal lines
+            TextureManager.draw_diagonal_lines(surface, rect, CYAN, (150, 255, 255), 
+                                            spacing=8, line_width=2)
+        elif self.type == EnemyType.TURRET.value:
+            # TURRET: Checkered
+            TextureManager.draw_checkered_rect(surface, rect, ORANGE, (255, 200, 100), 
+                                            check_size=8)
         
-        pygame.draw.rect(surface, color, rect)
-        pygame.draw.rect(surface, WHITE, rect, 2)
+        # Thick border
+        pygame.draw.rect(surface, WHITE, rect, 3)
         
-        # Draw eyes
-        eye_y = rect.y + 10
-        pygame.draw.circle(surface, WHITE, (rect.x + 10, eye_y), 4)
-        pygame.draw.circle(surface, WHITE, (rect.x + 22, eye_y), 4)
+        # Eyes with X pattern for enemies
+        pygame.draw.line(surface, WHITE, (rect.x + 8, rect.y + 8), (rect.x + 14, rect.y + 14), 2)
+        pygame.draw.line(surface, WHITE, (rect.x + 14, rect.y + 8), (rect.x + 8, rect.y + 14), 2)
+        pygame.draw.line(surface, WHITE, (rect.x + 18, rect.y + 8), (rect.x + 24, rect.y + 14), 2)
+        pygame.draw.line(surface, WHITE, (rect.x + 24, rect.y + 8), (rect.x + 18, rect.y + 14), 2)

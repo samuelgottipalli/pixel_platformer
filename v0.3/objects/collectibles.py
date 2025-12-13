@@ -34,16 +34,32 @@ class Coin:
         return pygame.Rect(self.x, self.y, self.width, self.height)
         
     def draw(self, surface, camera_x, camera_y):
-        """Render spinning coin"""
+        """Render coin with star pattern"""
         width = abs(math.cos(math.radians(self.rotation))) * self.width
-        rect = pygame.Rect(
-            self.x - camera_x + (self.width - width) / 2,
-            self.y - camera_y, 
-            width, 
-            self.height
-        )
-        pygame.draw.ellipse(surface, YELLOW, rect)
-        pygame.draw.ellipse(surface, ORANGE, rect, 2)
+        screen_x = self.x - camera_x + (self.width - width) / 2
+        screen_y = self.y - camera_y
+        
+        # Draw coin as star shape instead of circle
+        center = (int(screen_x + width/2), int(screen_y + self.height/2))
+        radius = int(self.height / 2)
+        
+        # 8-point star
+        points = []
+        for i in range(16):
+            angle = (i * math.pi / 8) + (self.rotation * math.pi / 180)
+            r = radius if i % 2 == 0 else radius * 0.5
+            x = center[0] + r * math.cos(angle)
+            y = center[1] + r * math.sin(angle)
+            points.append((x, y))
+        
+        pygame.draw.polygon(surface, YELLOW, points)
+        pygame.draw.polygon(surface, ORANGE, points, 2)
+        
+        # Value indicator (dots in center)
+        for i in range(min(self.value, 5)):
+            offset = (i - 2) * 3
+            pygame.draw.circle(surface, WHITE, (center[0] + offset, center[1]), 2)
+
 
 class Key:
     """Collectible key for unlocking doors/portals"""
@@ -105,7 +121,16 @@ class PowerUp:
                           self.width, self.height)
         
     def draw(self, surface, camera_x, camera_y):
-        """Render power-up"""
+        """Render power-up with distinct shape per type"""
+        from utils.textures import TextureManager
+        
+        rect = pygame.Rect(
+            self.x - camera_x, 
+            self.y + self.float_offset - camera_y,
+            self.width, 
+            self.height
+        )
+        
         colors = {
             PowerUpType.HEALTH.value: RED,
             PowerUpType.DOUBLE_JUMP.value: CYAN,
@@ -114,28 +139,33 @@ class PowerUp:
         }
         color = colors.get(self.type, WHITE)
         
-        rect = pygame.Rect(
-            self.x - camera_x, 
-            self.y + self.float_offset - camera_y,
-            self.width, 
-            self.height
-        )
-        pygame.draw.rect(surface, color, rect)
-        pygame.draw.rect(surface, WHITE, rect, 2)
+        # Different pattern per type
+        if self.type == PowerUpType.HEALTH.value:
+            # HEALTH: Plus sign with cross pattern
+            TextureManager.draw_checkered_rect(surface, rect, color, (255, 100, 100), check_size=6)
+        elif self.type == PowerUpType.SPEED.value:
+            # SPEED: Lightning stripes
+            TextureManager.draw_diagonal_lines(surface, rect, color, (255, 255, 150), spacing=6)
+        elif self.type == PowerUpType.DOUBLE_JUMP.value:
+            # DOUBLE JUMP: Dotted
+            TextureManager.draw_dotted_rect(surface, rect, color, (150, 255, 255), dot_size=3, spacing=8)
+        elif self.type == PowerUpType.INVINCIBLE.value:
+            # INVINCIBLE: Grid
+            TextureManager.draw_grid_rect(surface, rect, color, (255, 150, 255), grid_size=8)
         
-        # Draw icon based on type
+        pygame.draw.rect(surface, WHITE, rect, 3)
+        
+        # Large icon in center
         cx, cy = rect.centerx, rect.centery
         if self.type == PowerUpType.HEALTH.value:
-            # Cross/plus symbol
-            pygame.draw.line(surface, WHITE, (cx, cy-6), (cx, cy+6), 3)
-            pygame.draw.line(surface, WHITE, (cx-6, cy), (cx+6, cy), 3)
+            # Cross
+            pygame.draw.line(surface, WHITE, (cx, cy-8), (cx, cy+8), 4)
+            pygame.draw.line(surface, WHITE, (cx-8, cy), (cx+8, cy), 4)
         elif self.type == PowerUpType.SPEED.value:
-            # Lightning bolt shape
-            points = [(cx-4, cy-6), (cx+2, cy), (cx-2, cy), (cx+4, cy+6)]
-            pygame.draw.lines(surface, WHITE, False, points, 2)
+            # Lightning bolt
+            points = [(cx-6, cy-8), (cx+4, cy), (cx-4, cy), (cx+6, cy+8)]
+            pygame.draw.lines(surface, WHITE, False, points, 3)
         elif self.type == PowerUpType.DOUBLE_JUMP.value:
             # Up arrows
-            pygame.draw.line(surface, WHITE, (cx, cy-4), (cx-4, cy), 2)
-            pygame.draw.line(surface, WHITE, (cx, cy-4), (cx+4, cy), 2)
-            pygame.draw.line(surface, WHITE, (cx, cy+2), (cx-4, cy+6), 2)
-            pygame.draw.line(surface, WHITE, (cx, cy+2), (cx+4, cy+6), 2)
+            pygame.draw.polygon(surface, WHITE, [(cx, cy-6), (cx-6, cy), (cx+6, cy)])
+            pygame.draw.polygon(surface, WHITE, [(cx, cy+2), (cx-6, cy+8), (cx+6, cy+8)])

@@ -6,13 +6,14 @@ from enum import Enum
 class GameState(Enum):
     """Game state machine states"""
     MENU = 1
-    PROFILE_SELECT = 2
-    CHAR_SELECT = 3
-    PLAYING = 4
-    PAUSED = 5
-    GAME_OVER = 6
-    LEVEL_COMPLETE = 7
-    VICTORY = 8
+    DIFFICULTY_SELECT = 2
+    PROFILE_SELECT = 3
+    CHAR_SELECT = 4
+    PLAYING = 5
+    PAUSED = 6
+    GAME_OVER = 7
+    LEVEL_COMPLETE = 8
+    VICTORY = 9
 
 class Theme(Enum):
     """Level themes"""

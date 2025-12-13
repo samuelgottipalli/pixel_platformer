@@ -268,11 +268,13 @@ class Player:
         return pygame.Rect(self.x, self.y, self.width, self.height)
         
     def draw(self, surface, camera_x, camera_y):
-        """Render player to screen"""
+        """Render player to screen with texture"""
+        from utils.textures import TextureManager
+        
         # Invincibility flicker
         if self.invincible and (pygame.time.get_ticks() // 100) % 2:
             return
-            
+        
         rect = pygame.Rect(
             self.x - camera_x, 
             self.y - camera_y,
@@ -283,15 +285,17 @@ class Player:
         # Body color based on character
         color = CHARACTER_COLORS[self.character % len(CHARACTER_COLORS)]
         
-        # Draw body
-        pygame.draw.rect(surface, color, rect)
-        pygame.draw.rect(surface, WHITE, rect, 2)
+        # PATTERN: Vertical stripes for player
+        TextureManager.draw_striped_rect(surface, rect, color, WHITE, stripe_width=3, vertical=True)
         
-        # Draw eyes
+        # Thick border
+        pygame.draw.rect(surface, BLACK, rect, 3)
+        
+        # Eyes
         eye_y = rect.y + 12
         eye_x = rect.centerx + (5 if self.direction > 0 else -10)
-        pygame.draw.circle(surface, WHITE, (eye_x, eye_y), 4)
-        pygame.draw.circle(surface, BLACK, (eye_x + self.direction * 2, eye_y), 2)
+        pygame.draw.circle(surface, WHITE, (eye_x, eye_y), 6)
+        pygame.draw.circle(surface, BLACK, (eye_x + self.direction * 2, eye_y), 3)
         
         # Melee effect
         if self.melee_active:

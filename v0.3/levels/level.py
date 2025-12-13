@@ -33,17 +33,22 @@ class Level:
         self.portals = self._create_portals(level_data.get('portals', []))
         
     def _create_tiles(self, tile_data):
-        """Create tile list from data"""
+        """Create tile list from data with textures"""
+        from utils.textures import TextureManager
+        
         tiles = []
         default_color = THEME_TILE_COLORS.get(self.theme.name, (100, 100, 100))
         
         for tile in tile_data:
-            tiles.append({
+            tile_dict = {
                 'rect': pygame.Rect(tile['x'], tile['y'], TILE_SIZE, TILE_SIZE),
                 'type': tile.get('type', 'ground'),
                 'solid': tile.get('solid', True),
-                'color': tuple(tile.get('color', default_color))
-            })
+                'color': tuple(tile.get('color', default_color)),
+                'theme': self.theme.name  # Add theme for drawing
+            }
+            tiles.append(tile_dict)
+        
         return tiles
         
     def _create_enemies(self, enemy_data):
