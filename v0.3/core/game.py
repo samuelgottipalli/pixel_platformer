@@ -671,8 +671,29 @@ class Game:
         
     def _draw_game(self):
         """Draw game world and HUD"""
-        # Background
-        self.screen.fill(self.level.get_background_color())
+        from utils.textures import BackgroundManager
+        
+        # Draw themed background with parallax
+        theme = self.level.theme.name if self.level else 'SCIFI'
+        
+        if theme == 'SCIFI':
+            BackgroundManager.draw_scifi_background(
+                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT)
+        elif theme == 'NATURE':
+            BackgroundManager.draw_nature_background(
+                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT)
+        elif theme == 'SPACE':
+            BackgroundManager.draw_space_background(
+                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT)
+        elif theme == 'UNDERGROUND':
+            BackgroundManager.draw_underground_background(
+                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT)
+        elif theme == 'UNDERWATER':
+            BackgroundManager.draw_underwater_background(
+                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT)
+        else:
+            # Fallback
+            self.screen.fill((20, 20, 40))
         
         # Draw tiles
         self._draw_tiles()
