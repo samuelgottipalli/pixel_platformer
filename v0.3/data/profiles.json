@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "name": "sam",
+    "character": 0,
+    "total_score": 590,
+    "levels_completed": 0,
+    "coins_collected": 44
+  }
+]
