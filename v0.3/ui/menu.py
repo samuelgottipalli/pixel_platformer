@@ -375,3 +375,46 @@ class Menu:
         # Continue
         cont = self.font_small.render("Press ENTER to return to menu", True, (100, 100, 100))  # GRAY
         surface.blit(cont, (640 - cont.get_width() // 2, 550))
+
+    def draw_level_select(self, surface, levels, selection, difficulty):
+        """
+        Draw level selection screen
+        Args:
+            surface: Pygame surface
+            levels: List of all levels
+            selection: Currently selected level index
+            difficulty: Current difficulty string
+        """
+        surface.fill(BLACK)
+        
+        # Title
+        title = self.font_large.render(f"LEVEL SELECT - {difficulty}", True, CYAN)
+        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 50))
+        
+        subtitle = self.font_small.render("Choose your starting level", True, WHITE)
+        surface.blit(subtitle, (SCREEN_WIDTH // 2 - subtitle.get_width() // 2, 120))
+        
+        # Level list
+        start_y = 200
+        levels_to_show = min(len(levels), 10)
+        start_idx = max(0, selection - 5)
+        end_idx = min(len(levels), start_idx + 10)
+        
+        for i in range(start_idx, end_idx):
+            color = YELLOW if i == selection else WHITE
+            
+            # Level info
+            level_name = f"Level {i}"
+            if i < len(levels):
+                width = levels[i].get('width', 'N/A')
+                level_name += f" - {width}px"
+            
+            text = self.font_medium.render(level_name, True, color)
+            surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 
+                            start_y + (i - start_idx) * 50))
+        
+        # Instructions
+        inst1 = self.font_small.render("Arrow Keys to select, ENTER to start", True, GRAY)
+        inst2 = self.font_small.render("ESC to go back", True, GRAY)
+        surface.blit(inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, SCREEN_HEIGHT - 100))
+        surface.blit(inst2, (SCREEN_WIDTH // 2 - inst2.get_width() // 2, SCREEN_HEIGHT - 60))
