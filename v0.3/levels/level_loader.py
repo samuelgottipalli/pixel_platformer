@@ -10,6 +10,14 @@ class LevelLoader:
     """Loads and manages level data"""
     
     @staticmethod
+    def fix_spike_positions(level_data):
+        """Fix spike positions to be on top of ground"""
+        for hazard in level_data.get('hazards', []):
+            if hazard['type'] == 'spike' and hazard.get('y', 0) >= 640:
+                hazard['y'] = 608  # 640 - 32 = 608 (on top of ground)
+        return level_data
+
+    @staticmethod
     def load_from_file(filename):
         """
         Load level from JSON file
@@ -67,6 +75,9 @@ class LevelLoader:
             # Get Levels 2-6 from act1_complete_levels
             act1_complete = get_complete_act1_levels()
             levels.extend(act1_complete)  # Add Levels 2-6
+
+            # FIX SPIKE POSITIONS
+            levels = [LevelLoader.fix_spike_positions(level) for level in levels]
             
             print(f"✓ Loaded {len(levels)} Act 1 levels")
             return levels

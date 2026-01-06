@@ -72,6 +72,10 @@ class Game:
         self.jump_pressed = False
         self.pause_pressed = False
 
+        # Debug mode
+        self.debug_mode = False
+        self.debug_toggle_pressed = False
+
         # Mouse position
         self.mouse_pos = pygame.mouse.get_pos()
 
@@ -434,6 +438,15 @@ class Game:
         else:
             self.pause_pressed = False
 
+        # Debug mode toggle (F3 key)
+        if controls.check_key_pressed(keys, controls.DEBUG_TOGGLE):
+            if not self.debug_toggle_pressed:
+                self.debug_mode = not self.debug_mode
+                print(f"Debug mode: {'ON' if self.debug_mode else 'OFF'}")
+                self.debug_toggle_pressed = True
+        else:
+            self.debug_toggle_pressed = False
+
     def _create_jump_particles(self):
         """Create particles for jump effect"""
         for _ in range(5):
@@ -655,19 +668,19 @@ class Game:
     def _game_complete(self):
         """Handle game completion (victory)"""
         self.state = GameState.VICTORY
-        
+
         # Mark difficulty as completed
         if self.current_profile:
             DifficultyCompletionTracker.mark_difficulty_complete(
                 self.current_profile.name,
                 self.difficulty
             )
-            
+
             # Save completed game stats and delete active profile
             ProfileManager.save_completed_game(self.current_profile, self.player.score)
             ProfileManager.delete_profile(self.current_profile.name)
             SaveManager.delete_save(self.current_profile.name)
-            
+
             # Reload profiles list
             self.profiles = ProfileManager.load_profiles()
 
@@ -740,6 +753,121 @@ class Game:
 
         # Draw HUD
         self.hud.draw(self.screen, self.player, self.current_level_index)
+
+        # Draw debug info
+        if self.debug_mode:
+            self._draw_debug_overlay()
+
+    def _draw_debug_overlay(self):
+        """Draw debug information overlay"""
+        # Semi-transparent background
+        overlay = pygame.Surface((400, 200))
+        overlay.set_alpha(200)
+        overlay.fill((0, 0, 0))
+        self.screen.blit(overlay, (10, 200))
+
+        # Get level info
+        level_names = [
+            "Tutorial: Training Facility",
+            "Level 1: The Awakening",
+            "Level 2: Rising Conflict",
+            "Level 3: The Ascent",
+            "Level 4: Deep Dive",
+            "Level 5: Convergence",
+            "Level 6: Guardian's Lair (BOSS)",
+        ]
+
+        # Get area name based on position
+        area_name = self._get_area_name(self.current_level_index, self.player.x)
+
+        # Debug info
+        debug_info = [
+            f"DEBUG MODE (F3 to toggle)",
+            f"Level: {self.current_level_index} - {level_names[self.current_level_index] if self.current_level_index < len(level_names) else 'Unknown'}",
+            f"Area: {area_name}",
+            f"Position: ({int(self.player.x)}, {int(self.player.y)})",
+            f"Camera: ({int(self.camera.x)}, {int(self.camera.y)})",
+            f"Difficulty: {self.difficulty if hasattr(self, 'difficulty') else 'N/A'}",
+            f"Velocity: dx={int(self.player.dx)}, dy={int(self.player.dy)}",
+        ]
+
+        # Draw debug text
+        y_offset = 210
+        for i, line in enumerate(debug_info):
+            color = (255, 255, 0) if i == 0 else (255, 255, 255)
+            text = self.font_small.render(line, True, color)
+            self.screen.blit(text, (20, y_offset + i * 25))
+
+    def _get_area_name(self, level_index, player_x):
+        """Get area name based on level and player position"""
+        # Level-specific area mappings
+        areas = {
+            0: [  # Tutorial
+                (0, 600, "Section 1: Basic Movement"),
+                (600, 1200, "Section 2: Jumping"),
+                (1200, 2000, "Section 3: Double Jump"),
+                (2000, 2800, "Section 4: Wall Jump"),
+                (2800, 3600, "Section 5: Combat - Shooting"),
+                (3600, 4200, "Section 6: Melee Combat"),
+                (4200, 5000, "Section 7: Hazards"),
+                (5000, 5800, "Section 8: Collectibles"),
+                (5800, 6400, "Section 9: Final Test"),
+            ],
+            1: [  # Level 1
+                (0, 1500, "Area 1: Introduction"),
+                (1500, 2800, "Area 2: Vertical Section"),
+                (2800, 4200, "Area 3: High Platforms"),
+                (4200, 5800, "Area 4: Underground Passage"),
+                (5800, 7000, "Area 5: Combat Zone"),
+                (7000, 8000, "Area 6: Final Ascent"),
+            ],
+            2: [  # Level 2
+                (0, 1500, "Area 1: Gentle Start"),
+                (1500, 2800, "Area 2: Tower Climb"),
+                (2800, 4200, "Area 3: High Platforms"),
+                (4200, 5800, "Area 4: Underground"),
+                (5800, 7000, "Area 5: Combat Arena"),
+                (7000, 8500, "Area 6: Final Gauntlet"),
+            ],
+            3: [  # Level 3
+                (0, 1800, "Area 1: Courtyard"),
+                (1800, 3200, "Area 2: First Tower"),
+                (3200, 4500, "Area 3: Bridge Section"),
+                (4500, 6000, "Area 4: Second Tower"),
+                (6000, 7500, "Area 5: Spire Section (3rd Tower)"),
+                (7500, 9000, "Area 6: Descent & Finale"),
+            ],
+            4: [  # Level 4
+                (0, 1500, "Area 1: Surface"),
+                (1500, 2800, "Area 2: Descent"),
+                (2800, 5000, "Area 3: Cave Systems"),
+                (5000, 6500, "Area 4: Underground Lake"),
+                (6500, 8000, "Area 5: Crystal Caverns"),
+                (8000, 9500, "Area 6: Ascent & Exit"),
+            ],
+            5: [  # Level 5
+                (0, 2000, "Area 1: Gauntlet Start"),
+                (2000, 3200, "Area 2: Wall Jump Tower"),
+                (3200, 4800, "Area 3: Precision Platforming"),
+                (4800, 6500, "Area 4: Combat Marathon"),
+                (6500, 8000, "Area 5: Hazard Gauntlet"),
+                (8000, 9500, "Area 6: Escape Sequence"),
+                (9500, 10000, "Area 7: Boss Door"),
+            ],
+            6: [  # Boss Level
+                (0, 1280, "Boss Arena: Guardian's Lair"),
+            ],
+        }
+
+        # Get areas for current level
+        level_areas = areas.get(level_index, [])
+
+        # Find which area player is in
+        for start_x, end_x, name in level_areas:
+            if start_x <= player_x < end_x:
+                return name
+
+        return "Unknown Area"
 
     def _draw_tiles(self):
         """Draw level tiles with theme-based textures"""
@@ -839,7 +967,6 @@ class Game:
         if not self.profiles:
             self.state = GameState.MENU
 
-
     def _handle_level_select_events(self, event):
         """Handle level selection input"""
         if event.type == pygame.KEYDOWN:
@@ -852,7 +979,6 @@ class Game:
                 self._start_from_level_select()
             elif controls.check_key_event(event, controls.MENU_BACK):
                 self.state = GameState.DIFFICULTY_SELECT
-
 
     def _start_from_level_select(self):
         """Start game from level selection"""

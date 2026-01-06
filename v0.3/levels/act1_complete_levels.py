@@ -210,7 +210,12 @@ def get_complete_act1_levels():
             *[{'x': 6132, 'y': 600 - i * 45, 'solid': True} for i in range(14)],
             *[{'x': 6100 - (i % 2) * 64, 'y': 575 - i * 45, 'solid': True} for i in range(14)],
             # Spire top
-            *[{'x': 6900 + i * TILE_SIZE, 'y': 50, 'solid': True} for i in range(20)],
+            *[{'x': 6700 + i * TILE_SIZE, 'y': 50, 'solid': True} for i in range(20)],
+            
+            # FIXED: Static floating platform after spire (3rd tower)
+            {'x': 7300, 'y': 120, 'solid': True},
+            {'x': 7332, 'y': 120, 'solid': True},
+            {'x': 7364, 'y': 120, 'solid': True},  # 3 tiles wide for safety
             
             # === AREA 6: DESCENT & FINALE (7500-9000) ===
             # Controlled descent with combat
@@ -264,8 +269,8 @@ def get_complete_act1_levels():
             {'x': 4200, 'y': 100, 'type': 'falling_block'},
             # Moving platforms
             {'x': 2600, 'y': 200, 'type': 'moving_platform', 'width': 96},
-            {'x': 5400, 'y': 200, 'type': 'moving_platform', 'width': 96},
-            {'x': 7000, 'y': 150, 'type': 'moving_platform', 'width': 128},
+            {'x': 5400, 'y': 200, 'type': 'moving_platform', 'width': 96},  # Reverted to original
+            {'x': 7200, 'y': 180, 'type': 'moving_platform', 'width': 96},  # FIXED: Starts at x=7200 (closer to static platform), y=180 (below static platform at y=120)
         ],
         'coins': [
             # Path coins
@@ -330,28 +335,15 @@ def get_complete_act1_levels():
             # === AREA 4: UNDERGROUND LAKE (5000-6500) ===
             # Water level simulation (lower platforms)
             *[{'x': 5000 + i * TILE_SIZE, 'y': 680, 'solid': True} for i in range(50)],
-            # Islands in lake - FIXED: proper spacing (64px apart = 2 tiles)
-            # Island 1
-            {'x': 5200, 'y': 600, 'solid': True},
-            {'x': 5232, 'y': 600, 'solid': True},
-            # Island 2 (136px gap - easily double-jumpable)
-            {'x': 5368, 'y': 580, 'solid': True},
-            {'x': 5400, 'y': 580, 'solid': True},
-            # Island 3 (136px gap)
-            {'x': 5536, 'y': 600, 'solid': True},
-            {'x': 5568, 'y': 600, 'solid': True},
-            # Island 4 (136px gap)
-            {'x': 5704, 'y': 580, 'solid': True},
-            {'x': 5736, 'y': 580, 'solid': True},
-            # Island 5 (136px gap)
-            {'x': 5872, 'y': 600, 'solid': True},
-            {'x': 5904, 'y': 600, 'solid': True},
-            # Island 6 (136px gap)
-            {'x': 6040, 'y': 580, 'solid': True},
-            {'x': 6072, 'y': 580, 'solid': True},
-            # Final platform to solid ground (136px gap)
-            {'x': 6208, 'y': 600, 'solid': True},
-            {'x': 6240, 'y': 600, 'solid': True},
+            # Islands in lake
+            *[{'x': 5200, 'y': 600, 'solid': True}],
+            *[{'x': 5232, 'y': 600, 'solid': True}],
+            *[{'x': 5500, 'y': 580, 'solid': True}],
+            *[{'x': 5532, 'y': 580, 'solid': True}],
+            *[{'x': 5800, 'y': 600, 'solid': True}],
+            *[{'x': 5832, 'y': 600, 'solid': True}],
+            *[{'x': 6100, 'y': 580, 'solid': True}],
+            *[{'x': 6132, 'y': 580, 'solid': True}],
             
             # === AREA 5: CRYSTAL CAVERNS (6500-8000) ===
             *[{'x': 6500 + i * TILE_SIZE, 'y': 640, 'solid': True} for i in range(50)],
@@ -440,7 +432,7 @@ def get_complete_act1_levels():
         ],
         'keys': [],
         'portals': [
-            {'x': 9350, 'y': 50, 'dest': 5}  # Fixed: on the exit platform at y=100
+            {'x': 9350, 'y': 10, 'dest': 5}
         ]
     }
     levels.append(level_4)

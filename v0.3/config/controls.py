@@ -28,6 +28,9 @@ PAUSE = [pygame.K_ESCAPE, pygame.K_p]
 SAVE_GAME = [pygame.K_F5]
 QUIT = [pygame.K_ESCAPE]
 
+# Debug Controls
+DEBUG_TOGGLE = [pygame.K_F3]
+
 def check_key_pressed(keys, key_list):
     """Check if any key in key_list is pressed"""
     return any(keys[key] for key in key_list)
