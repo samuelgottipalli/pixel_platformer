@@ -1,420 +1,299 @@
 """
-Menu screens (main menu, character select, pause, game over)
+Menu screens with modern, clean design
 """
 import pygame
 from config.settings import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, YELLOW, CYAN, RED,
-    GRAY, CHARACTER_COLORS
+    SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, WHITE, YELLOW, CYAN, 
+    GRAY, CHARACTER_COLORS, UI_BG, UI_BORDER, UI_HIGHLIGHT, UI_TEXT, UI_TEXT_DIM
 )
 
-
-class Button:
-    """Clickable button"""
-    def __init__(self, x, y, width, height, text, font):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.text = text
-        self.font = font
-        self.hovered = False
-    
-    def update(self, mouse_pos):
-        self.hovered = self.rect.collidepoint(mouse_pos)
-    
-    def draw(self, surface, selected=False):
-        # Color based on state
-        if self.hovered:
-            bg_color = (80, 80, 120)
-            border_color = YELLOW
-        elif selected:
-            bg_color = (60, 60, 100)
-            border_color = CYAN
-        else:
-            bg_color = (40, 40, 60)
-            border_color = GRAY
-        
-        pygame.draw.rect(surface, bg_color, self.rect)
-        pygame.draw.rect(surface, border_color, self.rect, 3)
-        
-        text_surf = self.font.render(self.text, True, WHITE)
-        text_x = self.rect.centerx - text_surf.get_width() // 2
-        text_y = self.rect.centery - text_surf.get_height() // 2
-        surface.blit(text_surf, (text_x, text_y))
-    
-    def is_clicked(self, mouse_pos, mouse_pressed):
-        return self.rect.collidepoint(mouse_pos) and mouse_pressed
-
-
 class Menu:
-    """Handles all menu screens"""
+    """Handles all menu screens with modern, clean design"""
     
     def __init__(self, font_large, font_medium, font_small):
-        """
-        Args:
-            font_large, font_medium, font_small: Pygame fonts
-        """
-        self.font_large = font_large
-        self.font_medium = font_medium
-        self.font_small = font_small
-        self._create_buttons()
-
-    def _create_buttons(self):
-        """Create all menu buttons"""
-        center_x = SCREEN_WIDTH // 2
-        btn_width = 300
-        btn_height = 60
+        """Initialize with cleaner, smaller fonts"""
+        self.font_large = pygame.font.Font(None, 52)      # Title font
+        self.font_medium = pygame.font.Font(None, 32)     # Button/option font
+        self.font_small = pygame.font.Font(None, 22)      # Info font
+        self.font_tiny = pygame.font.Font(None, 18)       # Hint font
         
-        # Main menu buttons
-        self.main_buttons = [
-            Button(center_x - btn_width//2, 350, btn_width, btn_height, "New Game", self.font_medium),
-            Button(center_x - btn_width//2, 430, btn_width, btn_height, "Load Game", self.font_medium),
-            Button(center_x - btn_width//2, 510, btn_width, btn_height, "Quit", self.font_medium)
-        ]
-        
-        # Pause menu buttons
-        self.pause_buttons = [
-            Button(center_x - btn_width//2, 300, btn_width, btn_height, "Resume", self.font_medium),
-            Button(center_x - btn_width//2, 380, btn_width, btn_height, "Main Menu", self.font_medium),
-            Button(center_x - btn_width//2, 460, btn_width, btn_height, "Quit Game", self.font_medium)
-        ]
-
-        # Difficulty buttons
-        self.difficulty_buttons = [
-            Button(center_x - btn_width//2, 250, btn_width, btn_height, "EASY", self.font_medium),
-            Button(center_x - btn_width//2, 350, btn_width, btn_height, "NORMAL", self.font_medium),
-            Button(center_x - btn_width//2, 450, btn_width, btn_height, "HARD", self.font_medium)
-        ]
-        
-        # Character select buttons
-        self.char_buttons = [
-            Button(center_x - 240 + i * 120, 350, 96, 96, "", self.font_small)
-            for i in range(4)
-        ]
-        self.start_button = Button(center_x - 100, 520, 200, 50, "START", self.font_medium)
-        self.back_button = Button(50, 50, 120, 40, "< BACK", self.font_small)
-    
-    def check_button_click(self, buttons, mouse_pos, mouse_pressed):
-        """Return index of clicked button or -1"""
-        for i, btn in enumerate(buttons):
-            if btn.is_clicked(mouse_pos, mouse_pressed):
-                return i
-        return -1
-    
-    def draw_main_menu(self, surface, selection, mouse_pos=None):
-        """
-        Draw main menu
-        Args:
-            surface: Pygame surface
-            selection: Currently selected option index
-            mouse_pos: Current mouse position (optional)
-        """
+    def draw_main_menu(self, surface, selection):
+        """Draw main menu with modern design"""
         surface.fill(BLACK)
         
         # Title
-        title = self.font_large.render("RETRO PLATFORMER", True, CYAN)
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 150))
-        
-        # Buttons
-        if mouse_pos:
-            for btn in self.main_buttons:
-                btn.update(mouse_pos)
-        
-        for i, btn in enumerate(self.main_buttons):
-            btn.draw(surface, selected=(i == selection))
-        
-        # Instructions
-        inst = self.font_small.render("Arrow Keys + ENTER  or  Click with Mouse", True, GRAY)
-        surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 600))
-        
-    def draw_char_select(self, surface, player_name, char_selection, mouse_pos=None):
-        """Draw character selection with buttons"""
-        surface.fill(BLACK)
-        
-        # Back button
-        if mouse_pos:
-            self.back_button.update(mouse_pos)
-        self.back_button.draw(surface)
-        
-        # Title
-        title = self.font_large.render("CHARACTER SELECT", True, CYAN)
+        title = self.font_large.render("RETRO PLATFORMER", True, UI_HIGHLIGHT)
         surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 100))
         
-        # Name input box
-        name_box = pygame.Rect(340, 190, 600, 60)
-        pygame.draw.rect(surface, (40, 40, 60), name_box)
-        pygame.draw.rect(surface, CYAN, name_box, 2)
+        # Subtitle
+        subtitle = self.font_small.render("2D Side-Scrolling Action", True, UI_TEXT_DIM)
+        surface.blit(subtitle, (SCREEN_WIDTH // 2 - subtitle.get_width() // 2, 160))
+        
+        # Menu options
+        options = ["New Game", "Load Game", "Controls", "Level Map", "Quit"]
+        start_y = 260
+        
+        for i, option in enumerate(options):
+            y = start_y + i * 55
+            is_selected = i == selection
+            
+            # Draw button
+            self._draw_button(surface, option, y, is_selected)
+        
+        # Controls hint
+        hint = self.font_tiny.render("↑↓ Navigate   ENTER Select   ESC Back", True, UI_TEXT_DIM)
+        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 35))
+    
+    def _draw_button(self, surface, text, y, selected):
+        """Helper to draw a modern button"""
+        button_width = 280
+        button_height = 40
+        button_x = SCREEN_WIDTH // 2 - button_width // 2
+        button_rect = pygame.Rect(button_x, y - 8, button_width, button_height)
+        
+        if selected:
+            pygame.draw.rect(surface, UI_HIGHLIGHT, button_rect, border_radius=5)
+            pygame.draw.rect(surface, WHITE, button_rect, 2, border_radius=5)
+            text_color = BLACK
+        else:
+            pygame.draw.rect(surface, UI_BG, button_rect, border_radius=5)
+            pygame.draw.rect(surface, UI_BORDER, button_rect, 1, border_radius=5)
+            text_color = UI_TEXT
+        
+        text_surface = self.font_medium.render(text, True, text_color)
+        surface.blit(text_surface, (SCREEN_WIDTH // 2 - text_surface.get_width() // 2, y))
+        
+    def draw_char_select(self, surface, player_name, char_selection):
+        """Draw character selection screen"""
+        surface.fill(BLACK)
+        
+        # Title
+        title = self.font_large.render("CHARACTER SELECT", True, UI_HIGHLIGHT)
+        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 80))
+        
+        # Name input
+        name_label = self.font_small.render("Enter Name:", True, UI_TEXT_DIM)
+        surface.blit(name_label, (SCREEN_WIDTH // 2 - name_label.get_width() // 2, 160))
+        
         name_text = self.font_medium.render(f"{player_name}_", True, WHITE)
-        surface.blit(name_text, (360, 205))
+        surface.blit(name_text, (SCREEN_WIDTH // 2 - name_text.get_width() // 2, 190))
         
-        # Character buttons
-        if mouse_pos:
-            for btn in self.char_buttons:
-                btn.update(mouse_pos)
-        
-        for i, btn in enumerate(self.char_buttons):
-            # Draw character preview inside button
-            is_selected = (i == char_selection)
-            if btn.hovered:
-                border = YELLOW
-                bg = (80, 80, 120)
-            elif is_selected:
-                border = CYAN
-                bg = (60, 60, 100)
+        # Characters
+        char_y = 280
+        for i in range(4):
+            x = SCREEN_WIDTH // 2 - 250 + i * 120
+            
+            # Character preview
+            rect = pygame.Rect(x, char_y, 56, 96)
+            pygame.draw.rect(surface, CHARACTER_COLORS[i], rect, border_radius=5)
+            
+            if i == char_selection:
+                pygame.draw.rect(surface, YELLOW, rect, 3, border_radius=5)
             else:
-                border = GRAY
-                bg = (40, 40, 60)
+                pygame.draw.rect(surface, UI_BORDER, rect, 1, border_radius=5)
             
-            pygame.draw.rect(surface, bg, btn.rect)
-            pygame.draw.rect(surface, border, btn.rect, 3)
-            
-            # Character inside
-            char_rect = pygame.Rect(btn.rect.x + 20, btn.rect.y + 10, 56, 76)
-            pygame.draw.rect(surface, CHARACTER_COLORS[i], char_rect)
-            pygame.draw.circle(surface, WHITE, (char_rect.x + 20, char_rect.y + 24), 8)
-            pygame.draw.circle(surface, BLACK, (char_rect.x + 24, char_rect.y + 24), 4)
-        
-        # Start button
-        if mouse_pos:
-            self.start_button.update(mouse_pos)
-        self.start_button.draw(surface, selected=False)
+            # Eyes
+            pygame.draw.circle(surface, WHITE, (x + 20, char_y + 30), 6)
+            pygame.draw.circle(surface, BLACK, (x + 22, char_y + 30), 3)
         
         # Instructions
-        inst = self.font_small.render("Type name, click character, then START", True, GRAY)
-        surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 580))
+        inst1 = self.font_tiny.render("Type name   ←→ Select character   ENTER Start", True, UI_TEXT_DIM)
+        surface.blit(inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, SCREEN_HEIGHT - 50))
         
-    def draw_pause_menu(self, surface, selection=0, mouse_pos=None):
-        """
-        Draw pause menu overlay
-        Args:
-            surface: Pygame surface
-            selection: Currently selected option
-            mouse_pos: Current mouse position (optional)
-        """
+    def draw_pause_menu(self, surface, selection=0):
+        """Draw pause menu overlay"""
         # Semi-transparent overlay
         overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-        overlay.set_alpha(128)
+        overlay.set_alpha(180)
         overlay.fill(BLACK)
         surface.blit(overlay, (0, 0))
         
         # Paused text
         text = self.font_large.render("PAUSED", True, YELLOW)
-        surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 180))
+        surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 
+                           SCREEN_HEIGHT // 2 - 120))
         
-        # Buttons
-        if mouse_pos:
-            for btn in self.pause_buttons:
-                btn.update(mouse_pos)
+        # Menu options
+        options = ["Resume", "Return to Menu", "Quit Game"]
+        for i, option in enumerate(options):
+            y = SCREEN_HEIGHT // 2 - 30 + i * 55
+            self._draw_button(surface, option, y, i == selection)
         
-        for i, btn in enumerate(self.pause_buttons):
-            btn.draw(surface, selected=(i == selection))
+        inst = self.font_tiny.render("↑↓ Navigate   ENTER Select", True, UI_TEXT_DIM)
+        surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 
+                           SCREEN_HEIGHT // 2 + 120))
         
-        inst = self.font_small.render("Arrow Keys + ENTER  or  Click", True, GRAY)
-        surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 580))
-        
-    def draw_profile_select(self, surface, profiles, selection, mouse_pos=None):
-        """
-        Draw profile selection screen
-        Args:
-            surface: Pygame surface
-            profiles: List of PlayerProfile objects
-            selection: Currently selected profile index
-        """
+    def draw_profile_select(self, surface, profiles, selection):
+        """Draw profile selection screen"""
         surface.fill(BLACK)
-        
-        # Back button
-        if mouse_pos:
-            self.back_button.update(mouse_pos)
-        self.back_button.draw(surface)
         
         # Title
-        title = self.font_large.render("LOAD GAME", True, CYAN)
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 50))
+        title = self.font_large.render("SELECT PROFILE", True, UI_HIGHLIGHT)
+        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 80))
         
         if not profiles:
-            text = self.font_medium.render("No saved games", True, WHITE)
+            text = self.font_medium.render("No saved profiles found", True, UI_TEXT)
             surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 250))
+            
+            inst = self.font_tiny.render("Press ESC to go back", True, UI_TEXT_DIM)
+            surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 350))
         else:
-            # Create buttons for each profile
-            y_start = 150
+            # Display profiles
+            y_start = 180
             for i, profile in enumerate(profiles):
-                y = y_start + i * 100
+                y = y_start + i * 70
+                is_selected = i == selection
                 
                 # Profile box
-                box = pygame.Rect(150, y - 10, 780, 90)
-                if mouse_pos and box.collidepoint(mouse_pos):
-                    bg = (60, 60, 100)
-                elif i == selection:
-                    bg = (40, 40, 80)
+                box_width = 500
+                box_height = 60
+                box_x = SCREEN_WIDTH // 2 - box_width // 2
+                box_rect = pygame.Rect(box_x, y, box_width, box_height)
+                
+                if is_selected:
+                    pygame.draw.rect(surface, UI_HIGHLIGHT, box_rect, border_radius=5)
+                    pygame.draw.rect(surface, WHITE, box_rect, 2, border_radius=5)
+                    name_color = BLACK
+                    stats_color = (40, 40, 40)
                 else:
-                    bg = (30, 30, 50)
+                    pygame.draw.rect(surface, UI_BG, box_rect, border_radius=5)
+                    pygame.draw.rect(surface, UI_BORDER, box_rect, 1, border_radius=5)
+                    name_color = UI_TEXT
+                    stats_color = UI_TEXT_DIM
                 
-                pygame.draw.rect(surface, bg, box)
-                pygame.draw.rect(surface, CYAN if i == selection else GRAY, box, 2)
-                
-                # Profile info
+                # Name
                 name_text = self.font_medium.render(
                     f"{profile.name} - Char {profile.character + 1}", 
-                    True, YELLOW if i == selection else WHITE
+                    True, name_color
                 )
-                surface.blit(name_text, (200, y))
+                surface.blit(name_text, (box_x + 15, y + 8))
                 
-                stats_text = self.font_small.render(
-                    f"Score: {profile.total_score} | Lvl: {profile.levels_completed} | Coins: {profile.coins_collected}",
-                    True, GRAY
+                # Stats
+                stats_text = self.font_tiny.render(
+                    f"Score: {profile.total_score}  |  Levels: {profile.levels_completed}  |  Coins: {profile.coins_collected}",
+                    True, stats_color
                 )
-                surface.blit(stats_text, (200, y + 35))
-                
-                # Load button
-                load_btn = Button(750, y + 10, 80, 40, "LOAD", self.font_small)
-                if mouse_pos:
-                    load_btn.update(mouse_pos)
-                load_btn.draw(surface)
-                
-                # Delete button
-                del_btn = Button(840, y + 10, 80, 40, "DEL", self.font_small)
-                if mouse_pos:
-                    del_btn.update(mouse_pos)
-                del_btn.draw(surface)
-        
-        inst = self.font_small.render("Click to select • L: Load • D: Delete • ESC: Back", True, GRAY)
-        surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 580))
+                surface.blit(stats_text, (box_x + 15, y + 36))
+            
+            # Instructions
+            inst = self.font_tiny.render("↑↓ Select   ENTER Load   ESC Back", True, UI_TEXT_DIM)
+            surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, SCREEN_HEIGHT - 40))
     
     def draw_game_over(self, surface, score):
-        """
-        Draw game over screen
-        Args:
-            surface: Pygame surface
-            score: Final score
-        """
+        """Draw game over screen"""
         surface.fill(BLACK)
         
-        # Game Over text
         text = self.font_large.render("GAME OVER", True, RED)
         surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 
-                           SCREEN_HEIGHT // 2 - 100))
+                           SCREEN_HEIGHT // 2 - 80))
         
-        # Score
         score_text = self.font_medium.render(f"Final Score: {score}", True, WHITE)
         surface.blit(score_text, (SCREEN_WIDTH // 2 - score_text.get_width() // 2, 
                                  SCREEN_HEIGHT // 2))
         
-        # Instructions
-        inst = self.font_small.render("Press ENTER to return to menu", True, GRAY)
+        inst = self.font_tiny.render("Press ENTER to return to menu", True, UI_TEXT_DIM)
         surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 
-                           SCREEN_HEIGHT // 2 + 100))
-        
-
-    def draw_difficulty_select(self, surface, selection, mouse_pos=None):
-        """
-        Draw difficulty selection screen
-        Args:
-            surface: Pygame surface
-            selection: Currently selected difficulty (0=Easy, 1=Normal, 2=Hard)
-            mouse_pos: Current mouse position (optional)
-        """
-        surface.fill(BLACK)
+                           SCREEN_HEIGHT // 2 + 80))
     
-        # Back button
-        if mouse_pos:
-            self.back_button.update(mouse_pos)
-        self.back_button.draw(surface)
-        
-        # Title
-        title = self.font_large.render("SELECT DIFFICULTY", True, CYAN)
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 100))
-        
-        # Difficulty descriptions
-        descriptions = [
-            ("5 Lives • More Resources • Forgiving", (0, 255, 0)),      # GREEN
-            ("3 Lives • Balanced Challenge • Standard", WHITE),
-            ("1 Life • Extreme Challenge • 2x Score", RED)
-        ]
-        
-        # Update and draw buttons
-        if mouse_pos:
-            for btn in self.difficulty_buttons:
-                btn.update(mouse_pos)
-        
-        for i, (btn, (desc, color)) in enumerate(zip(self.difficulty_buttons, descriptions)):
-            btn.draw(surface, selected=(i == selection))
-            
-            # Description below button
-            desc_text = self.font_small.render(desc, True, color)
-            desc_x = SCREEN_WIDTH // 2 - desc_text.get_width() // 2
-            desc_y = btn.rect.bottom + 10
-            surface.blit(desc_text, (desc_x, desc_y))
-        
-        # Instructions
-        inst = self.font_small.render("Arrow Keys + ENTER  or  Click to Select", True, GRAY)
-        surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 600))
-
-    def draw_victory(self, surface, score):
-        """
-        Draw victory/game complete screen
-        Args:
-            surface: Pygame surface
-            score: Final score
-        """
-        surface.fill((0, 0, 0))  # BLACK
-        
-        # Victory text
-        victory = self.font_large.render("VICTORY!", True, (255, 215, 0))  # GOLD
-        surface.blit(victory, (640 - victory.get_width() // 2, 200))
-        
-        # Congratulations
-        congrats = self.font_medium.render("You completed Act 1!", True, (255, 255, 255))  # WHITE
-        surface.blit(congrats, (640 - congrats.get_width() // 2, 300))
-        
-        # Score
-        score_text = self.font_medium.render(f"Final Score: {score}", True, (0, 255, 255))  # CYAN
-        surface.blit(score_text, (640 - score_text.get_width() // 2, 380))
-        
-        # Message
-        msg = self.font_small.render("Your progress has been saved to the hall of champions!", 
-                                    True, (200, 200, 200))  # GRAY
-        surface.blit(msg, (640 - msg.get_width() // 2, 460))
-        
-        # Continue
-        cont = self.font_small.render("Press ENTER to return to menu", True, (100, 100, 100))  # GRAY
-        surface.blit(cont, (640 - cont.get_width() // 2, 550))
-
-    def draw_level_select(self, surface, levels, selection, difficulty):
-        """
-        Draw level selection screen
-        Args:
-            surface: Pygame surface
-            levels: List of all levels
-            selection: Currently selected level index
-            difficulty: Current difficulty string
-        """
+    def draw_controls_screen(self, surface):
+        """Draw controls reference screen"""
         surface.fill(BLACK)
         
         # Title
-        title = self.font_large.render(f"LEVEL SELECT - {difficulty}", True, CYAN)
+        title = self.font_large.render("CONTROLS", True, UI_HIGHLIGHT)
         surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 50))
         
-        subtitle = self.font_small.render("Choose your starting level", True, WHITE)
-        surface.blit(subtitle, (SCREEN_WIDTH // 2 - subtitle.get_width() // 2, 120))
+        # Two columns
+        col1_x = 120
+        col2_x = 660
+        start_y = 140
         
-        # Level list
-        start_y = 200
-        levels_to_show = min(len(levels), 10)
-        start_idx = max(0, selection - 5)
-        end_idx = min(len(levels), start_idx + 10)
+        # Movement
+        self._draw_control_section(surface, col1_x, start_y, "Movement", [
+            ("WASD / Arrows", "Move"),
+            ("Space", "Jump"),
+            ("Space (airborne)", "Double Jump"),
+            ("Space (on wall)", "Wall Jump"),
+        ])
         
-        for i in range(start_idx, end_idx):
-            color = YELLOW if i == selection else WHITE
-            
-            # Level info
-            level_name = f"Level {i}"
-            if i < len(levels):
-                width = levels[i].get('width', 'N/A')
-                level_name += f" - {width}px"
-            
-            text = self.font_medium.render(level_name, True, color)
-            surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 
-                            start_y + (i - start_idx) * 50))
+        # Combat
+        self._draw_control_section(surface, col2_x, start_y, "Combat", [
+            ("Z", "Shoot"),
+            ("X", "Melee Attack"),
+            ("U", "Upgrade Weapon"),
+        ])
         
-        # Instructions
-        inst1 = self.font_small.render("Arrow Keys to select, ENTER to start", True, GRAY)
-        inst2 = self.font_small.render("ESC to go back", True, GRAY)
-        surface.blit(inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, SCREEN_HEIGHT - 100))
-        surface.blit(inst2, (SCREEN_WIDTH // 2 - inst2.get_width() // 2, SCREEN_HEIGHT - 60))
+        # System
+        self._draw_control_section(surface, col1_x, start_y + 250, "System", [
+            ("P / ESC", "Pause"),
+            ("F1", "Toggle Controls"),
+            ("F3", "Debug Info"),
+            ("F5", "Quick Save"),
+        ])
+        
+        # Hint
+        hint = self.font_tiny.render("Press ESC to return", True, UI_TEXT_DIM)
+        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 40))
+    
+    def _draw_control_section(self, surface, x, y, title, controls):
+        """Helper to draw a control section"""
+        # Section title
+        title_text = self.font_medium.render(title, True, UI_HIGHLIGHT)
+        surface.blit(title_text, (x, y))
+        
+        # Controls
+        y += 40
+        for key, action in controls:
+            key_text = self.font_small.render(key, True, YELLOW)
+            action_text = self.font_small.render(f"— {action}", True, UI_TEXT)
+            surface.blit(key_text, (x, y))
+            surface.blit(action_text, (x + 170, y))
+            y += 32
+    
+    def draw_level_map_screen(self, surface):
+        """Draw level map screen"""
+        surface.fill(BLACK)
+        
+        # Title
+        title = self.font_large.render("LEVEL MAP", True, UI_HIGHLIGHT)
+        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
+        
+        # Act 1 info
+        act_title = self.font_medium.render("ACT 1 - FREE VERSION", True, CYAN)
+        surface.blit(act_title, (100, 120))
+        
+        playtime = self.font_small.render("Approx. 2 hours of gameplay", True, UI_TEXT_DIM)
+        surface.blit(playtime, (120, 155))
+        
+        # Levels
+        levels = [
+            "Level 0: Tutorial - Training Facility",
+            "Level 1: The Awakening",
+            "Level 2: Rising Conflict", 
+            "Level 3: The Ascent",
+            "Level 4: Deep Dive",
+            "Level 5: Convergence",
+            "Level 6: BOSS - Guardian's Lair"
+        ]
+        
+        y = 200
+        for i, level in enumerate(levels):
+            if "BOSS" in level:
+                color = YELLOW
+            else:
+                color = UI_TEXT
+            text = self.font_small.render(level, True, color)
+            surface.blit(text, (140, y))
+            y += 35
+        
+        # Future content
+        future_y = 470
+        future_title = self.font_medium.render("ACTS 2-4 - COMING SOON", True, UI_TEXT_DIM)
+        surface.blit(future_title, (100, future_y))
+        
+        price = self.font_small.render("$1.99 for 6+ hours of additional content", True, UI_TEXT_DIM)
+        surface.blit(price, (120, future_y + 35))
+        
+        # Hint
+        hint = self.font_tiny.render("Press ESC to return", True, UI_TEXT_DIM)
+        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 40))

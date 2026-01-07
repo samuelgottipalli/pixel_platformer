@@ -210,7 +210,7 @@ def get_complete_act1_levels():
             *[{'x': 6132, 'y': 600 - i * 45, 'solid': True} for i in range(14)],
             *[{'x': 6100 - (i % 2) * 64, 'y': 575 - i * 45, 'solid': True} for i in range(14)],
             # Spire top
-            *[{'x': 6700 + i * TILE_SIZE, 'y': 50, 'solid': True} for i in range(20)],
+            *[{'x': 6900 + i * TILE_SIZE, 'y': 50, 'solid': True} for i in range(20)],
             
             # FIXED: Static floating platform after spire (3rd tower)
             {'x': 7300, 'y': 120, 'solid': True},

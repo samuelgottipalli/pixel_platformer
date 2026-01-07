@@ -27,6 +27,7 @@ MENU_BACK = [pygame.K_ESCAPE]
 PAUSE = [pygame.K_ESCAPE, pygame.K_p]
 SAVE_GAME = [pygame.K_F5]
 QUIT = [pygame.K_ESCAPE]
+TOGGLE_CONTROLS = [pygame.K_F1]
 
 # Debug Controls
 DEBUG_TOGGLE = [pygame.K_F3]

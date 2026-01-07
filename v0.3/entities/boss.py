@@ -17,7 +17,6 @@ class Boss:
     - Multiple health phases
     - Different attack patterns per phase
     - Invulnerability periods
-    - Minion spawning
     - Visual feedback
     """
     
@@ -63,11 +62,6 @@ class Boss:
         self.attack_cooldown = 120  # 2 seconds
         self.current_attack = None
         self.attack_state = 0
-        
-        # Minion spawning
-        self.minion_timer = 0
-        self.minion_cooldown = 300  # 5 seconds
-        self.minions_spawned = []
         
         # Animation
         self.animation_timer = 0
@@ -122,9 +116,6 @@ class Boss:
         # Attack AI
         self._update_attacks(player, current_time)
         
-        # Minion spawning
-        self._update_minions(current_time)
-        
         # Animation
         self._update_animation(current_time)
         
@@ -167,7 +158,6 @@ class Boss:
             self.damage_flash -= 1
             
         self.attack_timer += 1
-        self.minion_timer += 1
         
     def _update_movement(self, player):
         """Update boss movement patterns"""
@@ -223,32 +213,20 @@ class Boss:
             # Phase 1: Simple projectile attacks
             attack = 'projectile'
         elif self.phase == 2:
-            # Phase 2: Projectile + slam attack
-            attack = 'projectile' if distance > 200 else 'slam'
+            # Phase 2: Projectile + spread attack
+            attack = 'projectile' if distance > 200 else 'projectile_spread'
         else:
-            # Phase 3: All attacks + laser
+            # Phase 3: All attacks
             if distance > 300:
-                attack = 'laser'
-            elif distance > 150:
                 attack = 'projectile_spread'
+            elif distance > 150:
+                attack = 'projectile'
             else:
                 attack = 'slam'
                 
         self.current_attack = attack
         self.attack_state = 0
         self.attack_timer = 0
-        
-    def _update_minions(self, current_time):
-        """Spawn minions periodically"""
-        if self.phase < 2:
-            return  # Only spawn minions in phase 2+
-            
-        if self.minion_timer < self.minion_cooldown:
-            return
-            
-        # Spawn minion
-        self.minion_timer = 0
-        # Minion spawn will be handled by game logic
         
     def _update_animation(self, current_time):
         """Update visual animations"""
@@ -285,10 +263,6 @@ class Boss:
     def get_projectile_spawn_point(self):
         """Get point where projectiles spawn"""
         return (self.x + self.width // 2, self.y + self.height // 2)
-        
-    def should_spawn_minion(self):
-        """Check if should spawn minion this frame"""
-        return self.phase >= 2 and self.minion_timer == 0
         
     def get_current_attack(self):
         """Get current attack pattern"""
