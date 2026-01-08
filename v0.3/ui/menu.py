@@ -1,5 +1,5 @@
 """
-Menu screens with modern design and full mouse support
+Menu screens - Complete version with Controls and Level Map
 """
 import pygame
 from config.settings import (
@@ -8,7 +8,7 @@ from config.settings import (
 )
 
 class Menu:
-    """Handles all menu screens with modern design and mouse support"""
+    """Handles all menu screens"""
     
     def __init__(self, font_large, font_medium, font_small):
         """Initialize with cleaner, smaller fonts"""
@@ -16,6 +16,54 @@ class Menu:
         self.font_medium = pygame.font.Font(None, 32)
         self.font_small = pygame.font.Font(None, 22)
         self.font_tiny = pygame.font.Font(None, 18)
+        
+        # Button definitions for mouse handling
+        self.main_buttons = self._create_main_buttons()
+        self.pause_buttons = self._create_pause_buttons()
+        self.char_buttons = self._create_char_buttons()
+        
+    def _create_main_buttons(self):
+        """Create button rectangles for main menu (5 buttons)"""
+        buttons = []
+        button_width = 280
+        button_height = 40
+        button_x = SCREEN_WIDTH // 2 - button_width // 2
+        start_y = 260
+        for i in range(5):  # 5: New Game, Load Game, Controls, Level Map, Quit
+            y = start_y + i * 55
+            buttons.append(pygame.Rect(button_x, y - 8, button_width, button_height))
+        return buttons
+    
+    def _create_pause_buttons(self):
+        """Create button rectangles for pause menu"""
+        buttons = []
+        button_width = 280
+        button_height = 40
+        button_x = SCREEN_WIDTH // 2 - button_width // 2
+        start_y = SCREEN_HEIGHT // 2 - 30
+        for i in range(3):
+            y = start_y + i * 55
+            buttons.append(pygame.Rect(button_x, y - 8, button_width, button_height))
+        return buttons
+    
+    def _create_char_buttons(self):
+        """Create button rectangles for character selection"""
+        buttons = []
+        char_y = 280
+        for i in range(4):
+            x = SCREEN_WIDTH // 2 - 250 + i * 120
+            buttons.append(pygame.Rect(x, char_y, 56, 96))
+        return buttons
+    
+    def check_button_click(self, buttons, mouse_pos, mouse_pressed):
+        """Check if any button was clicked"""
+        if not mouse_pressed[0]:  # Left click
+            return -1
+        
+        for i, button in enumerate(buttons):
+            if button.collidepoint(mouse_pos):
+                return i
+        return -1
         
     def _draw_button(self, surface, text, y, is_selected):
         """Helper to draw a consistent button"""
@@ -42,7 +90,7 @@ class Menu:
         surface.blit(text_surf, (text_x, text_y))
         
     def draw_main_menu(self, surface, selection, mouse_pos=None):
-        """Draw main menu with mouse support"""
+        """Draw main menu - 5 options"""
         surface.fill(BLACK)
         
         # Title
@@ -53,7 +101,7 @@ class Menu:
         subtitle = self.font_small.render("2D Side-Scrolling Action", True, UI_TEXT_DIM)
         surface.blit(subtitle, (SCREEN_WIDTH // 2 - subtitle.get_width() // 2, 160))
         
-        # Menu options
+        # Menu options - ALL 5
         options = ["New Game", "Load Game", "Controls", "Level Map", "Quit"]
         start_y = 260
         
@@ -63,208 +111,19 @@ class Menu:
             
             # Check mouse hover
             if mouse_pos:
-                button_width = 280
-                button_height = 40
-                button_x = SCREEN_WIDTH // 2 - button_width // 2
-                button_rect = pygame.Rect(button_x, y - 8, button_width, button_height)
-                if button_rect.collidepoint(mouse_pos):
+                button = self.main_buttons[i]
+                if button.collidepoint(mouse_pos):
                     is_selected = True
             
             self._draw_button(surface, option, y, is_selected)
         
         # Controls hint
         hint = self.font_tiny.render("↑↓ Navigate   ENTER Select   Mouse Click", True, UI_TEXT_DIM)
-        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 35))
-    
-    def draw_difficulty_select(self, surface, selection, mouse_pos=None):
-        """Draw difficulty selection screen"""
-        surface.fill(BLACK)
+        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 50))
         
-        # Title
-        title = self.font_large.render("SELECT DIFFICULTY", True, UI_HIGHLIGHT)
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 100))
-        
-        # Difficulty options
-        difficulties = [
-            ("EASY", "More lives, more resources"),
-            ("NORMAL", "Balanced challenge"),
-            ("HARD", "For skilled players")
-        ]
-        
-        start_y = 240
-        for i, (diff, desc) in enumerate(difficulties):
-            y = start_y + i * 80
-            is_selected = i == selection
-            
-            # Check mouse hover
-            if mouse_pos:
-                button_width = 280
-                button_height = 60
-                button_x = SCREEN_WIDTH // 2 - button_width // 2
-                button_rect = pygame.Rect(button_x, y - 8, button_width, button_height)
-                if button_rect.collidepoint(mouse_pos):
-                    is_selected = True
-            
-            # Draw difficulty button (larger)
-            button_width = 280
-            button_height = 60
-            x = SCREEN_WIDTH // 2 - button_width // 2
-            button_rect = pygame.Rect(x, y - 8, button_width, button_height)
-            
-            if is_selected:
-                pygame.draw.rect(surface, UI_HIGHLIGHT, button_rect, border_radius=5)
-                pygame.draw.rect(surface, WHITE, button_rect, 2, border_radius=5)
-                title_color = BLACK
-                desc_color = (40, 40, 40)
-            else:
-                pygame.draw.rect(surface, UI_BG, button_rect, border_radius=5)
-                pygame.draw.rect(surface, UI_BORDER, button_rect, 1, border_radius=5)
-                title_color = UI_TEXT
-                desc_color = UI_TEXT_DIM
-            
-            # Difficulty name
-            diff_text = self.font_medium.render(diff, True, title_color)
-            surface.blit(diff_text, (x + button_width // 2 - diff_text.get_width() // 2, y))
-            
-            # Description
-            desc_text = self.font_tiny.render(desc, True, desc_color)
-            surface.blit(desc_text, (x + button_width // 2 - desc_text.get_width() // 2, y + 30))
-        
-        # Controls hint
-        hint = self.font_tiny.render("↑↓ Select   ENTER Continue   ESC Back   Mouse Click", True, UI_TEXT_DIM)
-        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 40))
-    
-    def draw_char_select(self, surface, player_name, char_selection, mouse_pos=None):
-        """Draw character selection screen with mouse support"""
-        surface.fill(BLACK)
-        
-        # Title
-        title = self.font_large.render("CHARACTER SELECT", True, UI_HIGHLIGHT)
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 80))
-        
-        # Name input
-        name_label = self.font_small.render("Enter Name:", True, UI_TEXT_DIM)
-        surface.blit(name_label, (SCREEN_WIDTH // 2 - name_label.get_width() // 2, 160))
-        
-        name_text = self.font_medium.render(f"{player_name}_", True, WHITE)
-        surface.blit(name_text, (SCREEN_WIDTH // 2 - name_text.get_width() // 2, 190))
-        
-        # Characters
-        char_y = 280
-        for i in range(4):
-            x = SCREEN_WIDTH // 2 - 250 + i * 120
-            
-            rect = pygame.Rect(x, char_y, 56, 96)
-            is_selected = i == char_selection
-            
-            # Check mouse hover
-            if mouse_pos and rect.collidepoint(mouse_pos):
-                is_selected = True
-            
-            pygame.draw.rect(surface, CHARACTER_COLORS[i], rect, border_radius=5)
-            
-            if is_selected:
-                pygame.draw.rect(surface, YELLOW, rect, 3, border_radius=5)
-            else:
-                pygame.draw.rect(surface, UI_BORDER, rect, 1, border_radius=5)
-            
-            # Eyes
-            pygame.draw.circle(surface, WHITE, (x + 20, char_y + 30), 6)
-            pygame.draw.circle(surface, BLACK, (x + 22, char_y + 30), 3)
-        
-        # Instructions
-        inst = self.font_tiny.render("Type name   ←→ Select   ENTER Start   Mouse Click", True, UI_TEXT_DIM)
-        surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, SCREEN_HEIGHT - 50))
-    
-    def draw_pause_menu(self, surface, selection=0, mouse_pos=None):
-        """Draw pause menu with mouse support"""
-        # Semi-transparent overlay
-        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-        overlay.set_alpha(180)
-        overlay.fill(BLACK)
-        surface.blit(overlay, (0, 0))
-        
-        # Paused text
-        text = self.font_large.render("PAUSED", True, YELLOW)
-        surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, SCREEN_HEIGHT // 2 - 120))
-        
-        # Options
-        options = ["Resume", "Return to Menu", "Quit Game"]
-        for i, option in enumerate(options):
-            y = SCREEN_HEIGHT // 2 - 30 + i * 55
-            is_selected = i == selection
-            
-            # Check mouse hover
-            if mouse_pos:
-                button_width = 280
-                button_height = 40
-                button_x = SCREEN_WIDTH // 2 - button_width // 2
-                button_rect = pygame.Rect(button_x, y - 8, button_width, button_height)
-                if button_rect.collidepoint(mouse_pos):
-                    is_selected = True
-            
-            self._draw_button(surface, option, y, is_selected)
-        
-        hint = self.font_tiny.render("↑↓ Navigate   ENTER Select   Mouse Click", True, UI_TEXT_DIM)
-        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT // 2 + 120))
-    
-    def draw_profile_select(self, surface, profiles, selection, mouse_pos=None):
-        """Draw profile selection with mouse support"""
-        surface.fill(BLACK)
-        
-        # Title
-        title = self.font_large.render("SELECT PROFILE", True, UI_HIGHLIGHT)
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 80))
-        
-        if not profiles:
-            text = self.font_medium.render("No saved profiles", True, UI_TEXT)
-            surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 250))
-            
-            inst = self.font_tiny.render("ESC to go back", True, UI_TEXT_DIM)
-            surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 350))
-        else:
-            y_start = 180
-            for i, profile in enumerate(profiles):
-                y = y_start + i * 70
-                is_selected = i == selection
-                
-                # Profile box
-                box_width = 500
-                box_height = 60
-                box_x = SCREEN_WIDTH // 2 - box_width // 2
-                box_rect = pygame.Rect(box_x, y, box_width, box_height)
-                
-                # Check mouse hover
-                if mouse_pos and box_rect.collidepoint(mouse_pos):
-                    is_selected = True
-                
-                if is_selected:
-                    pygame.draw.rect(surface, UI_HIGHLIGHT, box_rect, border_radius=5)
-                    pygame.draw.rect(surface, WHITE, box_rect, 2, border_radius=5)
-                    name_color = BLACK
-                    stats_color = (40, 40, 40)
-                else:
-                    pygame.draw.rect(surface, UI_BG, box_rect, border_radius=5)
-                    pygame.draw.rect(surface, UI_BORDER, box_rect, 1, border_radius=5)
-                    name_color = UI_TEXT
-                    stats_color = UI_TEXT_DIM
-                
-                # Name
-                name_text = self.font_medium.render(
-                    f"{profile.name} - Char {profile.character + 1}", 
-                    True, name_color
-                )
-                surface.blit(name_text, (box_x + 15, y + 8))
-                
-                # Stats
-                stats_text = self.font_tiny.render(
-                    f"Score: {profile.total_score}  |  Levels: {profile.levels_completed}  |  Coins: {profile.coins_collected}",
-                    True, stats_color
-                )
-                surface.blit(stats_text, (box_x + 15, y + 36))
-            
-            inst = self.font_tiny.render("↑↓ Select   ENTER Load   ESC Back   Mouse Click", True, UI_TEXT_DIM)
-            surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, SCREEN_HEIGHT - 40))
+        # Version info
+        version = self.font_tiny.render("Press F1 in-game for controls overlay", True, UI_TEXT_DIM)
+        surface.blit(version, (SCREEN_WIDTH // 2 - version.get_width() // 2, SCREEN_HEIGHT - 25))
     
     def draw_controls_screen(self, surface, mouse_pos=None):
         """Draw controls/keybindings screen"""
@@ -368,10 +227,9 @@ class Menu:
             y = y_start + i * 30
             if "BOSS" in level:
                 color = YELLOW
-                level_text = self.font_small.render(level, True, color)
             else:
                 color = UI_TEXT
-                level_text = self.font_small.render(level, True, color)
+            level_text = self.font_small.render(level, True, color)
             surface.blit(level_text, (220, y))
         
         # Future acts (grayed out)
@@ -386,11 +244,142 @@ class Menu:
         hint = self.font_tiny.render("ESC to return to menu", True, UI_TEXT_DIM)
         surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 40))
     
+    def draw_char_select(self, surface, player_name, char_selection, mouse_pos=None):
+        """Draw character selection screen"""
+        surface.fill(BLACK)
+        
+        # Title
+        title = self.font_large.render("CHARACTER SELECT", True, UI_HIGHLIGHT)
+        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 80))
+        
+        # Name input
+        name_label = self.font_small.render("Enter Name:", True, UI_TEXT_DIM)
+        surface.blit(name_label, (SCREEN_WIDTH // 2 - name_label.get_width() // 2, 160))
+        
+        name_text = self.font_medium.render(f"{player_name}_", True, WHITE)
+        surface.blit(name_text, (SCREEN_WIDTH // 2 - name_text.get_width() // 2, 190))
+        
+        # Characters
+        char_y = 280
+        for i in range(4):
+            x = SCREEN_WIDTH // 2 - 250 + i * 120
+            
+            rect = pygame.Rect(x, char_y, 56, 96)
+            is_selected = i == char_selection
+            
+            # Check mouse hover
+            if mouse_pos:
+                button = self.char_buttons[i]
+                if button.collidepoint(mouse_pos):
+                    is_selected = True
+            
+            pygame.draw.rect(surface, CHARACTER_COLORS[i], rect, border_radius=5)
+            
+            if is_selected:
+                pygame.draw.rect(surface, YELLOW, rect, 3, border_radius=5)
+            else:
+                pygame.draw.rect(surface, UI_BORDER, rect, 1, border_radius=5)
+            
+            # Eyes
+            pygame.draw.circle(surface, WHITE, (x + 20, char_y + 30), 6)
+            pygame.draw.circle(surface, BLACK, (x + 22, char_y + 30), 3)
+        
+        # Instructions
+        inst = self.font_tiny.render("Type name   ←→ Select   ENTER Start   Mouse Click", True, UI_TEXT_DIM)
+        surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, SCREEN_HEIGHT - 50))
+    
+    def draw_pause_menu(self, surface, selection=0, mouse_pos=None):
+        """Draw pause menu overlay"""
+        # Semi-transparent overlay
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay.set_alpha(180)
+        overlay.fill(BLACK)
+        surface.blit(overlay, (0, 0))
+        
+        # Paused text
+        text = self.font_large.render("PAUSED", True, YELLOW)
+        surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, SCREEN_HEIGHT // 2 - 120))
+        
+        # Options
+        options = ["Resume", "Return to Menu", "Quit Game"]
+        for i, option in enumerate(options):
+            y = SCREEN_HEIGHT // 2 - 30 + i * 55
+            is_selected = i == selection
+            
+            # Check mouse hover
+            if mouse_pos:
+                button = self.pause_buttons[i]
+                if button.collidepoint(mouse_pos):
+                    is_selected = True
+            
+            self._draw_button(surface, option, y, is_selected)
+        
+        hint = self.font_tiny.render("↑↓ Navigate   ENTER Select   Mouse Click", True, UI_TEXT_DIM)
+        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT // 2 + 120))
+    
+    def draw_profile_select(self, surface, profiles, selection, mouse_pos=None):
+        """Draw profile selection"""
+        surface.fill(BLACK)
+        
+        # Title
+        title = self.font_large.render("SELECT PROFILE", True, UI_HIGHLIGHT)
+        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 80))
+        
+        if not profiles:
+            text = self.font_medium.render("No saved profiles", True, UI_TEXT)
+            surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 250))
+            
+            inst = self.font_tiny.render("ESC to go back", True, UI_TEXT_DIM)
+            surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, 350))
+        else:
+            y_start = 180
+            for i, profile in enumerate(profiles):
+                y = y_start + i * 70
+                is_selected = i == selection
+                
+                # Profile box
+                box_width = 500
+                box_height = 60
+                box_x = SCREEN_WIDTH // 2 - box_width // 2
+                box_rect = pygame.Rect(box_x, y, box_width, box_height)
+                
+                # Check mouse hover
+                if mouse_pos and box_rect.collidepoint(mouse_pos):
+                    is_selected = True
+                
+                if is_selected:
+                    pygame.draw.rect(surface, UI_HIGHLIGHT, box_rect, border_radius=5)
+                    pygame.draw.rect(surface, WHITE, box_rect, 2, border_radius=5)
+                    name_color = BLACK
+                    stats_color = (40, 40, 40)
+                else:
+                    pygame.draw.rect(surface, UI_BG, box_rect, border_radius=5)
+                    pygame.draw.rect(surface, UI_BORDER, box_rect, 1, border_radius=5)
+                    name_color = UI_TEXT
+                    stats_color = UI_TEXT_DIM
+                
+                # Name
+                name_text = self.font_medium.render(
+                    f"{profile.name} - Char {profile.character + 1}", 
+                    True, name_color
+                )
+                surface.blit(name_text, (box_x + 15, y + 8))
+                
+                # Stats
+                stats_text = self.font_tiny.render(
+                    f"Score: {profile.total_score}  |  Levels: {profile.levels_completed}  |  Coins: {profile.coins_collected}",
+                    True, stats_color
+                )
+                surface.blit(stats_text, (box_x + 15, y + 36))
+            
+            inst = self.font_tiny.render("↑↓ Select   ENTER Load   ESC Back   Mouse Click", True, UI_TEXT_DIM)
+            surface.blit(inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, SCREEN_HEIGHT - 40))
+    
     def draw_game_over(self, surface, score):
         """Draw game over screen"""
         surface.fill(BLACK)
         
-        text = self.font_large.render("GAME OVER", True, RED)
+        text = self.font_large.render("GAME OVER", True, (220, 80, 80))
         surface.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, SCREEN_HEIGHT // 2 - 100))
         
         score_text = self.font_medium.render(f"Final Score: {score}", True, WHITE)

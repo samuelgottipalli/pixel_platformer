@@ -91,82 +91,50 @@ class Game:
 
     def _handle_mouse_click(self):
         """Handle mouse clicks on buttons"""
-        mouse_pressed = pygame.mouse.get_pressed()[0]
+        mouse_pressed = pygame.mouse.get_pressed()
+        if not mouse_pressed[0]:  # Left click
+            return
 
         if self.state == GameState.MENU:
-            idx = self.menu.check_button_click(self.menu.main_buttons, self.mouse_pos, mouse_pressed)
+            idx = self.menu.check_button_click(
+                self.menu.main_buttons, self.mouse_pos, mouse_pressed
+            )
             if idx >= 0:
                 self.menu_selection = idx
                 self._handle_menu_selection()
 
-        elif self.state == GameState.PAUSED:
-            idx = self.menu.check_button_click(self.menu.pause_buttons, self.mouse_pos, mouse_pressed)
-            if idx >= 0:
-                self.pause_selection = idx
-                self._handle_pause_selection()
-
         elif self.state == GameState.CHAR_SELECT:
-            # Back button
-            if self.menu.back_button.is_clicked(self.mouse_pos, mouse_pressed):
-                self.state = GameState.MENU
-                return
-
-            # Character buttons
-            for i, btn in enumerate(self.menu.char_buttons):
-                if btn.is_clicked(self.mouse_pos, mouse_pressed):
-                    self.char_selection = i
-                    break
-
-            # Start button
-            if self.menu.start_button.is_clicked(self.mouse_pos, mouse_pressed):
+            idx = self.menu.check_button_click(
+                self.menu.char_buttons, self.mouse_pos, mouse_pressed
+            )
+            if idx >= 0:
+                self.char_selection = idx
+                # Auto-start if name entered
                 if len(self.player_name) > 0:
                     self._create_new_profile()
 
         elif self.state == GameState.PROFILE_SELECT:
-            # Back button
-            if self.menu.back_button.is_clicked(self.mouse_pos, mouse_pressed):
-                self.state = GameState.MENU
-                return
-
-            if not self.profiles:
-                return
-
-            # Check profile boxes and buttons
-            y_start = 150
+            # Manual check for profile boxes
+            mouse_x, mouse_y = self.mouse_pos
+            y_start = 180
+            box_width = 500
+            box_height = 60
+            box_x = SCREEN_WIDTH // 2 - box_width // 2
             for i in range(len(self.profiles)):
-                y = y_start + i * 100
-
-                # Profile box click selects it
-                box = pygame.Rect(150, y - 10, 780, 90)
-                if box.collidepoint(self.mouse_pos):
-                    self.profile_selection = i
-
-                # Load button (positioned at x=750)
-                load_btn = pygame.Rect(750, y + 10, 80, 40)
-                if load_btn.collidepoint(self.mouse_pos):
+                y = y_start + i * 70
+                box_rect = pygame.Rect(box_x, y, box_width, box_height)
+                if box_rect.collidepoint(mouse_x, mouse_y):
                     self.profile_selection = i
                     self._load_selected_profile()
-                    return
+                    break
 
-                # Delete button (positioned at x=840)
-                del_btn = pygame.Rect(840, y + 10, 80, 40)
-                if del_btn.collidepoint(self.mouse_pos):
-                    self.profile_selection = i
-                    self._delete_selected_profile()
-                    return
-
-        elif self.state == GameState.DIFFICULTY_SELECT:
-            # Back button
-            if self.menu.back_button.is_clicked(self.mouse_pos, mouse_pressed):
-                self.state = GameState.MENU
-                return
-
-            # Difficulty buttons
-            idx = self.menu.check_button_click(self.menu.difficulty_buttons, 
-                                            self.mouse_pos, mouse_pressed)
+        elif self.state == GameState.PAUSED:
+            idx = self.menu.check_button_click(
+                self.menu.pause_buttons, self.mouse_pos, mouse_pressed
+            )
             if idx >= 0:
-                self.difficulty_selection = idx
-                self._apply_difficulty_selection()
+                self.pause_selection = idx
+                self._handle_pause_selection()
 
     def _handle_events(self):
         """Handle pygame events"""
@@ -187,6 +155,10 @@ class Game:
                 self._handle_char_select_events(event)
             elif self.state == GameState.PROFILE_SELECT:
                 self._handle_profile_select_events(event)
+            elif self.state == GameState.CONTROLS:
+                self._handle_controls_events(event)
+            elif self.state == GameState.LEVEL_MAP:
+                self._handle_level_map_events(event)
             elif self.state == GameState.PAUSED:
                 self._handle_pause_events(event)
             elif self.state == GameState.GAME_OVER:
@@ -202,9 +174,9 @@ class Game:
         """Handle difficulty selection input"""
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
-                self.difficulty_selection = (self.difficulty_selection - 1) % 3
+                self.difficulty_selection = (self.difficulty_selection - 1) % 5
             elif controls.check_key_event(event, controls.MENU_DOWN):
-                self.difficulty_selection = (self.difficulty_selection + 1) % 3
+                self.difficulty_selection = (self.difficulty_selection + 1) % 5
             elif controls.check_key_event(event, controls.MENU_SELECT):
                 # Set difficulty
                 difficulties = ['EASY', 'NORMAL', 'HARD']
@@ -235,6 +207,18 @@ class Game:
         self.state = GameState.CHAR_SELECT
         self.player_name = ""
 
+    def _handle_controls_events(self, event):
+        """Handle controls screen input"""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.state = GameState.MENU
+
+    def _handle_level_map_events(self, event):
+        """Handle level map screen input"""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.state = GameState.MENU
+
     def _handle_menu_events(self, event):
         """Handle main menu input"""
         if event.type == pygame.KEYDOWN:
@@ -248,13 +232,17 @@ class Game:
     def _handle_menu_selection(self):
         """Handle menu option selection"""
         if self.menu_selection == 0:  # New Game
-            self.state = GameState.DIFFICULTY_SELECT  # CHANGED FROM CHAR_SELECT
-            self.difficulty_selection = 1  # Default to Normal
+            self.state = GameState.CHAR_SELECT
+            self.player_name = ""
         elif self.menu_selection == 1:  # Load Game
             if self.profiles:
                 self.state = GameState.PROFILE_SELECT
                 self.profile_selection = 0
-        elif self.menu_selection == 2:  # Quit
+        elif self.menu_selection == 2:  # Controls
+            self.state = GameState.CONTROLS
+        elif self.menu_selection == 3:  # Level Map
+            self.state = GameState.LEVEL_MAP
+        elif self.menu_selection == 4:  # Quit
             self.running = False
 
     def _handle_profile_select_events(self, event):
@@ -699,6 +687,10 @@ class Game:
         elif self.state == GameState.CHAR_SELECT:
             self.menu.draw_char_select(self.screen, self.player_name, 
                                     self.char_selection, self.mouse_pos)
+        elif self.state == GameState.CONTROLS:
+            self.menu.draw_controls_screen(self.screen, self.mouse_pos)
+        elif self.state == GameState.LEVEL_MAP:
+            self.menu.draw_level_map_screen(self.screen, self.mouse_pos)
         elif self.state == GameState.PLAYING:
             self._draw_game()
         elif self.state == GameState.PAUSED:
