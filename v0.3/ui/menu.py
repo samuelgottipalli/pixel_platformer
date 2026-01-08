@@ -244,6 +244,65 @@ class Menu:
         hint = self.font_tiny.render("ESC to return to menu", True, UI_TEXT_DIM)
         surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 40))
     
+    def draw_difficulty_select(self, surface, selection, mouse_pos=None):
+        """Draw difficulty selection screen"""
+        surface.fill(BLACK)
+        
+        # Title
+        title = self.font_large.render("SELECT DIFFICULTY", True, UI_HIGHLIGHT)
+        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 80))
+        
+        # Subtitle
+        subtitle = self.font_small.render("Choose your challenge level", True, UI_TEXT_DIM)
+        surface.blit(subtitle, (SCREEN_WIDTH // 2 - subtitle.get_width() // 2, 140))
+        
+        # Difficulty options
+        difficulties = [
+            ("EASY", "5 Lives • More Resources • 2x Time", (100, 200, 100)),
+            ("NORMAL", "3 Lives • Balanced Challenge • Standard", WHITE),
+            ("HARD", "1 Life • Extreme Challenge • 2x Score", (220, 80, 80))
+        ]
+        
+        y_start = 220
+        for i, (name, desc, color) in enumerate(difficulties):
+            y = y_start + i * 120
+            is_selected = i == selection
+            
+            # Button box
+            box_width = 500
+            box_height = 100
+            box_x = SCREEN_WIDTH // 2 - box_width // 2
+            box_rect = pygame.Rect(box_x, y, box_width, box_height)
+            
+            # Check mouse hover
+            if mouse_pos and box_rect.collidepoint(mouse_pos):
+                is_selected = True
+            
+            if is_selected:
+                pygame.draw.rect(surface, UI_HIGHLIGHT, box_rect, border_radius=8)
+                pygame.draw.rect(surface, color, box_rect, 3, border_radius=8)
+                name_color = BLACK
+                desc_color = (40, 40, 40)
+            else:
+                pygame.draw.rect(surface, UI_BG, box_rect, border_radius=8)
+                pygame.draw.rect(surface, color, box_rect, 2, border_radius=8)
+                name_color = color
+                desc_color = UI_TEXT_DIM
+            
+            # Difficulty name
+            name_text = self.font_medium.render(name, True, name_color)
+            name_x = box_x + box_width // 2 - name_text.get_width() // 2
+            surface.blit(name_text, (name_x, y + 25))
+            
+            # Description
+            desc_text = self.font_tiny.render(desc, True, desc_color)
+            desc_x = box_x + box_width // 2 - desc_text.get_width() // 2
+            surface.blit(desc_text, (desc_x, y + 60))
+        
+        # Instructions
+        hint = self.font_tiny.render("↑↓ Select   ENTER Confirm   ESC Back   Mouse Click", True, UI_TEXT_DIM)
+        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 40))
+    
     def draw_char_select(self, surface, player_name, char_selection, mouse_pos=None):
         """Draw character selection screen"""
         surface.fill(BLACK)

@@ -59,6 +59,7 @@ class Game:
         self.level = None
         self.camera = Camera()
         self.difficulty = 'NORMAL'  # EASY, NORMAL, HARD
+        self.difficulty_selection = 1  # Default to Normal (0=Easy, 1=Normal, 2=Hard)
         self.difficulty_manager = None
 
         # Load levels
@@ -102,6 +103,24 @@ class Game:
             if idx >= 0:
                 self.menu_selection = idx
                 self._handle_menu_selection()
+
+        elif self.state == GameState.DIFFICULTY_SELECT:         # ← ADD THIS BLOCK
+            # Check difficulty selection boxes
+            mouse_x, mouse_y = self.mouse_pos
+            y_start = 220
+            box_width = 500
+            box_height = 100
+            box_x = SCREEN_WIDTH // 2 - box_width // 2
+            for i in range(3):
+                y = y_start + i * 120
+                box_rect = pygame.Rect(box_x, y, box_width, box_height)
+                if box_rect.collidepoint(mouse_x, mouse_y):
+                    self.difficulty_selection = i
+                    difficulties = ['EASY', 'NORMAL', 'HARD']
+                    self.difficulty = difficulties[i]
+                    self.state = GameState.CHAR_SELECT
+                    self.player_name = ""
+                    break
 
         elif self.state == GameState.CHAR_SELECT:
             idx = self.menu.check_button_click(
@@ -151,6 +170,8 @@ class Game:
             # Keyboard events
             if self.state == GameState.MENU:
                 self._handle_menu_events(event)
+            elif self.state == GameState.DIFFICULTY_SELECT:
+                self._handle_difficulty_select_events(event)
             elif self.state == GameState.CHAR_SELECT:
                 self._handle_char_select_events(event)
             elif self.state == GameState.PROFILE_SELECT:
@@ -165,8 +186,6 @@ class Game:
                 self._handle_game_over_events(event)
             elif self.state == GameState.VICTORY:
                 self._handle_victory_events(event)
-            elif self.state == GameState.DIFFICULTY_SELECT:
-                self._handle_difficulty_select_events(event)
             elif self.state == GameState.LEVEL_SELECT:
                 self._handle_level_select_events(event)
 
@@ -174,30 +193,16 @@ class Game:
         """Handle difficulty selection input"""
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
-                self.difficulty_selection = (self.difficulty_selection - 1) % 5
+                self.difficulty_selection = (self.difficulty_selection - 1) % 3
             elif controls.check_key_event(event, controls.MENU_DOWN):
-                self.difficulty_selection = (self.difficulty_selection + 1) % 5
+                self.difficulty_selection = (self.difficulty_selection + 1) % 3
             elif controls.check_key_event(event, controls.MENU_SELECT):
-                # Set difficulty
+                # Apply difficulty and proceed to character select
                 difficulties = ['EASY', 'NORMAL', 'HARD']
                 self.difficulty = difficulties[self.difficulty_selection]
-
-                # Check if this difficulty is completed for current profile
-                if self.current_profile:
-                    completed = DifficultyCompletionTracker.has_completed_difficulty(
-                        self.current_profile.name, 
-                        self.difficulty
-                    )
-                    if completed:
-                        # Show level selection
-                        self.state = GameState.LEVEL_SELECT
-                        self.level_selection = 0
-                        return
-
-                # Otherwise go to character select
                 self.state = GameState.CHAR_SELECT
                 self.player_name = ""
-            elif controls.check_key_event(event, controls.MENU_BACK):
+            elif event.key == pygame.K_ESCAPE:
                 self.state = GameState.MENU
 
     def _apply_difficulty_selection(self):
@@ -232,8 +237,7 @@ class Game:
     def _handle_menu_selection(self):
         """Handle menu option selection"""
         if self.menu_selection == 0:  # New Game
-            self.state = GameState.CHAR_SELECT
-            self.player_name = ""
+            self.state = GameState.DIFFICULTY_SELECT
         elif self.menu_selection == 1:  # Load Game
             if self.profiles:
                 self.state = GameState.PROFILE_SELECT
