@@ -23,20 +23,20 @@ PLAYER_MAX_HEALTH = 100
 PLAYER_START_LIVES = 3
 PLAYER_MAX_JUMPS = 2
 PLAYER_INVINCIBILITY_DURATION = 120  # frames
-PLAYER_SPEED_BOOST_DURATION = 600    # frames
+PLAYER_SPEED_BOOST_DURATION = 600  # frames
 PLAYER_SPEED_BOOST_MULTIPLIER = 1.5
 
 # Combat
 SHOOT_BASE_COOLDOWN = 30  # frames
-MELEE_DURATION = 20       # frames
+MELEE_DURATION = 20  # frames
 MELEE_RANGE = 32
 
 # Weapon Upgrade Costs
 WEAPON_UPGRADE_COSTS = {
-    1: 20,   # Level 1 -> 2: 20 coins
-    2: 50,   # Level 2 -> 3: 50 coins
+    1: 20,  # Level 1 -> 2: 20 coins
+    2: 50,  # Level 2 -> 3: 50 coins
     3: 100,  # Level 3 -> 4: 100 coins
-    4: 999   # Level 4 is max
+    4: 999,  # Level 4 is max
 }
 
 # Difficulty Settings
@@ -81,52 +81,52 @@ PROGRESSIVE_DIFFICULTY_ENABLED = True
 PROGRESSIVE_DIFFICULTY_CURVE = 0.5  # How much harder each level gets (0-1)
 
 # Modern Color Palette - Muted and Professional
-BLACK = (15, 15, 20)           # Soft black
-WHITE = (240, 240, 245)        # Soft white
-GRAY = (120, 120, 130)         # Medium gray
-LIGHT_GRAY = (180, 180, 190)   # Light gray
-DARK_GRAY = (60, 60, 70)       # Dark gray
+BLACK = (15, 15, 20)  # Soft black
+WHITE = (240, 240, 245)  # Soft white
+GRAY = (120, 120, 130)  # Medium gray
+LIGHT_GRAY = (180, 180, 190)  # Light gray
+DARK_GRAY = (60, 60, 70)  # Dark gray
 
 # Accent Colors - Softer, less saturated
-RED = (220, 80, 80)            # Soft red
-GREEN = (80, 200, 120)         # Soft green
-BLUE = (90, 150, 230)          # Soft blue
-YELLOW = (240, 200, 80)        # Soft yellow
-PURPLE = (180, 100, 220)       # Soft purple
-CYAN = (100, 200, 220)         # Soft cyan
-ORANGE = (230, 140, 70)        # Soft orange
+RED = (220, 80, 80)  # Soft red
+GREEN = (80, 200, 120)  # Soft green
+BLUE = (90, 150, 230)  # Soft blue
+YELLOW = (240, 200, 80)  # Soft yellow
+PURPLE = (180, 100, 220)  # Soft purple
+CYAN = (100, 200, 220)  # Soft cyan
+ORANGE = (230, 140, 70)  # Soft orange
 
 # UI-specific Colors
-UI_BG = (25, 25, 35)           # UI background
-UI_BORDER = (100, 100, 120)    # UI borders
-UI_HIGHLIGHT = (120, 180, 240) # Selection highlight
-UI_TEXT = (220, 220, 230)      # Primary text
+UI_BG = (25, 25, 35)  # UI background
+UI_BORDER = (100, 100, 120)  # UI borders
+UI_HIGHLIGHT = (120, 180, 240)  # Selection highlight
+UI_TEXT = (220, 220, 230)  # Primary text
 UI_TEXT_DIM = (150, 150, 160)  # Secondary text
 
 # Theme Background Colors (slightly muted)
 THEME_BACKGROUNDS = {
-    'SCIFI': (15, 20, 35),
-    'NATURE': (30, 45, 35),
-    'SPACE': (8, 8, 18),
-    'UNDERGROUND': (25, 18, 15),
-    'UNDERWATER': (12, 25, 45)
+    "SCIFI": (15, 20, 35),
+    "NATURE": (30, 45, 35),
+    "SPACE": (8, 8, 18),
+    "UNDERGROUND": (25, 18, 15),
+    "UNDERWATER": (12, 25, 45),
 }
 
 # Theme Tile Colors (muted)
 THEME_TILE_COLORS = {
-    'SCIFI': (85, 90, 130),
-    'NATURE': (80, 120, 85),
-    'SPACE': (45, 45, 75),
-    'UNDERGROUND': (100, 70, 55),
-    'UNDERWATER': (45, 85, 120)
+    "SCIFI": (85, 90, 130),
+    "NATURE": (80, 120, 85),
+    "SPACE": (45, 45, 75),
+    "UNDERGROUND": (100, 70, 55),
+    "UNDERWATER": (45, 85, 120),
 }
 
 # Character Colors (slightly muted)
 CHARACTER_COLORS = [
-    (90, 150, 230),   # Blue
-    (80, 200, 120),   # Green
+    (90, 150, 230),  # Blue
+    (80, 200, 120),  # Green
     (180, 100, 220),  # Purple
-    (230, 140, 70)    # Orange
+    (230, 140, 70),  # Orange
 ]
 
 # Legacy colors for compatibility

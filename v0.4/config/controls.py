@@ -1,6 +1,7 @@
 """
 Control Bindings Configuration
 """
+
 import pygame
 
 # Movement Controls
@@ -32,9 +33,11 @@ TOGGLE_CONTROLS = [pygame.K_F1]
 # Debug Controls
 DEBUG_TOGGLE = [pygame.K_F3]
 
+
 def check_key_pressed(keys, key_list):
     """Check if any key in key_list is pressed"""
     return any(keys[key] for key in key_list)
+
 
 def check_key_event(event, key_list):
     """Check if event key is in key_list"""

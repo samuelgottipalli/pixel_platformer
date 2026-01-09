@@ -1,33 +1,40 @@
 """
 Player profile management
 """
+
 import json
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+
 from config.settings import PROFILES_FILE
+
 
 @dataclass
 class PlayerProfile:
     """Player profile data"""
+
     name: str
     character: int
     total_score: int
     levels_completed: int
     coins_collected: int
-    
+
+
 @dataclass
 class CompletedGame:
     """Completed game record for leaderboard/stats"""
+
     player_name: str
     character: int
     final_score: int
     levels_completed: int
     coins_collected: int
     completion_date: str
-    
+
+
 class ProfileManager:
     """Manages player profiles"""
-    
+
     @staticmethod
     def load_profiles():
         """
@@ -38,8 +45,8 @@ class ProfileManager:
         try:
             # Create data directory if it doesn't exist
             os.makedirs(os.path.dirname(PROFILES_FILE), exist_ok=True)
-            
-            with open(PROFILES_FILE, 'r') as f:
+
+            with open(PROFILES_FILE, "r") as f:
                 data = json.load(f)
                 return [PlayerProfile(**p) for p in data]
         except FileNotFoundError:
@@ -47,7 +54,7 @@ class ProfileManager:
         except Exception as e:
             print(f"Error loading profiles: {e}")
             return []
-    
+
     @staticmethod
     def save_profiles(profiles):
         """
@@ -59,15 +66,15 @@ class ProfileManager:
         """
         try:
             os.makedirs(os.path.dirname(PROFILES_FILE), exist_ok=True)
-            
-            with open(PROFILES_FILE, 'w') as f:
+
+            with open(PROFILES_FILE, "w") as f:
                 data = [asdict(p) for p in profiles]
                 json.dump(data, f, indent=2)
             return True
         except Exception as e:
             print(f"Error saving profiles: {e}")
             return False
-    
+
     @staticmethod
     def load_completed_games():
         """
@@ -76,8 +83,10 @@ class ProfileManager:
             List of CompletedGame objects
         """
         try:
-            completed_file = PROFILES_FILE.replace('profiles.json', 'completed_games.json')
-            with open(completed_file, 'r') as f:
+            completed_file = PROFILES_FILE.replace(
+                "profiles.json", "completed_games.json"
+            )
+            with open(completed_file, "r") as f:
                 data = json.load(f)
                 return [CompletedGame(**g) for g in data]
         except FileNotFoundError:
@@ -85,7 +94,7 @@ class ProfileManager:
         except Exception as e:
             print(f"Error loading completed games: {e}")
             return []
-    
+
     @staticmethod
     def save_completed_game(profile, final_score):
         """
@@ -98,10 +107,10 @@ class ProfileManager:
         """
         try:
             from datetime import datetime
-            
+
             # Load existing completed games
             completed_games = ProfileManager.load_completed_games()
-            
+
             # Create new completed game record
             new_record = CompletedGame(
                 player_name=profile.name,
@@ -109,22 +118,24 @@ class ProfileManager:
                 final_score=final_score,
                 levels_completed=profile.levels_completed,
                 coins_collected=profile.coins_collected,
-                completion_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                completion_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             )
             completed_games.append(new_record)
-            
+
             # Save completed games
-            completed_file = PROFILES_FILE.replace('profiles.json', 'completed_games.json')
+            completed_file = PROFILES_FILE.replace(
+                "profiles.json", "completed_games.json"
+            )
             os.makedirs(os.path.dirname(completed_file), exist_ok=True)
-            with open(completed_file, 'w') as f:
+            with open(completed_file, "w") as f:
                 data = [asdict(g) for g in completed_games]
                 json.dump(data, f, indent=2)
-            
+
             return True
         except Exception as e:
             print(f"Error saving completed game: {e}")
             return False
-    
+
     @staticmethod
     def delete_profile(profile_name):
         """
@@ -142,7 +153,7 @@ class ProfileManager:
         except Exception as e:
             print(f"Error deleting profile: {e}")
             return False
-    
+
     @staticmethod
     def get_profile_by_name(profiles, name):
         """
@@ -157,9 +168,11 @@ class ProfileManager:
             if profile.name == name:
                 return profile
         return None
-    
+
     @staticmethod
-    def update_profile_stats(profile, score_gained, coins_gained, level_completed=False):
+    def update_profile_stats(
+        profile, score_gained, coins_gained, level_completed=False
+    ):
         """
         Update profile statistics
         Args:
@@ -172,7 +185,7 @@ class ProfileManager:
         profile.coins_collected += coins_gained
         if level_completed:
             profile.levels_completed += 1
-    
+
     @staticmethod
     def get_top_profiles(profiles, limit=10):
         """

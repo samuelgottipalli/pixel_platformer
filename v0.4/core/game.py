@@ -1,27 +1,32 @@
 """
 Main game class - handles game loop and state management
 """
-import pygame
+
 import random
-from utils.enums import GameState
-from config.settings import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, FPS, CYAN, SCORE_COIN, SCORE_ENEMY_KILL,
-    SCORE_ENEMY_HIT, SCORE_MELEE_HIT, SCORE_POWERUP, SCORE_KEY, YELLOW, WHITE
-)
+
+import pygame
+
 from config import controls
+from config.settings import (CYAN, FPS, SCORE_COIN, SCORE_ENEMY_HIT,
+                             SCORE_ENEMY_KILL, SCORE_KEY, SCORE_MELEE_HIT,
+                             SCORE_POWERUP, SCREEN_HEIGHT, SCREEN_WIDTH, WHITE,
+                             YELLOW)
 from core.camera import Camera
 from entities.boss import Boss
-from entities.boss_attacks import BossAttackManager, BossAttackEffect
+from entities.boss_attacks import BossAttackEffect, BossAttackManager
+from entities.particle import Particle
 from entities.player import Player
 from entities.projectile import Projectile
-from entities.particle import Particle
 from levels.level import Level
 from levels.level_loader import LevelLoader
-from save_system.profile_manager import ProfileManager, PlayerProfile
+from save_system.difficulty_completion_tracker import \
+    DifficultyCompletionTracker
+from save_system.profile_manager import PlayerProfile, ProfileManager
 from save_system.save_manager import SaveManager
-from save_system.difficulty_completion_tracker import DifficultyCompletionTracker
-from ui.menu import Menu
 from ui.hud import HUD
+from ui.menu import Menu
+from utils.enums import GameState
+
 
 class Game:
     """Main game class"""
@@ -60,7 +65,7 @@ class Game:
         self.current_level_index = 0
         self.level = None
         self.camera = Camera()
-        self.difficulty = 'NORMAL'  # EASY, NORMAL, HARD
+        self.difficulty = "NORMAL"  # EASY, NORMAL, HARD
         self.difficulty_selection = 1  # Default to Normal (0=Easy, 1=Normal, 2=Hard)
         self.difficulty_manager = None
 
@@ -116,7 +121,7 @@ class Game:
                 self.menu_selection = idx
                 self._handle_menu_selection()
 
-        elif self.state == GameState.DIFFICULTY_SELECT:         # ← ADD THIS BLOCK
+        elif self.state == GameState.DIFFICULTY_SELECT:  # ← ADD THIS BLOCK
             # Check difficulty selection boxes
             mouse_x, mouse_y = self.mouse_pos
             y_start = 220
@@ -128,7 +133,7 @@ class Game:
                 box_rect = pygame.Rect(box_x, y, box_width, box_height)
                 if box_rect.collidepoint(mouse_x, mouse_y):
                     self.difficulty_selection = i
-                    difficulties = ['EASY', 'NORMAL', 'HARD']
+                    difficulties = ["EASY", "NORMAL", "HARD"]
                     self.difficulty = difficulties[i]
                     self.state = GameState.CHAR_SELECT
                     self.player_name = ""
@@ -210,7 +215,7 @@ class Game:
                 self.difficulty_selection = (self.difficulty_selection + 1) % 3
             elif controls.check_key_event(event, controls.MENU_SELECT):
                 # Apply difficulty and proceed to character select
-                difficulties = ['EASY', 'NORMAL', 'HARD']
+                difficulties = ["EASY", "NORMAL", "HARD"]
                 self.difficulty = difficulties[self.difficulty_selection]
                 self.state = GameState.CHAR_SELECT
                 self.player_name = ""
@@ -219,7 +224,7 @@ class Game:
 
     def _apply_difficulty_selection(self):
         """Apply selected difficulty and proceed to character select"""
-        difficulties = ['EASY', 'NORMAL', 'HARD']
+        difficulties = ["EASY", "NORMAL", "HARD"]
         self.difficulty = difficulties[self.difficulty_selection]
         self.state = GameState.CHAR_SELECT
         self.player_name = ""
@@ -265,9 +270,13 @@ class Game:
         """Handle profile selection input"""
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
-                self.profile_selection = (self.profile_selection - 1) % len(self.profiles)
+                self.profile_selection = (self.profile_selection - 1) % len(
+                    self.profiles
+                )
             elif controls.check_key_event(event, controls.MENU_DOWN):
-                self.profile_selection = (self.profile_selection + 1) % len(self.profiles)
+                self.profile_selection = (self.profile_selection + 1) % len(
+                    self.profiles
+                )
             elif event.key == pygame.K_l:  # L key to load
                 self._load_selected_profile()
             elif event.key == pygame.K_d:  # D key to delete
@@ -282,7 +291,7 @@ class Game:
 
         save_data = SaveManager.load_game(self.current_profile.name)
         if save_data:
-            self.current_level_index = save_data['current_level']
+            self.current_level_index = save_data["current_level"]
             SaveManager.apply_save_to_player(self.player, save_data)
         else:
             self.current_level_index = 0
@@ -316,7 +325,7 @@ class Game:
             character=self.char_selection,
             total_score=0,
             levels_completed=0,
-            coins_collected=0
+            coins_collected=0,
         )
         self.profiles.append(self.current_profile)
         ProfileManager.save_profiles(self.profiles)
@@ -377,7 +386,7 @@ class Game:
 
     def _update_boss(self):
         """Update boss fight logic"""
-        from entities.boss_attacks import BossAttackManager, BossAttackEffect
+        from entities.boss_attacks import BossAttackEffect, BossAttackManager
 
         # Update boss
         current_time = pygame.time.get_ticks()
@@ -490,7 +499,7 @@ class Game:
             self.player.x + self.player.width // 2,
             self.player.y + self.player.height // 2,
             self.level.width,
-            self.level.height
+            self.level.height,
         )
 
         # Update boss (if exists)
@@ -569,14 +578,16 @@ class Game:
     def _create_jump_particles(self):
         """Create particles for jump effect"""
         for _ in range(5):
-            self.particles.append(Particle(
-                self.player.x + self.player.width // 2,
-                self.player.y + self.player.height,
-                WHITE,
-                random.uniform(-2, 2),
-                random.uniform(-1, 1),
-                20
-            ))
+            self.particles.append(
+                Particle(
+                    self.player.x + self.player.width // 2,
+                    self.player.y + self.player.height,
+                    WHITE,
+                    random.uniform(-2, 2),
+                    random.uniform(-1, 1),
+                    20,
+                )
+            )
 
     def _create_projectile(self):
         """Create projectile from player"""
@@ -588,7 +599,7 @@ class Game:
             self.player.direction,
             speed,
             damage,
-            CYAN
+            CYAN,
         )
         self.projectiles.append(proj)
 
@@ -624,14 +635,16 @@ class Game:
     def _create_coin_particles(self, coin):
         """Create particles when coin is collected"""
         for _ in range(8):
-            self.particles.append(Particle(
-                coin.x + coin.width // 2,
-                coin.y + coin.height // 2,
-                YELLOW,
-                random.uniform(-3, 3),
-                random.uniform(-3, 3),
-                30
-            ))
+            self.particles.append(
+                Particle(
+                    coin.x + coin.width // 2,
+                    coin.y + coin.height // 2,
+                    YELLOW,
+                    random.uniform(-3, 3),
+                    random.uniform(-3, 3),
+                    30,
+                )
+            )
 
     def _update_portals(self):
         """Update portals and handle level transitions"""
@@ -662,8 +675,10 @@ class Game:
     def _handle_enemy_player_collision(self, enemy):
         """Handle collision between player and enemy"""
         # Check if player is stomping
-        if (self.player.dy > 0 and 
-            self.player.y + self.player.height - 10 < enemy.y + enemy.height // 2):
+        if (
+            self.player.dy > 0
+            and self.player.y + self.player.height - 10 < enemy.y + enemy.height // 2
+        ):
             enemy.take_damage(2)
             self.player.dy = -10
             self.player.score += SCORE_ENEMY_KILL
@@ -675,15 +690,18 @@ class Game:
     def _create_enemy_death_particles(self, enemy):
         """Create particles when enemy dies"""
         from config.settings import RED
+
         for _ in range(15):
-            self.particles.append(Particle(
-                enemy.x + enemy.width // 2,
-                enemy.y + enemy.height // 2,
-                RED,
-                random.uniform(-4, 4),
-                random.uniform(-4, 4),
-                40
-            ))
+            self.particles.append(
+                Particle(
+                    enemy.x + enemy.width // 2,
+                    enemy.y + enemy.height // 2,
+                    RED,
+                    random.uniform(-4, 4),
+                    random.uniform(-4, 4),
+                    40,
+                )
+            )
 
     def _update_hazards(self):
         """Update hazards and check platform collisions"""
@@ -691,14 +709,9 @@ class Game:
             hazard.update(self.player.get_rect())
 
             # Moving platform collision
-            if hazard.type == 'moving_platform':
+            if hazard.type == "moving_platform":
                 if self.player.dy > 0:
-                    platform_top = pygame.Rect(
-                        hazard.x, 
-                        hazard.y - 5, 
-                        hazard.width, 
-                        10
-                    )
+                    platform_top = pygame.Rect(hazard.x, hazard.y - 5, hazard.width, 10)
                     if self.player.get_rect().colliderect(platform_top):
                         self.player.y = hazard.y - self.player.height
                         self.player.dy = 0
@@ -749,22 +762,18 @@ class Game:
         from entities.boss import Boss
 
         # Boss levels: 6, 12, 18, 24 (every 6 levels after tutorial)
-        boss_levels = {
-            6: 'guardian',
-            12: 'forest',
-            18: 'void',
-            24: 'ancient'
-        }
+        boss_levels = {6: "guardian", 12: "forest", 18: "void", 24: "ancient"}
 
         if self.current_level_index in boss_levels:
             boss_type = boss_levels[self.current_level_index]
             # Spawn boss at center-top of screen
             from config.settings import SCREEN_WIDTH
+
             self.boss = Boss(
                 SCREEN_WIDTH // 2 - 48,  # Center horizontally
                 100,  # Near top of screen
                 boss_type,
-                self.difficulty
+                self.difficulty,
             )
             self.boss_defeated = False
             self.boss_projectiles = []
@@ -782,7 +791,7 @@ class Game:
                 self.current_profile,
                 self.player.score,
                 self.player.coins,
-                level_completed=True
+                level_completed=True,
             )
             ProfileManager.save_profiles(self.profiles)
 
@@ -799,9 +808,7 @@ class Game:
         """Save current game state"""
         if self.current_profile and self.player:
             SaveManager.save_game(
-                self.current_profile.name,
-                self.player,
-                self.current_level_index
+                self.current_profile.name, self.player, self.current_level_index
             )
 
     def _game_over(self):
@@ -811,9 +818,7 @@ class Game:
         # Update final profile stats
         if self.current_profile:
             ProfileManager.update_profile_stats(
-                self.current_profile,
-                self.player.score,
-                self.player.coins
+                self.current_profile, self.player.score, self.player.coins
             )
             ProfileManager.save_profiles(self.profiles)
 
@@ -824,8 +829,7 @@ class Game:
         # Mark difficulty as completed
         if self.current_profile:
             DifficultyCompletionTracker.mark_difficulty_complete(
-                self.current_profile.name,
-                self.difficulty
+                self.current_profile.name, self.difficulty
             )
 
             # Save completed game stats and delete active profile
@@ -846,11 +850,13 @@ class Game:
         #     self.menu.draw_level_select(self.screen, self.levels,
         #                                 self.level_selection, self.difficulty)
         elif self.state == GameState.PROFILE_SELECT:
-            self.menu.draw_profile_select(self.screen, self.profiles, 
-                                        self.profile_selection, self.mouse_pos)
+            self.menu.draw_profile_select(
+                self.screen, self.profiles, self.profile_selection, self.mouse_pos
+            )
         elif self.state == GameState.CHAR_SELECT:
-            self.menu.draw_char_select(self.screen, self.player_name, 
-                                    self.char_selection, self.mouse_pos)
+            self.menu.draw_char_select(
+                self.screen, self.player_name, self.char_selection, self.mouse_pos
+            )
         elif self.state == GameState.CONTROLS:
             self.menu.draw_controls_screen(self.screen, self.mouse_pos)
         elif self.state == GameState.LEVEL_MAP:
@@ -872,23 +878,28 @@ class Game:
         from utils.textures import BackgroundManager
 
         # Draw themed background with parallax
-        theme = self.level.theme.name if self.level else 'SCIFI'
+        theme = self.level.theme.name if self.level else "SCIFI"
 
-        if theme == 'SCIFI':
+        if theme == "SCIFI":
             BackgroundManager.draw_scifi_background(
-                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT)
-        elif theme == 'NATURE':
+                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+            )
+        elif theme == "NATURE":
             BackgroundManager.draw_nature_background(
-                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT)
-        elif theme == 'SPACE':
+                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+            )
+        elif theme == "SPACE":
             BackgroundManager.draw_space_background(
-                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT)
-        elif theme == 'UNDERGROUND':
+                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+            )
+        elif theme == "UNDERGROUND":
             BackgroundManager.draw_underground_background(
-                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT)
-        elif theme == 'UNDERWATER':
+                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+            )
+        elif theme == "UNDERWATER":
             BackgroundManager.draw_underwater_background(
-                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT)
+                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+            )
         else:
             # Fallback
             self.screen.fill((20, 20, 40))
@@ -1052,31 +1063,49 @@ class Game:
         from utils.textures import TextureManager
 
         for tile in self.level.tiles:
-            if is_rect_on_screen(tile['rect'], self.camera.x, self.camera.y,
-                                SCREEN_WIDTH, SCREEN_HEIGHT):
-                rect = self.camera.apply_rect(tile['rect'])
-                theme = tile.get('theme', 'SCIFI')
-                color = tile['color']
+            if is_rect_on_screen(
+                tile["rect"], self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+            ):
+                rect = self.camera.apply_rect(tile["rect"])
+                theme = tile.get("theme", "SCIFI")
+                color = tile["color"]
 
                 # Different pattern per theme for easy identification
-                if theme == 'SCIFI':
+                if theme == "SCIFI":
                     # Grid pattern for sci-fi
-                    TextureManager.draw_grid_rect(self.screen , rect, color, (200, 200, 200), grid_size=8)
-                elif theme == 'NATURE':
+                    TextureManager.draw_grid_rect(
+                        self.screen, rect, color, (200, 200, 200), grid_size=8
+                    )
+                elif theme == "NATURE":
                     # Diagonal lines for nature
-                    TextureManager.draw_diagonal_lines(self.screen, rect, color, (150, 200, 150), spacing=6)
-                elif theme == 'SPACE':
+                    TextureManager.draw_diagonal_lines(
+                        self.screen, rect, color, (150, 200, 150), spacing=6
+                    )
+                elif theme == "SPACE":
                     # Dots for space
-                    TextureManager.draw_dotted_rect(self.screen, rect, color, (150, 150, 200), dot_size=2, spacing=8)
-                elif theme == 'UNDERGROUND':
+                    TextureManager.draw_dotted_rect(
+                        self.screen, rect, color, (150, 150, 200), dot_size=2, spacing=8
+                    )
+                elif theme == "UNDERGROUND":
                     # Brick pattern for underground
-                    TextureManager.draw_brick_wall(self.screen, rect, (80, 60, 40), color)
-                elif theme == 'UNDERWATER':
+                    TextureManager.draw_brick_wall(
+                        self.screen, rect, (80, 60, 40), color
+                    )
+                elif theme == "UNDERWATER":
                     # Horizontal waves for underwater
-                    TextureManager.draw_striped_rect(self.screen, rect, color, (100, 150, 200), stripe_width=4, vertical=False)
+                    TextureManager.draw_striped_rect(
+                        self.screen,
+                        rect,
+                        color,
+                        (100, 150, 200),
+                        stripe_width=4,
+                        vertical=False,
+                    )
                 else:
                     # Default checkered
-                    TextureManager.draw_checkered_rect(self.screen, rect, color, (120, 120, 120), check_size=8)
+                    TextureManager.draw_checkered_rect(
+                        self.screen, rect, color, (120, 120, 120), check_size=8
+                    )
 
                 # Border
                 pygame.draw.rect(self.screen, WHITE, rect, 1)
