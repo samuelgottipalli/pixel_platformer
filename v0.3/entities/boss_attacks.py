@@ -3,7 +3,7 @@ Boss attack patterns and abilities
 """
 import math
 import pygame
-from boss import BossProjectile
+from entities.boss import BossProjectile
 from config.settings import RED, ORANGE, CYAN, PURPLE, YELLOW
 
 class BossAttackManager:
