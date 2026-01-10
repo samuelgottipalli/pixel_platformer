@@ -8,17 +8,31 @@ from enum import Enum
 class GameState(Enum):
     """Game state machine states"""
 
-    MENU = 1
-    DIFFICULTY_SELECT = 2
-    PROFILE_SELECT = 3
+    # MENU = 1
+    # DIFFICULTY_SELECT = 2
+    # PROFILE_SELECT = 3
+    # CHAR_SELECT = 4
+    # PLAYING = 5
+    # PAUSED = 6
+    # GAME_OVER = 7
+    # LEVEL_COMPLETE = 8
+    # VICTORY = 9
+    # CONTROLS = 10
+    # LEVEL_MAP = 11
+    PROFILE_SELECT = 1  # First screen - select/create profile
+    MENU = 2  # Main menu (after profile selected)
+    DIFFICULTY_SELECT = 3
     CHAR_SELECT = 4
     PLAYING = 5
     PAUSED = 6
     GAME_OVER = 7
     LEVEL_COMPLETE = 8
     VICTORY = 9
-    CONTROLS = 10
-    LEVEL_MAP = 11
+    OPTIONS = 10  # Options menu (controls, settings, credits)
+    CONTROLS = 11  # Controls screen (inside options)
+    SETTINGS = 12  # Settings screen (inside options) - placeholder
+    CREDITS = 13  # Credits screen (inside options) - placeholder
+    LEVEL_MAP = 14  # Level selection (unlocked levels only)
 
 
 class Theme(Enum):

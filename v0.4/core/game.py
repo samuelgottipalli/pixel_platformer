@@ -49,18 +49,23 @@ class Game:
         self.menu = Menu(self.font_large, self.font_medium, self.font_small)
         self.hud = HUD(self.font_small)
 
-        # Game state
-        self.state = GameState.MENU
-        self.menu_selection = 0
+        # Game state - START AT PROFILE SELECT
+        self.state = GameState.PROFILE_SELECT
+
+        # Menu selections
+        self.menu_selection = 0  # Main menu selection (0=New Game, 1=Continue, 2=Level Map, 3=Options, 4=Quit)
+        self.options_selection = 0  # Options menu (0=Controls, 1=Settings, 2=Credits, 3=Back)
         self.pause_selection = 0
         self.profile_selection = 0
-        self.char_selection = 0
-        self.player_name = ""
         self.level_selection = 0  # For level select screen
+        self.player_name = ""
+        self.char_selection = 0
 
-        # Player and level
+        # Profile management
         self.profiles = ProfileManager.load_profiles()
-        self.current_profile = None
+        self.current_profile = None  # Selected profile
+        self.profile_action = None  # 'new' or 'load'
+
         self.player = None
         self.current_level_index = 0
         self.level = None
@@ -113,13 +118,26 @@ class Game:
         if not mouse_pressed[0]:  # Left click
             return
 
-        if self.state == GameState.MENU:
+        if self.state == GameState.PROFILE_SELECT:
+            # Check New Profile button
+            # Check Load Profile button (on selected profile)
+            # Handled in menu.py draw method
+            pass
+        elif self.state == GameState.MENU:
             idx = self.menu.check_button_click(
                 self.menu.main_buttons, self.mouse_pos, mouse_pressed
             )
             if idx >= 0:
                 self.menu_selection = idx
                 self._handle_menu_selection()
+        
+        elif self.state == GameState.OPTIONS:
+            idx = self.menu.check_button_click(
+                self.menu.options_buttons, self.mouse_pos, mouse_pressed
+            )
+            if idx >= 0:
+                self.options_selection = idx
+                self._handle_options_selection()
 
         elif self.state == GameState.DIFFICULTY_SELECT:  # ← ADD THIS BLOCK
             # Check difficulty selection boxes
@@ -149,21 +167,6 @@ class Game:
                 if len(self.player_name) > 0:
                     self._create_new_profile()
 
-        elif self.state == GameState.PROFILE_SELECT:
-            # Manual check for profile boxes
-            mouse_x, mouse_y = self.mouse_pos
-            y_start = 180
-            box_width = 500
-            box_height = 60
-            box_x = SCREEN_WIDTH // 2 - box_width // 2
-            for i in range(len(self.profiles)):
-                y = y_start + i * 70
-                box_rect = pygame.Rect(box_x, y, box_width, box_height)
-                if box_rect.collidepoint(mouse_x, mouse_y):
-                    self.profile_selection = i
-                    self._load_selected_profile()
-                    break
-
         elif self.state == GameState.PAUSED:
             idx = self.menu.check_button_click(
                 self.menu.pause_buttons, self.mouse_pos, mouse_pressed
@@ -180,21 +183,26 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
 
-            # Mouse clicks
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self._handle_mouse_click()
 
-            # Keyboard events
-            if self.state == GameState.MENU:
+            # Route to appropriate handler based on state
+            if self.state == GameState.PROFILE_SELECT:
+                self._handle_profile_select_events(event)
+            elif self.state == GameState.MENU:
                 self._handle_menu_events(event)
             elif self.state == GameState.DIFFICULTY_SELECT:
                 self._handle_difficulty_select_events(event)
             elif self.state == GameState.CHAR_SELECT:
                 self._handle_char_select_events(event)
-            elif self.state == GameState.PROFILE_SELECT:
-                self._handle_profile_select_events(event)
+            elif self.state == GameState.OPTIONS:
+                self._handle_options_events(event)
             elif self.state == GameState.CONTROLS:
                 self._handle_controls_events(event)
+            elif self.state == GameState.SETTINGS:
+                self._handle_settings_events(event)
+            elif self.state == GameState.CREDITS:
+                self._handle_credits_events(event)
             elif self.state == GameState.LEVEL_MAP:
                 self._handle_level_map_events(event)
             elif self.state == GameState.PAUSED:
@@ -203,8 +211,6 @@ class Game:
                 self._handle_game_over_events(event)
             elif self.state == GameState.VICTORY:
                 self._handle_victory_events(event)
-            # elif self.state == GameState.LEVEL_SELECT:
-            #     self._handle_level_select_events(event)
 
     def _handle_difficulty_select_events(self, event):
         """Handle difficulty selection input"""
@@ -214,35 +220,76 @@ class Game:
             elif controls.check_key_event(event, controls.MENU_DOWN):
                 self.difficulty_selection = (self.difficulty_selection + 1) % 3
             elif controls.check_key_event(event, controls.MENU_SELECT):
-                # Apply difficulty and proceed to character select
-                difficulties = ["EASY", "NORMAL", "HARD"]
-                self.difficulty = difficulties[self.difficulty_selection]
-                self.state = GameState.CHAR_SELECT
-                self.player_name = ""
+                self._start_new_game()
             elif event.key == pygame.K_ESCAPE:
                 self.state = GameState.MENU
+
+    def _start_new_game(self):
+        """Start new game with selected difficulty"""
+        from utils.difficulty_manager import DifficultyManager
+        
+        # Set difficulty
+        difficulties = ['EASY', 'NORMAL', 'HARD']
+        self.difficulty = difficulties[self.difficulty_selection]
+        
+        # Initialize difficulty manager
+        self.difficulty_manager = DifficultyManager(self.difficulty, len(self.levels))
+        
+        # Create player with current profile's character
+        lives = self.difficulty_manager.get_lives(0)
+        self.player = Player(100, 100, self.current_profile.character)
+        self.player.lives = lives
+        
+        # Start from level 0
+        self._load_level(0)
+        self.state = GameState.PLAYING
 
     def _apply_difficulty_selection(self):
         """Apply selected difficulty and proceed to character select"""
         difficulties = ["EASY", "NORMAL", "HARD"]
         self.difficulty = difficulties[self.difficulty_selection]
-        self.state = GameState.CHAR_SELECT
-        self.player_name = ""
+        # Initialize player with current profile's character
+        self.player = Player(100, 100, self.current_profile.character)
+
+        # Set difficulty-based lives
+        self.difficulty_manager = DifficultyManager(self.difficulty, len(self.levels))
+        self.player.lives = self.difficulty_manager.get_lives(0)
+
+        # Start from level 0
+        self._load_level(0)
+        self.state = GameState.PLAYING
 
     def _handle_controls_events(self, event):
         """Handle controls screen input"""
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                self.state = GameState.MENU
+                self.state = GameState.OPTIONS # Back to options
 
     def _handle_level_map_events(self, event):
-        """Handle level map screen input"""
+        """Handle level map screen input
+            Show completed levels
+            Allow selecting them to replay
+            Track completions per difficulty
+        """
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
+            if controls.check_key_event(event, controls.MENU_UP):
+                # Navigate unlocked levels
+                pass
+            elif controls.check_key_event(event, controls.MENU_SELECT):
+                # Start selected level
+                self._start_from_level_select()
+            elif event.key == pygame.K_ESCAPE:
                 self.state = GameState.MENU
 
     def _handle_menu_events(self, event):
-        """Handle main menu input"""
+        """Handle main menu input
+            Main menu options:
+        0 = New Game (start from Level 0)
+        1 = Continue Game (load saved game)
+        2 = Level Map (select unlocked levels)
+        3 = Options
+        4 = Quit
+        """
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
                 self.menu_selection = (self.menu_selection - 1) % 5
@@ -250,39 +297,146 @@ class Game:
                 self.menu_selection = (self.menu_selection + 1) % 5
             elif controls.check_key_event(event, controls.MENU_SELECT):
                 self._handle_menu_selection()
+            elif event.key == pygame.K_ESCAPE:
+                # ESC from main menu returns to profile select (logout)
+                self.current_profile = None
+                self.state = GameState.PROFILE_SELECT
 
     def _handle_menu_selection(self):
         """Handle menu option selection"""
         if self.menu_selection == 0:  # New Game
             self.state = GameState.DIFFICULTY_SELECT
-        elif self.menu_selection == 1:  # Load Game
-            if self.profiles:
-                self.state = GameState.PROFILE_SELECT
-                self.profile_selection = 0
-        elif self.menu_selection == 2:  # Controls
-            self.state = GameState.CONTROLS
-        elif self.menu_selection == 3:  # Level Map
+            self.difficulty_selection = 1  # Default to Normal
+
+        elif self.menu_selection == 1:  # Continue Game
+            save_data = SaveManager.load_game(self.current_profile.name)
+            if save_data:
+                # Load from save
+                self.player = Player(100, 100, self.current_profile.character)
+                self.current_level_index = save_data["current_level"]
+                self.difficulty = save_data.get("difficulty", "NORMAL")
+                SaveManager.apply_save_to_player(self.player, save_data)
+
+                # Initialize difficulty manager
+                from utils.difficulty_manager import DifficultyManager
+
+                self.difficulty_manager = DifficultyManager(
+                    self.difficulty, len(self.levels)
+                )
+
+                self._load_level(self.current_level_index)
+                self.state = GameState.PLAYING
+            else:
+                # No save file, treat as new game
+                self.state = GameState.DIFFICULTY_SELECT
+                self.difficulty_selection = 1
+
+        elif self.menu_selection == 2:  # Level Map
             self.state = GameState.LEVEL_MAP
+            self.level_selection = 0
+
+        elif self.menu_selection == 3:  # Options
+            self.state = GameState.OPTIONS
+            self.options_selection = 0
+
         elif self.menu_selection == 4:  # Quit
             self.running = False
 
-    def _handle_profile_select_events(self, event):
-        """Handle profile selection input"""
+    def _handle_options_events(self, event):
+        """
+        Options submenu:
+        0 = Controls
+        1 = Settings (placeholder)
+        2 = Credits (placeholder)
+        3 = Back to Main Menu
+        """
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
-                self.profile_selection = (self.profile_selection - 1) % len(
-                    self.profiles
-                )
+                self.options_selection = (self.options_selection - 1) % 4
             elif controls.check_key_event(event, controls.MENU_DOWN):
-                self.profile_selection = (self.profile_selection + 1) % len(
-                    self.profiles
-                )
-            elif event.key == pygame.K_l:  # L key to load
-                self._load_selected_profile()
-            elif event.key == pygame.K_d:  # D key to delete
-                self._delete_selected_profile()
-            elif controls.check_key_event(event, controls.MENU_BACK):
+                self.options_selection = (self.options_selection + 1) % 4
+            elif controls.check_key_event(event, controls.MENU_SELECT):
+                self._handle_options_selection()
+            elif event.key == pygame.K_ESCAPE:
                 self.state = GameState.MENU
+
+    def _handle_options_selection(self):
+        if self.options_selection == 0:  # Controls
+            self.state = GameState.CONTROLS
+        elif self.options_selection == 1:  # Settings (placeholder)
+            self.state = GameState.SETTINGS
+        elif self.options_selection == 2:  # Credits (placeholder)
+            self.state = GameState.CREDITS
+        elif self.options_selection == 3:  # Back
+            self.state = GameState.MENU
+
+    def _handle_settings_events(self, event):
+        """Handle settings screen - PLACEHOLDER"""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.state = GameState.OPTIONS
+
+    def _handle_credits_events(self, event):
+        """Handle credits screen - PLACEHOLDER"""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.state = GameState.OPTIONS
+
+    def _handle_profile_select_events(self, event):
+        """Handle profile selection inputTwo options:
+            - New Profile (N key or button)
+            - Load Profile (L key or select from list)
+        """
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_n:  # New profile
+                self.profile_action = "new"
+                self.player_name = ""
+                self.char_selection = 0
+                self.state = GameState.CHAR_SELECT  # Go to create character
+
+            elif event.key == pygame.K_l and self.profiles:  # Load Profile (L key)
+                self._load_selected_profile_to_menu()
+
+            elif controls.check_key_event(event, controls.MENU_UP):
+                if self.profiles:
+                    self.profile_selection = (self.profile_selection - 1) % len(
+                        self.profiles
+                    )
+
+            elif controls.check_key_event(event, controls.MENU_DOWN):
+                if self.profiles:
+                    self.profile_selection = (self.profile_selection + 1) % len(
+                        self.profiles
+                    )
+
+            elif (
+                controls.check_key_event(event, controls.MENU_SELECT) and self.profiles
+            ):
+                # Enter key loads selected profile
+                self._load_selected_profile_to_menu()
+
+            elif event.key == pygame.K_d and self.profiles:  # Delete profile
+                self._delete_selected_profile()
+
+    def _load_selected_profile_to_menu(self):
+        """Load selected profile and go to main menu"""
+        if self.profiles:
+            self.current_profile = self.profiles[self.profile_selection]
+            self.state = GameState.MENU
+            self.menu_selection = 0
+
+    def _delete_selected_profile(self):
+        """Delete the currently selected profile"""
+        if not self.profiles:
+            return
+
+        profile = self.profiles[self.profile_selection]
+        SaveManager.delete_save(profile.name)
+        ProfileManager.delete_profile(profile.name)
+        self.profiles = ProfileManager.load_profiles()
+
+        if self.profile_selection >= len(self.profiles):
+            self.profile_selection = max(0, len(self.profiles) - 1)
 
     def _load_selected_profile(self):
         """Load the selected profile"""
@@ -300,7 +454,12 @@ class Game:
         self.state = GameState.PLAYING
 
     def _handle_char_select_events(self, event):
-        """Handle character selection input"""
+        """Handle character selection input
+            When creating NEW profile:
+            - Enter name
+            - Select character
+            - RETURN creates profile and goes to MENU
+        """
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
                 self.char_selection = (self.char_selection - 1) % 4
@@ -311,15 +470,13 @@ class Game:
             elif event.key == pygame.K_RETURN and len(self.player_name) > 0:
                 self._create_new_profile()
             elif event.key == pygame.K_ESCAPE:
-                self.state = GameState.MENU
-            # Allow all alphanumeric including 'a' and 'd'
+                self.state = GameState.PROFILE_SELECT
             elif event.unicode.isalnum() and len(self.player_name) < 15:
                 self.player_name += event.unicode
 
     def _create_new_profile(self):
-        """Create new player profile and start game"""
-        from utils.difficulty_manager import DifficultyManager
-
+        """Create new player profile and go to main menu"""
+        # Create profile
         self.current_profile = PlayerProfile(
             name=self.player_name,
             character=self.char_selection,
@@ -330,16 +487,9 @@ class Game:
         self.profiles.append(self.current_profile)
         ProfileManager.save_profiles(self.profiles)
 
-        # Initialize difficulty manager with selected difficulty
-        self.difficulty_manager = DifficultyManager(self.difficulty, len(self.levels))
-
-        # Start game with difficulty-adjusted lives
-        lives = self.difficulty_manager.get_lives(0)
-        self.player = Player(100, 100, self.char_selection)
-        self.player.lives = lives
-
-        self._load_level(0)
-        self.state = GameState.PLAYING
+        # Go to main menu (profile now selected)
+        self.state = GameState.MENU
+        self.menu_selection = 0
 
     def _handle_pause_events(self, event):
         """Handle pause menu input"""
@@ -359,22 +509,22 @@ class Game:
             self._save_game()  # Auto-save before returning
             self.state = GameState.MENU
             self.menu_selection = 0
-        elif self.pause_selection == 2:  # Quit Game
-            self._save_game()  # Auto-save before quitting
-            self.running = False
-
-    def _handle_game_over_events(self, event):
-        """Handle game over screen input"""
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-            # Delete the save file when returning to menu after game over
-            if self.current_profile:
-                SaveManager.delete_save(self.current_profile.name)
-            self.state = GameState.MENU
+        elif self.pause_selection == 2:  # Quit to Profile Select
+            self._save_game()
+            self.current_profile = None
+            self.state = GameState.PROFILE_SELECT  # Return to profile select
 
     def _handle_victory_events(self, event):
         """Handle victory screen input"""
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-            self.state = GameState.MENU
+            self.state = GameState.MENU  # Stay with current profile
+
+    def _handle_game_over_events(self, event):
+        """Handle game over screen input"""
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+            if self.current_profile:
+                SaveManager.delete_save(self.current_profile.name)
+            self.state = GameState.MENU  # Stay with current profile
 
     def _update(self):
         """Update game state"""
@@ -842,23 +992,28 @@ class Game:
 
     def _draw(self):
         """Draw current game state"""
-        if self.state == GameState.MENU:
-            self.menu.draw_main_menu(self.screen, self.menu_selection, self.mouse_pos)
+        if self.state == GameState.PROFILE_SELECT:
+            self.menu.draw_profile_select(self.screen, self.profiles,
+                                        self.profile_selection, self.mouse_pos)
+        elif self.state == GameState.MENU:
+            self.menu.draw_main_menu(
+                self.screen, self.current_profile, self.menu_selection, self.mouse_pos
+            )
         elif self.state == GameState.DIFFICULTY_SELECT:
             self.menu.draw_difficulty_select(self.screen, self.difficulty_selection)
-        # elif self.state == GameState.LEVEL_SELECT:
-        #     self.menu.draw_level_select(self.screen, self.levels,
-        #                                 self.level_selection, self.difficulty)
-        elif self.state == GameState.PROFILE_SELECT:
-            self.menu.draw_profile_select(
-                self.screen, self.profiles, self.profile_selection, self.mouse_pos
-            )
         elif self.state == GameState.CHAR_SELECT:
             self.menu.draw_char_select(
                 self.screen, self.player_name, self.char_selection, self.mouse_pos
             )
+        elif self.state == GameState.OPTIONS:
+            self.menu.draw_options_menu(self.screen, self.options_selection,
+                                    self.mouse_pos)
         elif self.state == GameState.CONTROLS:
             self.menu.draw_controls_screen(self.screen, self.mouse_pos)
+        elif self.state == GameState.SETTINGS:
+            self.menu.draw_settings_screen(self.screen, self.mouse_pos)
+        elif self.state == GameState.CREDITS:
+            self.menu.draw_credits_screen(self.screen, self.mouse_pos)
         elif self.state == GameState.LEVEL_MAP:
             self.menu.draw_level_map_screen(self.screen, self.mouse_pos)
         elif self.state == GameState.PLAYING:
@@ -1148,30 +1303,6 @@ class Game:
         """Draw particle effects"""
         for particle in self.particles:
             particle.draw(self.screen, self.camera.x, self.camera.y)
-
-    def _delete_selected_profile(self):
-        """Delete the selected profile"""
-        if not self.profiles:
-            return
-
-        profile = self.profiles[self.profile_selection]
-
-        # Delete save file
-        SaveManager.delete_save(profile.name)
-
-        # Delete profile
-        ProfileManager.delete_profile(profile.name)
-
-        # Reload profiles
-        self.profiles = ProfileManager.load_profiles()
-
-        # Adjust selection
-        if self.profile_selection >= len(self.profiles):
-            self.profile_selection = max(0, len(self.profiles) - 1)
-
-        # If no profiles left, return to menu
-        if not self.profiles:
-            self.state = GameState.MENU
 
     def _draw_boss(self):
         """Draw boss and related combat objects"""
