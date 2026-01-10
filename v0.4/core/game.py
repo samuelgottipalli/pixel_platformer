@@ -102,6 +102,11 @@ class Game:
         self.show_controls = False
         self.controls_toggle_pressed = False
 
+        # Popup message system
+        self.show_popup = False
+        self.popup_message = ""
+        self.popup_timer = 0
+
     def run(self):
         """Main game loop"""
         while self.running:
@@ -112,6 +117,12 @@ class Game:
 
         pygame.quit()
 
+    def _show_popup(self, message, duration=120):
+        """Show a popup message for duration frames (2 seconds at 60fps)"""
+        self.show_popup = True
+        self.popup_message = message
+        self.popup_timer = duration
+
     def _handle_mouse_click(self):
         """Handle mouse clicks on buttons"""
         mouse_pressed = pygame.mouse.get_pressed()
@@ -119,10 +130,27 @@ class Game:
             return
 
         if self.state == GameState.PROFILE_SELECT:
+            # Check profile boxes
+            if self.profiles:
+                y_start = 160
+                for i in range(len(self.profiles)):
+                    y = y_start + i * 70
+                    box_width = 500
+                    box_height = 60
+                    box_x = SCREEN_WIDTH // 2 - box_width // 2
+                    box_rect = pygame.Rect(box_x, y, box_width, box_height)
+                    if box_rect.collidepoint(self.mouse_pos):
+                        self.profile_selection = i
+                        self._load_selected_profile_to_menu()
+                        return
             # Check New Profile button
-            # Check Load Profile button (on selected profile)
-            # Handled in menu.py draw method
-            pass
+            button_y = SCREEN_HEIGHT - 120 if self.profiles else 350
+            button_rect = pygame.Rect(SCREEN_WIDTH // 2 - 140, button_y - 8, 280, 40)
+            if button_rect.collidepoint(self.mouse_pos):
+                self.profile_action = 'new'
+                self.player_name = ""
+                self.char_selection = 0
+                self.state = GameState.CHAR_SELECT
         elif self.state == GameState.MENU:
             idx = self.menu.check_button_click(
                 self.menu.main_buttons, self.mouse_pos, mouse_pressed
@@ -139,7 +167,7 @@ class Game:
                 self.options_selection = idx
                 self._handle_options_selection()
 
-        elif self.state == GameState.DIFFICULTY_SELECT:  # ← ADD THIS BLOCK
+        elif self.state == GameState.DIFFICULTY_SELECT:
             # Check difficulty selection boxes
             mouse_x, mouse_y = self.mouse_pos
             y_start = 220
@@ -153,7 +181,7 @@ class Game:
                     self.difficulty_selection = i
                     difficulties = ["EASY", "NORMAL", "HARD"]
                     self.difficulty = difficulties[i]
-                    self.state = GameState.CHAR_SELECT
+                    self.state = GameState.PLAYING
                     self.player_name = ""
                     break
 
@@ -220,6 +248,7 @@ class Game:
             elif controls.check_key_event(event, controls.MENU_DOWN):
                 self.difficulty_selection = (self.difficulty_selection + 1) % 3
             elif controls.check_key_event(event, controls.MENU_SELECT):
+                self.state = GameState.PLAYING
                 self._start_new_game()
             elif event.key == pygame.K_ESCAPE:
                 self.state = GameState.MENU
@@ -259,7 +288,7 @@ class Game:
         self._load_level(0)
         self.state = GameState.PLAYING
 
-    def _handle_controls_events(self, event):
+    def _handle_controls_events(self, event):                   
         """Handle controls screen input"""
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
@@ -327,9 +356,9 @@ class Game:
                 self._load_level(self.current_level_index)
                 self.state = GameState.PLAYING
             else:
-                # No save file, treat as new game
-                self.state = GameState.DIFFICULTY_SELECT
-                self.difficulty_selection = 1
+                # NO SAVE FILE - Show popup instead of going to difficulty select
+                self._show_popup("No saved game found! Start a new game.")
+                # Stay on menu, don't change state
 
         elif self.menu_selection == 2:  # Level Map
             self.state = GameState.LEVEL_MAP
@@ -476,6 +505,13 @@ class Game:
 
     def _create_new_profile(self):
         """Create new player profile and go to main menu"""
+        # Check for duplicate name
+        for profile in self.profiles:
+            if profile.name.lower() == self.player_name.lower():
+                # Show popup for duplicate name
+                self._show_popup(f"Profile '{self.player_name}' already exists!")
+                return  # Don't create, stay on char select screen
+        
         # Create profile
         self.current_profile = PlayerProfile(
             name=self.player_name,
@@ -528,6 +564,13 @@ class Game:
 
     def _update(self):
         """Update game state"""
+        # Update popup timer
+        if self.show_popup:
+            self.popup_timer -= 1
+            if self.popup_timer <= 0:
+                self.show_popup = False
+                self.popup_message = ""
+        
         if self.state == GameState.PLAYING:
             self._update_game()
 
@@ -1015,7 +1058,7 @@ class Game:
         elif self.state == GameState.CREDITS:
             self.menu.draw_credits_screen(self.screen, self.mouse_pos)
         elif self.state == GameState.LEVEL_MAP:
-            self.menu.draw_level_map_screen(self.screen, self.mouse_pos)
+            self.menu.draw_level_map_screen(self.screen, self.current_profile, self.mouse_pos)
         elif self.state == GameState.PLAYING:
             self._draw_game()
         elif self.state == GameState.PAUSED:
@@ -1026,7 +1069,54 @@ class Game:
         elif self.state == GameState.VICTORY:
             self.menu.draw_victory(self.screen, self.player.score)
 
+        # Draw popup overlay if active (AFTER all other drawing)
+        if self.show_popup:
+            self._draw_popup()
+
         pygame.display.flip()
+
+    def _draw_popup(self):
+        """Draw popup message overlay"""
+        # Semi-transparent overlay
+        overlay = pygame.Surface((600, 150))
+        overlay.fill((40, 40, 40))
+        overlay.set_alpha(230)
+        
+        overlay_x = SCREEN_WIDTH // 2 - 300
+        overlay_y = SCREEN_HEIGHT // 2 - 75
+        
+        # Border
+        pygame.draw.rect(self.screen, (200, 100, 100), 
+                        pygame.Rect(overlay_x - 2, overlay_y - 2, 604, 154), 3)
+        
+        self.screen.blit(overlay, (overlay_x, overlay_y))
+        
+        # Message text (word wrap for long messages)
+        words = self.popup_message.split()
+        lines = []
+        current_line = []
+        
+        for word in words:
+            test_line = ' '.join(current_line + [word])
+            test_surf = self.font_small.render(test_line, True, WHITE)
+            if test_surf.get_width() < 550:
+                current_line.append(word)
+            else:
+                if current_line:
+                    lines.append(' '.join(current_line))
+                current_line = [word]
+        if current_line:
+            lines.append(' '.join(current_line))
+        
+        # Draw lines centered
+        total_height = len(lines) * 35
+        start_y = overlay_y + 75 - total_height // 2
+        
+        for i, line in enumerate(lines):
+            text = self.font_small.render(line, True, WHITE)
+            text_x = overlay_x + 300 - text.get_width() // 2
+            text_y = start_y + i * 35
+            self.screen.blit(text, (text_x, text_y))
 
     def _draw_game(self):
         """Draw game world and HUD"""

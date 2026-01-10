@@ -345,7 +345,7 @@ class Menu:
     def draw_level_map_screen(self, surface, current_profile, mouse_pos=None):
         """
         Draw level map/selection screen
-        Shows only levels completed by current profile
+        Shows all levels with locked/unlocked status
         """
         surface.fill(BLACK)
 
@@ -353,31 +353,74 @@ class Menu:
         title = self.font_large.render("LEVEL MAP", True, UI_HIGHLIGHT)
         surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 60))
 
-        if not current_profile or current_profile.levels_completed == 0:
-            # No levels unlocked yet
-            msg = self.font_medium.render(
-                "Complete levels to unlock Level Map", True, UI_TEXT
-            )
-            surface.blit(msg, (SCREEN_WIDTH // 2 - msg.get_width() // 2, 250))
-        else:
-            # Show unlocked levels
-            unlocked_count = current_profile.levels_completed
-            msg = self.font_small.render(
-                f"Unlocked Levels: {unlocked_count}", True, UI_TEXT
-            )
-            surface.blit(msg, (SCREEN_WIDTH // 2 - msg.get_width() // 2, 130))
+        # Level names
+        level_names = [
+            "Tutorial: Training Facility",
+            "Level 1: The Awakening",
+            "Level 2: Rising Conflict",
+            "Level 3: The Ascent",
+            "Level 4: Deep Dive",
+            "Level 5: Convergence",
+            "Level 6: Guardian's Lair (BOSS)",
+        ]
 
-            # Level grid (placeholder for now)
-            msg2 = self.font_medium.render(
+        # Determine unlocked count
+        unlocked_count = 0
+        if current_profile:
+            # current_profile might be a tuple from mouse_pos parameter confusion
+            # Fix by checking if it's actually a profile object
+            if hasattr(current_profile, 'levels_completed'):
+                unlocked_count = current_profile.levels_completed
+            else:
+                unlocked_count = 0
+
+        # Subtitle
+        subtitle = self.font_small.render(
+            f"Unlocked: {unlocked_count} / {len(level_names)}", True, UI_TEXT
+        )
+        surface.blit(subtitle, (SCREEN_WIDTH // 2 - subtitle.get_width() // 2, 130))
+
+        # Draw level list
+        y_start = 200
+        for i, level_name in enumerate(level_names):
+            y = y_start + i * 50
+            
+            # Check if unlocked
+            is_unlocked = i < unlocked_count
+            
+            # Choose colors
+            if is_unlocked:
+                name_color = UI_HIGHLIGHT
+                icon = "✓"
+                icon_color = (100, 255, 100)
+            else:
+                name_color = UI_TEXT_DIM
+                icon = "🔒"
+                icon_color = (150, 150, 150)
+            
+            # Draw icon
+            icon_text = self.font_small.render(icon, True, icon_color)
+            surface.blit(icon_text, (200, y))
+            
+            # Draw level name
+            name_text = self.font_small.render(level_name, True, name_color)
+            surface.blit(name_text, (250, y))
+
+        # Instructions
+        if unlocked_count > 0:
+            inst1 = self.font_tiny.render(
                 "Level selection coming in Phase 3", True, UI_TEXT_DIM
             )
-            surface.blit(msg2, (SCREEN_WIDTH // 2 - msg2.get_width() // 2, 300))
+            surface.blit(inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, SCREEN_HEIGHT - 100))
+        else:
+            inst1 = self.font_tiny.render(
+                "Complete levels to unlock them here", True, UI_TEXT_DIM
+            )
+            surface.blit(inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, SCREEN_HEIGHT - 100))
 
         # Back instruction
-        inst = self.font_tiny.render("ESC to go back", True, UI_TEXT_DIM)
-        surface.blit(
-            inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, SCREEN_HEIGHT - 60)
-        )
+        inst2 = self.font_tiny.render("ESC to go back", True, UI_HIGHLIGHT)
+        surface.blit(inst2, (SCREEN_WIDTH // 2 - inst2.get_width() // 2, SCREEN_HEIGHT - 60))
 
     def draw_difficulty_select(self, surface, selection, mouse_pos=None):
         """Draw difficulty selection screen"""
