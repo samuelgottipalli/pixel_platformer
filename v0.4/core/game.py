@@ -181,8 +181,7 @@ class Game:
                     self.difficulty_selection = i
                     difficulties = ["EASY", "NORMAL", "HARD"]
                     self.difficulty = difficulties[i]
-                    self.state = GameState.PLAYING
-                    self.player_name = ""
+                    self._start_new_game()
                     break
 
         elif self.state == GameState.CHAR_SELECT:
