@@ -24,7 +24,8 @@ from save_system.difficulty_completion_tracker import \
 from save_system.profile_manager import PlayerProfile, ProfileManager
 from save_system.save_manager import SaveManager
 from ui.hud import HUD
-from ui.menu import Menu
+from ui.menu import MenuManager
+from ui.components import Popup
 from utils.enums import GameState
 
 
@@ -46,8 +47,9 @@ class Game:
         self.font_small = pygame.font.Font(None, 32)
 
         # UI
-        self.menu = Menu(self.font_large, self.font_medium, self.font_small)
+        self.menu = MenuManager(self.font_large, self.font_medium, self.font_small)
         self.hud = HUD(self.font_small)
+        self.popup = None
 
         # Game state - START AT PROFILE SELECT
         self.state = GameState.PROFILE_SELECT
@@ -118,10 +120,9 @@ class Game:
         pygame.quit()
 
     def _show_popup(self, message, duration=120):
-        """Show a popup message for duration frames (2 seconds at 60fps)"""
-        self.show_popup = True
-        self.popup_message = message
-        self.popup_timer = duration
+        """Show popup using Popup component"""
+        from ui.components import Popup
+        self.popup = Popup(message, duration)
 
     def _handle_mouse_click(self):
         """Handle mouse clicks on buttons"""
@@ -153,7 +154,7 @@ class Game:
                 self.state = GameState.CHAR_SELECT
         elif self.state == GameState.MENU:
             idx = self.menu.check_button_click(
-                self.menu.main_buttons, self.mouse_pos, mouse_pressed
+                self.menu.main_menu_buttons, self.mouse_pos, mouse_pressed
             )
             if idx >= 0:
                 self.menu_selection = idx
@@ -565,10 +566,7 @@ class Game:
         """Update game state"""
         # Update popup timer
         if self.show_popup:
-            self.popup_timer -= 1
-            if self.popup_timer <= 0:
-                self.show_popup = False
-                self.popup_message = ""
+            self.popup.update()
         
         if self.state == GameState.PLAYING:
             self._update_game()
@@ -1075,47 +1073,9 @@ class Game:
         pygame.display.flip()
 
     def _draw_popup(self):
-        """Draw popup message overlay"""
-        # Semi-transparent overlay
-        overlay = pygame.Surface((600, 150))
-        overlay.fill((40, 40, 40))
-        overlay.set_alpha(230)
-        
-        overlay_x = SCREEN_WIDTH // 2 - 300
-        overlay_y = SCREEN_HEIGHT // 2 - 75
-        
-        # Border
-        pygame.draw.rect(self.screen, (200, 100, 100), 
-                        pygame.Rect(overlay_x - 2, overlay_y - 2, 604, 154), 3)
-        
-        self.screen.blit(overlay, (overlay_x, overlay_y))
-        
-        # Message text (word wrap for long messages)
-        words = self.popup_message.split()
-        lines = []
-        current_line = []
-        
-        for word in words:
-            test_line = ' '.join(current_line + [word])
-            test_surf = self.font_small.render(test_line, True, WHITE)
-            if test_surf.get_width() < 550:
-                current_line.append(word)
-            else:
-                if current_line:
-                    lines.append(' '.join(current_line))
-                current_line = [word]
-        if current_line:
-            lines.append(' '.join(current_line))
-        
-        # Draw lines centered
-        total_height = len(lines) * 35
-        start_y = overlay_y + 75 - total_height // 2
-        
-        for i, line in enumerate(lines):
-            text = self.font_small.render(line, True, WHITE)
-            text_x = overlay_x + 300 - text.get_width() // 2
-            text_y = start_y + i * 35
-            self.screen.blit(text, (text_x, text_y))
+        """Draw popup overlay"""
+        if self.popup and self.popup.is_active():
+            self.popup.draw(self.screen, self.font_small)
 
     def _draw_game(self):
         """Draw game world and HUD"""
