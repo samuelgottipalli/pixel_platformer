@@ -1,13 +1,12 @@
 """
-Updated UI Components with Icon Support
-Added IconButton for back/options buttons on all screens
+Reusable UI Components for Menu System
+Provides modular buttons, text elements, and layout helpers
 """
 
 import pygame
 from config.settings import (BLACK, CYAN, GRAY, SCREEN_HEIGHT, SCREEN_WIDTH,
                              UI_BG, UI_BORDER, UI_HIGHLIGHT, UI_TEXT,
                              UI_TEXT_DIM, WHITE, YELLOW)
-from ui.icons import Icon
 
 
 class Button:
@@ -58,55 +57,6 @@ class Button:
         surface.blit(text_surf, (text_x, text_y))
 
 
-class IconButton:
-    """Button with icon (for back, options, etc)"""
-    
-    def __init__(self, x, y, width, height, icon_type, text, font):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.icon_type = icon_type
-        self.text = text
-        self.font = font
-        self.is_hovered = False
-        
-    def check_hover(self, mouse_pos):
-        """Check if mouse is over button"""
-        self.is_hovered = self.rect.collidepoint(mouse_pos) if mouse_pos else False
-        return self.is_hovered
-    
-    def check_click(self, mouse_pos, mouse_pressed):
-        """Check if button was clicked"""
-        if mouse_pressed[0] and self.rect.collidepoint(mouse_pos):
-            return True
-        return False
-    
-    def draw(self, surface):
-        """Draw icon button"""
-        is_active = self.is_hovered
-        
-        # Colors
-        bg_color = UI_HIGHLIGHT if is_active else UI_BG
-        border_color = WHITE if is_active else UI_BORDER
-        text_color = BLACK if is_active else UI_TEXT
-        icon_color = BLACK if is_active else WHITE
-        
-        # Draw button
-        pygame.draw.rect(surface, bg_color, self.rect, border_radius=5)
-        pygame.draw.rect(surface, border_color, self.rect, 1, border_radius=5)
-        
-        # Draw icon
-        icon_size = min(self.rect.height - 10, 20)
-        icon_x = self.rect.x + 8
-        icon_y = self.rect.y + self.rect.height // 2 - icon_size // 2
-        Icon.draw(surface, self.icon_type, icon_x, icon_y, icon_size, icon_color)
-        
-        # Draw text
-        if self.text:
-            text_surf = self.font.render(self.text, True, text_color)
-            text_x = self.rect.x + icon_size + 16
-            text_y = self.rect.y + self.rect.height // 2 - text_surf.get_height() // 2
-            surface.blit(text_surf, (text_x, text_y))
-
-
 class TextBox:
     """Reusable text display box"""
     
@@ -154,17 +104,17 @@ class SelectableBox:
         if not self.is_unlocked:
             border_color = UI_TEXT_DIM
             text_color = UI_TEXT_DIM
-            icon_type = Icon.LOCK
+            icon = "🔒"
             icon_color = (150, 150, 150)
         elif is_active:
             border_color = UI_HIGHLIGHT
             text_color = UI_HIGHLIGHT
-            icon_type = Icon.CHECKMARK
+            icon = "✓"
             icon_color = (100, 255, 100)
         else:
             border_color = UI_BORDER
             text_color = UI_TEXT
-            icon_type = Icon.CHECKMARK
+            icon = "✓"
             icon_color = (100, 200, 100)
         
         # Draw box
@@ -181,10 +131,8 @@ class SelectableBox:
             surface.blit(fill_surface, (fill_rect.x, fill_rect.y))
         
         # Draw icon
-        Icon.draw(surface, icon_type, 
-                 self.rect.x + 15, 
-                 self.rect.y + self.rect.height // 2 - 10,
-                 20, icon_color)
+        icon_surf = font_small.render(icon, True, icon_color)
+        surface.blit(icon_surf, (self.rect.x + 15, self.rect.y + self.rect.height // 2 - 10))
         
         # Draw label
         label_surf = font_small.render(self.label, True, text_color)
@@ -258,10 +206,9 @@ class ButtonGroup:
 
 
 class Screen:
-    """Base class for reusable screen layouts with back/options buttons"""
+    """Base class for reusable screen layouts"""
     
-    def __init__(self, title, font_large, font_medium, font_small, font_tiny,
-                 show_back=True, show_options=False):
+    def __init__(self, title, font_large, font_medium, font_small, font_tiny):
         self.title = title
         self.font_large = font_large
         self.font_medium = font_medium
@@ -269,40 +216,9 @@ class Screen:
         self.font_tiny = font_tiny
         self.components = []
         
-        # Create back button (top-left)
-        self.back_button = None
-        if show_back:
-            self.back_button = IconButton(20, 20, 100, 40, Icon.BACK_ARROW, 
-                                         "Back", font_tiny)
-        
-        # Create options button (top-right)
-        self.options_button = None
-        if show_options:
-            self.options_button = IconButton(SCREEN_WIDTH - 140, 20, 120, 40,
-                                            Icon.SETTINGS, "Options", font_tiny)
-        
     def add_component(self, component):
         """Add a UI component to the screen"""
         self.components.append(component)
-    
-    def check_back_click(self, mouse_pos, mouse_pressed):
-        """Check if back button was clicked"""
-        if self.back_button:
-            return self.back_button.check_click(mouse_pos, mouse_pressed)
-        return False
-    
-    def check_options_click(self, mouse_pos, mouse_pressed):
-        """Check if options button was clicked"""
-        if self.options_button:
-            return self.options_button.check_click(mouse_pos, mouse_pressed)
-        return False
-    
-    def update_button_hover(self, mouse_pos):
-        """Update hover states for back/options buttons"""
-        if self.back_button:
-            self.back_button.check_hover(mouse_pos)
-        if self.options_button:
-            self.options_button.check_hover(mouse_pos)
         
     def draw_title(self, surface, y=80):
         """Draw screen title"""
@@ -327,13 +243,6 @@ class Screen:
     def draw_background(self, surface):
         """Draw screen background"""
         surface.fill(BLACK)
-    
-    def draw_buttons(self, surface):
-        """Draw back and options buttons"""
-        if self.back_button:
-            self.back_button.draw(surface)
-        if self.options_button:
-            self.options_button.draw(surface)
 
 
 class LayoutHelper:

@@ -109,6 +109,10 @@ class Game:
         self.popup_message = ""
         self.popup_timer = 0
 
+        # Store current screen for back/options button detection
+        self.current_screen = None
+        self.previous_state = None  # For returning from options
+
     def run(self):
         """Main game loop"""
         while self.running:
@@ -129,6 +133,29 @@ class Game:
         mouse_pressed = pygame.mouse.get_pressed()
         if not mouse_pressed[0]:  # Left click
             return
+
+        # Check back/options buttons on current screen FIRST
+        if self.current_screen:
+            if hasattr(self.current_screen, "check_back_click"):
+                if self.current_screen.check_back_click(self.mouse_pos, mouse_pressed):
+                    self._handle_back_button()
+                    return
+
+            if hasattr(self.current_screen, "check_options_click"):
+                if self.current_screen.check_options_click(
+                    self.mouse_pos, mouse_pressed
+                ):
+                    self._handle_options_button()
+                    return
+
+        # Check pause menu options button
+        if self.state == GameState.PAUSED and self.current_screen:
+            if hasattr(self.current_screen, "check_click"):
+                if self.current_screen.check_click(self.mouse_pos, mouse_pressed):
+                    self.previous_state = GameState.PLAYING
+                    self.state = GameState.OPTIONS
+                    self.options_selection = 0
+                    return
 
         if self.state == GameState.PROFILE_SELECT:
             # Check profile boxes
@@ -159,7 +186,7 @@ class Game:
             if idx >= 0:
                 self.menu_selection = idx
                 self._handle_menu_selection()
-        
+
         elif self.state == GameState.OPTIONS:
             idx = self.menu.check_button_click(
                 self.menu.options_buttons, self.mouse_pos, mouse_pressed
@@ -180,8 +207,6 @@ class Game:
                 box_rect = pygame.Rect(box_x, y, box_width, box_height)
                 if box_rect.collidepoint(mouse_x, mouse_y):
                     self.difficulty_selection = i
-                    difficulties = ["EASY", "NORMAL", "HARD"]
-                    self.difficulty = difficulties[i]
                     self._start_new_game()
                     break
 
@@ -203,6 +228,33 @@ class Game:
                 self.pause_selection = idx
                 self._handle_pause_selection()
 
+    def _handle_back_button(self):
+        """Handle back button click based on current state"""
+        if self.state == GameState.DIFFICULTY_SELECT:
+            self.state = GameState.MENU
+        elif self.state == GameState.CHAR_SELECT:
+            self.state = GameState.PROFILE_SELECT
+        elif self.state == GameState.OPTIONS:
+            if self.previous_state:
+                self.state = self.previous_state
+                self.previous_state = None
+            else:
+                self.state = GameState.MENU
+        elif self.state == GameState.CONTROLS:
+            self.state = GameState.OPTIONS
+        elif self.state == GameState.SETTINGS:
+            self.state = GameState.OPTIONS
+        elif self.state == GameState.CREDITS:
+            self.state = GameState.OPTIONS
+        elif self.state == GameState.LEVEL_MAP:
+            self.state = GameState.MENU
+
+    def _handle_options_button(self):
+        """Handle options button click - opens options menu"""
+        self.previous_state = self.state
+        self.state = GameState.OPTIONS
+        self.options_selection = 0
+        
     def _handle_events(self):
         """Handle pygame events"""
         self.mouse_pos = pygame.mouse.get_pos()
@@ -256,19 +308,19 @@ class Game:
     def _start_new_game(self):
         """Start new game with selected difficulty"""
         from utils.difficulty_manager import DifficultyManager
-        
+
         # Set difficulty
         difficulties = ['EASY', 'NORMAL', 'HARD']
         self.difficulty = difficulties[self.difficulty_selection]
-        
+
         # Initialize difficulty manager
         self.difficulty_manager = DifficultyManager(self.difficulty, len(self.levels))
-        
+
         # Create player with current profile's character
         lives = self.difficulty_manager.get_lives(0)
         self.player = Player(100, 100, self.current_profile.character)
         self.player.lives = lives
-        
+
         # Start from level 0
         self._load_level(0)
         self.state = GameState.PLAYING
@@ -511,7 +563,7 @@ class Game:
                 # Show popup for duplicate name
                 self._show_popup(f"Profile '{self.player_name}' already exists!")
                 return  # Don't create, stay on char select screen
-        
+
         # Create profile
         self.current_profile = PlayerProfile(
             name=self.player_name,
@@ -567,7 +619,7 @@ class Game:
         # Update popup timer
         if self.show_popup:
             self.popup.update()
-        
+
         if self.state == GameState.PLAYING:
             self._update_game()
 
@@ -1032,6 +1084,7 @@ class Game:
 
     def _draw(self):
         """Draw current game state"""
+        self.current_screen = None  # Reset
         if self.state == GameState.PROFILE_SELECT:
             self.menu.draw_profile_select(self.screen, self.profiles,
                                         self.profile_selection, self.mouse_pos)
@@ -1040,9 +1093,11 @@ class Game:
                 self.screen, self.current_profile, self.menu_selection, self.mouse_pos
             )
         elif self.state == GameState.DIFFICULTY_SELECT:
-            self.menu.draw_difficulty_select(self.screen, self.difficulty_selection)
+            self.current_screen = self.menu.draw_difficulty_select(
+                self.screen, self.difficulty_selection, self.mouse_pos
+            )
         elif self.state == GameState.CHAR_SELECT:
-            self.menu.draw_char_select(
+            self.current_screen = self.menu.draw_char_select(
                 self.screen, self.player_name, self.char_selection, self.mouse_pos
             )
         elif self.state == GameState.OPTIONS:
