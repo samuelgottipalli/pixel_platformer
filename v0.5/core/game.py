@@ -2,6 +2,7 @@
 Main game class - handles game loop and state management
 """
 
+import os
 import random
 
 import pygame

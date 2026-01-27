@@ -78,7 +78,7 @@ class GameSettings:
         resolutions = []
         native_found = False
 
-        for width, height, scale, name in self.BASE_RESOLUTIONS:
+        for width, height, scale, name in self.RESOLUTIONS:
             # Check if this matches native resolution
             if width == self.native_width and height == self.native_height:
                 name = f"{name} (Native) ✓"
