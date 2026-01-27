@@ -22,7 +22,7 @@ from ui.components import IconButton, LayoutHelper, Screen
 from ui.icons import Icon
 
 
-class MenuManager:
+class Menu:
     """Manages all menu screens using modular components"""
 
     def __init__(self, font_large, font_medium, font_small):

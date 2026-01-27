@@ -24,7 +24,7 @@ from save_system.difficulty_completion_tracker import \
 from save_system.profile_manager import PlayerProfile, ProfileManager
 from save_system.save_manager import SaveManager
 from ui.hud import HUD
-from ui.menu import MenuManager
+from ui.menu import Menu
 from ui.components import Popup
 from utils.enums import GameState
 
@@ -47,7 +47,7 @@ class Game:
         self.font_small = pygame.font.Font(None, 32)
 
         # UI
-        self.menu = MenuManager(self.font_large, self.font_medium, self.font_small)
+        self.menu = Menu(self.font_large, self.font_medium, self.font_small)
         self.hud = HUD(self.font_small)
         self.popup = None
 
@@ -181,7 +181,7 @@ class Game:
                 self.state = GameState.CHAR_SELECT
         elif self.state == GameState.MENU:
             idx = self.menu.check_button_click(
-                self.menu.main_menu_buttons, self.mouse_pos, mouse_pressed
+                self.menu.main_buttons, self.mouse_pos, mouse_pressed
             )
             if idx >= 0:
                 self.menu_selection = idx
@@ -254,7 +254,7 @@ class Game:
         self.previous_state = self.state
         self.state = GameState.OPTIONS
         self.options_selection = 0
-        
+
     def _handle_events(self):
         """Handle pygame events"""
         self.mouse_pos = pygame.mouse.get_pos()
