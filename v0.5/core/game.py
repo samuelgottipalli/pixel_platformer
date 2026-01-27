@@ -7,6 +7,7 @@ import random
 import pygame
 
 from config import controls
+from config.game_settings import GameSettings
 from config.settings import (
     CYAN,
     FPS,
@@ -49,6 +50,15 @@ class Game:
         pygame.display.set_caption("Retro Pixel Platformer")
         self.clock = pygame.time.Clock()
         self.running = True
+
+        # Game settings
+        self.settings = GameSettings()
+        
+        # Apply video settings at startup
+        self.screen = self.settings.apply_video_settings(self.screen)
+        
+        # Track if settings changed (needs restart)
+        self.settings_changed = False
 
         # Fonts
         self.font_large = pygame.font.Font(None, 72)
@@ -1123,9 +1133,10 @@ class Game:
                 self.screen, self.mouse_pos
             )
         elif self.state == GameState.SETTINGS:
-            self.current_screen = self.menu.draw_settings_screen(
-                self.screen, self.mouse_pos
+            screen_obj, self.settings_components = self.menu.draw_settings_screen(
+                self.screen, self.settings, -1 if self.settings_changed else 0, self.mouse_pos
             )
+            self.current_screen = screen_obj
         elif self.state == GameState.CREDITS:
             self.current_screen = self.menu.draw_credits_screen(
                 self.screen, self.mouse_pos
@@ -1484,42 +1495,75 @@ class Game:
 
         return level_name, area_name
 
-    # def _handle_level_select_events(self, event):
-    #     """Handle level selection input"""
-    #     if event.type == pygame.KEYDOWN:
-    #         if controls.check_key_event(event, controls.MENU_UP):
-    #             self.level_selection = (self.level_selection - 1) % len(self.levels)
-    #         elif controls.check_key_event(event, controls.MENU_DOWN):
-    #             self.level_selection = (self.level_selection + 1) % len(self.levels)
-    #         elif controls.check_key_event(event, controls.MENU_SELECT):
-    #             # Start from selected level
-    #             self._start_from_level_select()
-    #         elif controls.check_key_event(event, controls.MENU_BACK):
-    #             self.state = GameState.DIFFICULTY_SELECT
-
-    # def _start_from_level_select(self):
-    #     """Start game from level selection"""
-    #     from utils.difficulty_manager import DifficultyManager
-
-    #     # Create or use existing profile
-    #     if not self.current_profile:
-    #         # Create temp profile
-    #         self.current_profile = PlayerProfile(
-    #             name=f"LevelSelect_{self.difficulty}",
-    #             character=0,
-    #             total_score=0,
-    #             levels_completed=0,
-    #             coins_collected=0,
-    #         )
-
-    #     # Initialize difficulty manager
-    #     self.difficulty_manager = DifficultyManager(self.difficulty, len(self.levels))
-
-    #     # Start game with difficulty-adjusted lives
-    #     lives = self.difficulty_manager.get_lives(self.level_selection)
-    #     self.player = Player(100, 100, self.current_profile.character)
-    #     self.player.lives = lives
-
-    #     # Load selected level
-    #     self._load_level(self.level_selection)
-    #     self.state = GameState.PLAYING
+    def _handle_settings_events(self, event):
+        """Handle settings screen input"""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                # Save settings when leaving
+                self.settings.save_settings()
+                self.state = GameState.OPTIONS
+        
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            # Handle clicks on settings components
+            if hasattr(self, 'settings_components'):
+                components = self.settings_components
+                
+                # Resolution dropdown
+                if 'res_dropdown' in components:
+                    old_res = self.settings.settings['video']['resolution_index']
+                    components['res_dropdown'].check_click(self.mouse_pos, pygame.mouse.get_pressed())
+                    new_res = components['res_dropdown'].get_selected_index()
+                    if new_res != old_res:
+                        self.settings.set_resolution(new_res)
+                        self.settings_changed = True
+                
+                # Fullscreen toggle
+                if 'fullscreen_toggle' in components:
+                    if components['fullscreen_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
+                        self.settings.toggle_fullscreen()
+                        # Apply immediately
+                        self.screen = self.settings.apply_video_settings(self.screen)
+                
+                # Music toggle
+                if 'music_toggle' in components:
+                    if components['music_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
+                        self.settings.toggle_music()
+                        # Apply to audio manager (when implemented)
+                
+                # SFX toggle
+                if 'sfx_toggle' in components:
+                    if components['sfx_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
+                        self.settings.toggle_sfx()
+        
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            # Start slider drag
+            if hasattr(self, 'settings_components'):
+                components = self.settings_components
+                if 'music_slider' in components:
+                    components['music_slider'].start_drag(self.mouse_pos)
+                if 'sfx_slider' in components:
+                    components['sfx_slider'].start_drag(self.mouse_pos)
+        
+        elif event.type == pygame.MOUSEBUTTONUP:
+            # Stop slider drag
+            if hasattr(self, 'settings_components'):
+                components = self.settings_components
+                if 'music_slider' in components:
+                    components['music_slider'].stop_drag()
+                    self.settings.set_music_volume(components['music_slider'].get_value())
+                if 'sfx_slider' in components:
+                    components['sfx_slider'].stop_drag()
+                    self.settings.set_sfx_volume(components['sfx_slider'].get_value())
+        
+        elif event.type == pygame.MOUSEMOTION:
+            # Update slider during drag
+            if hasattr(self, 'settings_components'):
+                components = self.settings_components
+                if 'music_slider' in components:
+                    components['music_slider'].update_drag(self.mouse_pos)
+                    if components['music_slider'].dragging:
+                        self.settings.set_music_volume(components['music_slider'].get_value())
+                if 'sfx_slider' in components:
+                    components['sfx_slider'].update_drag(self.mouse_pos)
+                    if components['sfx_slider'].dragging:
+                        self.settings.set_sfx_volume(components['sfx_slider'].get_value())

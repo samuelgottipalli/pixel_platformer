@@ -572,46 +572,132 @@ class Menu:
         screen.draw_buttons(surface)
         return screen
 
-    def draw_settings_screen(self, surface, mouse_pos=None):
-        """Draw settings placeholder"""
-        screen = Screen(
-            "SETTINGS",
-            self.font_large,
-            self.font_medium,
-            self.font_small,
-            self.font_tiny,
-            show_back=True,
-            show_options=False,
-        )
-
+    def draw_settings_screen(self, surface, game_settings, selection, mouse_pos=None):
+        """Draw functional settings screen with video and audio controls"""
+        from ui.settings_components import Slider, Toggle, Dropdown
+        
+        screen = Screen("SETTINGS", self.font_large, self.font_medium,
+                    self.font_small, self.font_tiny,
+                    show_back=True, show_options=False)
+        
         screen.draw_background(surface)
         screen.update_button_hover(mouse_pos)
-        screen.draw_title(surface, 100)
-
-        msg = self.font_medium.render("Settings Coming Soon", True, UI_TEXT)
-        surface.blit(msg, (SCREEN_WIDTH // 2 - msg.get_width() // 2, 250))
-
-        msg2 = self.font_small.render("(Planned for Phase 3)", True, UI_TEXT_DIM)
-        surface.blit(msg2, (SCREEN_WIDTH // 2 - msg2.get_width() // 2, 310))
-
-        features = [
-            "Sound Volume",
-            "Music Volume",
-            "Screen Resolution",
-            "Fullscreen Toggle",
-            "Key Rebinding",
-        ]
-        for i, feature in enumerate(features):
-            feat_surf = self.font_tiny.render(f"- {feature}", True, UI_TEXT_DIM)
-            surface.blit(feat_surf, (SCREEN_WIDTH // 2 - 80, 370 + i * 25))
-
-        hint = self.font_tiny.render("ESC/Back Button to return", True, UI_TEXT_DIM)
-        surface.blit(
-            hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 60)
+        screen.draw_title(surface, 60)
+        
+        # VIDEO SETTINGS Section
+        video_title = self.font_medium.render("VIDEO", True, UI_HIGHLIGHT)
+        surface.blit(video_title, (150, 150))
+        
+        # Resolution dropdown
+        res_label = self.font_small.render("Resolution:", True, UI_TEXT)
+        surface.blit(res_label, (150, 200))
+        
+        res_options = game_settings.get_resolution_list()
+        res_dropdown = Dropdown(
+            400, 195, 300, 30,
+            res_options,
+            game_settings.settings['video']['resolution_index'],
+            "Resolution"
         )
-
+        
+        # Fullscreen toggle
+        fs_label = self.font_small.render("Fullscreen:", True, UI_TEXT)
+        surface.blit(fs_label, (150, 250))
+        
+        fullscreen_toggle = Toggle(
+            400, 245, 60, 30,
+            game_settings.get_fullscreen(),
+            "Fullscreen"
+        )
+        
+        # AUDIO SETTINGS Section
+        audio_title = self.font_medium.render("AUDIO", True, UI_HIGHLIGHT)
+        surface.blit(audio_title, (150, 320))
+        
+        # Music toggle
+        music_label = self.font_small.render("Music:", True, UI_TEXT)
+        surface.blit(music_label, (150, 370))
+        
+        music_toggle = Toggle(
+            400, 365, 60, 30,
+            game_settings.get_music_enabled(),
+            "Music"
+        )
+        
+        # Music volume slider
+        music_vol_label = self.font_small.render("Music Volume:", True, UI_TEXT)
+        surface.blit(music_vol_label, (150, 420))
+        
+        music_slider = Slider(
+            400, 420, 200, 0, 100,
+            game_settings.get_music_volume(),
+            "Music Volume"
+        )
+        
+        # SFX toggle
+        sfx_label = self.font_small.render("Sound Effects:", True, UI_TEXT)
+        surface.blit(sfx_label, (150, 470))
+        
+        sfx_toggle = Toggle(
+            400, 465, 60, 30,
+            game_settings.get_sfx_enabled(),
+            "SFX"
+        )
+        
+        # SFX volume slider
+        sfx_vol_label = self.font_small.render("SFX Volume:", True, UI_TEXT)
+        surface.blit(sfx_vol_label, (150, 520))
+        
+        sfx_slider = Slider(
+            400, 520, 200, 0, 100,
+            game_settings.get_sfx_volume(),
+            "SFX Volume"
+        )
+        
+        # Draw all components
+        res_dropdown.check_hover(mouse_pos)
+        res_dropdown.draw(surface, self.font_tiny)
+        
+        fullscreen_toggle.check_hover(mouse_pos)
+        fullscreen_toggle.draw(surface, self.font_tiny)
+        
+        music_toggle.check_hover(mouse_pos)
+        music_toggle.draw(surface, self.font_tiny)
+        
+        music_slider.check_hover(mouse_pos)
+        music_slider.draw(surface, self.font_tiny)
+        
+        sfx_toggle.check_hover(mouse_pos)
+        sfx_toggle.draw(surface, self.font_tiny)
+        
+        sfx_slider.check_hover(mouse_pos)
+        sfx_slider.draw(surface, self.font_tiny)
+        
+        # Instructions
+        hint = self.font_tiny.render(
+            "Click to adjust   Changes apply immediately   ESC/Back to save",
+            True, UI_TEXT_DIM
+        )
+        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 80))
+        
+        # Warning if resolution changed
+        if selection == -1:  # Use selection to pass changed flag
+            warning = self.font_tiny.render(
+                "Resolution changes require restart!", True, (255, 200, 0)
+            )
+            surface.blit(warning, (SCREEN_WIDTH // 2 - warning.get_width() // 2, SCREEN_HEIGHT - 50))
+        
         screen.draw_buttons(surface)
-        return screen
+        
+        # Return components for interaction
+        return screen, {
+            'res_dropdown': res_dropdown,
+            'fullscreen_toggle': fullscreen_toggle,
+            'music_toggle': music_toggle,
+            'music_slider': music_slider,
+            'sfx_toggle': sfx_toggle,
+            'sfx_slider': sfx_slider
+        }
 
     def draw_credits_screen(self, surface, mouse_pos=None):
         """Draw credits screen"""
