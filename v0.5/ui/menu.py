@@ -38,11 +38,9 @@ class Menu:
         self.char_buttons = self._create_char_buttons()
         self.options_buttons = self._create_options_buttons()
 
-        # # Initialize button groups
-        # self._init_main_menu()
-        # self._init_options_menu()
-        # self._init_pause_menu()
-        # self._init_char_select()
+        # Settings screen components (persistent)
+        self.settings_components = None
+        self._init_settings_components()
 
     # ========================================================================
     # BUTTON GROUP INITIALIZATION
@@ -92,6 +90,19 @@ class Menu:
             y = start_y + i * 55
             buttons.append(pygame.Rect(button_x, y - 8, button_width, button_height))
         return buttons
+
+    def _init_settings_components(self):
+        """Initialize settings screen components"""
+        from ui.settings_components import Slider, Toggle, Dropdown
+
+        self.settings_components = {
+            'res_dropdown': Dropdown(400, 195, 300, 30, [], 0, "Resolution"),
+            'fullscreen_toggle': Toggle(400, 245, 60, 30, False, "Fullscreen"),
+            'music_toggle': Toggle(400, 365, 60, 30, True, "Music"),
+            'music_slider': Slider(400, 420, 200, 0, 100, 70, "Music Volume"),
+            'sfx_toggle': Toggle(400, 465, 60, 30, True, "SFX"),
+            'sfx_slider': Slider(400, 520, 200, 0, 100, 80, "SFX Volume"),
+        }
 
     # ========================================================================
     # MAIN MENU
@@ -572,132 +583,95 @@ class Menu:
         screen.draw_buttons(surface)
         return screen
 
-    def draw_settings_screen(self, surface, game_settings, selection, mouse_pos=None):
+    def draw_settings_screen(self, surface, game_settings, mouse_pos=None):
         """Draw functional settings screen with video and audio controls"""
-        from ui.settings_components import Slider, Toggle, Dropdown
-        
         screen = Screen("SETTINGS", self.font_large, self.font_medium,
                     self.font_small, self.font_tiny,
                     show_back=True, show_options=False)
-        
+
         screen.draw_background(surface)
         screen.update_button_hover(mouse_pos)
         screen.draw_title(surface, 60)
-        
+
+        # Update components with current settings
+        components = self.settings_components
+
+        # Update resolution dropdown options and selection
+        components['res_dropdown'].options = game_settings.get_resolution_list()
+        components['res_dropdown'].selected_index = game_settings.settings['video']['resolution_index']
+
+        # Update toggles
+        components['fullscreen_toggle'].enabled = game_settings.get_fullscreen()
+        components['music_toggle'].enabled = game_settings.get_music_enabled()
+        components['sfx_toggle'].enabled = game_settings.get_sfx_enabled()
+
+        # Update sliders
+        components['music_slider'].current_value = game_settings.get_music_volume()
+        components['sfx_slider'].current_value = game_settings.get_sfx_volume()
+
         # VIDEO SETTINGS Section
         video_title = self.font_medium.render("VIDEO", True, UI_HIGHLIGHT)
         surface.blit(video_title, (150, 150))
-        
-        # Resolution dropdown
+
+        # Resolution
         res_label = self.font_small.render("Resolution:", True, UI_TEXT)
         surface.blit(res_label, (150, 200))
-        
-        res_options = game_settings.get_resolution_list()
-        res_dropdown = Dropdown(
-            400, 195, 300, 30,
-            res_options,
-            game_settings.settings['video']['resolution_index'],
-            "Resolution"
-        )
-        
-        # Fullscreen toggle
+
+        # Fullscreen
         fs_label = self.font_small.render("Fullscreen:", True, UI_TEXT)
         surface.blit(fs_label, (150, 250))
-        
-        fullscreen_toggle = Toggle(
-            400, 245, 60, 30,
-            game_settings.get_fullscreen(),
-            "Fullscreen"
-        )
-        
+        components['fullscreen_toggle'].check_hover(mouse_pos)
+        components['fullscreen_toggle'].draw(surface, self.font_tiny)
+
         # AUDIO SETTINGS Section
         audio_title = self.font_medium.render("AUDIO", True, UI_HIGHLIGHT)
         surface.blit(audio_title, (150, 320))
-        
+
         # Music toggle
         music_label = self.font_small.render("Music:", True, UI_TEXT)
         surface.blit(music_label, (150, 370))
-        
-        music_toggle = Toggle(
-            400, 365, 60, 30,
-            game_settings.get_music_enabled(),
-            "Music"
-        )
-        
-        # Music volume slider
+        components['music_toggle'].check_hover(mouse_pos)
+        components['music_toggle'].draw(surface, self.font_tiny)
+
+        # Music volume
         music_vol_label = self.font_small.render("Music Volume:", True, UI_TEXT)
         surface.blit(music_vol_label, (150, 420))
-        
-        music_slider = Slider(
-            400, 420, 200, 0, 100,
-            game_settings.get_music_volume(),
-            "Music Volume"
-        )
-        
+        components['music_slider'].check_hover(mouse_pos)
+        components['music_slider'].draw(surface, self.font_tiny)
+
         # SFX toggle
         sfx_label = self.font_small.render("Sound Effects:", True, UI_TEXT)
         surface.blit(sfx_label, (150, 470))
-        
-        sfx_toggle = Toggle(
-            400, 465, 60, 30,
-            game_settings.get_sfx_enabled(),
-            "SFX"
-        )
-        
-        # SFX volume slider
+        components['sfx_toggle'].check_hover(mouse_pos)
+        components['sfx_toggle'].draw(surface, self.font_tiny)
+
+        # SFX volume
         sfx_vol_label = self.font_small.render("SFX Volume:", True, UI_TEXT)
         surface.blit(sfx_vol_label, (150, 520))
-        
-        sfx_slider = Slider(
-            400, 520, 200, 0, 100,
-            game_settings.get_sfx_volume(),
-            "SFX Volume"
-        )
-        
-        # Draw all components
-        res_dropdown.check_hover(mouse_pos)
-        res_dropdown.draw(surface, self.font_tiny)
-        
-        fullscreen_toggle.check_hover(mouse_pos)
-        fullscreen_toggle.draw(surface, self.font_tiny)
-        
-        music_toggle.check_hover(mouse_pos)
-        music_toggle.draw(surface, self.font_tiny)
-        
-        music_slider.check_hover(mouse_pos)
-        music_slider.draw(surface, self.font_tiny)
-        
-        sfx_toggle.check_hover(mouse_pos)
-        sfx_toggle.draw(surface, self.font_tiny)
-        
-        sfx_slider.check_hover(mouse_pos)
-        sfx_slider.draw(surface, self.font_tiny)
-        
+        components['sfx_slider'].check_hover(mouse_pos)
+        components['sfx_slider'].draw(surface, self.font_tiny)
+
         # Instructions
         hint = self.font_tiny.render(
-            "Click to adjust   Changes apply immediately   ESC/Back to save",
+            "Click to adjust   Changes save automatically   ESC/Back to return",
             True, UI_TEXT_DIM
         )
-        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 80))
-        
-        # Warning if resolution changed
-        if selection == -1:  # Use selection to pass changed flag
-            warning = self.font_tiny.render(
-                "Resolution changes require restart!", True, (255, 200, 0)
+        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 60))
+
+        # Draw restart warning if resolution changed
+        if hasattr(game_settings, "_resolution_changed"):
+            warning = self.font_small.render(
+                "⚠ Resolution change requires restart to take effect", True, (255, 200, 0)
             )
-            surface.blit(warning, (SCREEN_WIDTH // 2 - warning.get_width() // 2, SCREEN_HEIGHT - 50))
-        
+            surface.blit(warning, (150, 580))
+
         screen.draw_buttons(surface)
+
+        # DRAW DROPDOWN LAST (so it appears on top)
+        components['res_dropdown'].check_hover(mouse_pos)
+        components['res_dropdown'].draw(surface, self.font_tiny)
         
-        # Return components for interaction
-        return screen, {
-            'res_dropdown': res_dropdown,
-            'fullscreen_toggle': fullscreen_toggle,
-            'music_toggle': music_toggle,
-            'music_slider': music_slider,
-            'sfx_toggle': sfx_toggle,
-            'sfx_slider': sfx_slider
-        }
+        return screen
 
     def draw_credits_screen(self, surface, mouse_pos=None):
         """Draw credits screen"""
