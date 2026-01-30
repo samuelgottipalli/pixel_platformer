@@ -16,7 +16,7 @@ from utils.enums import EnemyType
 class Enemy:
     """Enemy entity with AI behavior"""
 
-    def __init__(self, x, y, enemy_type, patrol_distance=200):
+    def __init__(self, x, y, enemy_type, patrol_distance=200, audio=None):
         """
         Args:
             x, y: Starting position
@@ -46,6 +46,9 @@ class Enemy:
             self.speed = ENEMY_FLYING_SPEED
         else:
             self.speed = 0
+
+        # SFX manager
+        self.audio = audio
 
     def update(self, tiles):
         """Update enemy AI and movement"""
@@ -94,8 +97,12 @@ class Enemy:
     def take_damage(self, damage):
         """Take damage and die if health depletes"""
         self.health -= damage
+        if self.audio:
+            self.audio.enemy_hit()
         if self.health <= 0:
             self.dead = True
+            if self.audio:
+                self.audio.enemy_death()
 
     def can_shoot(self):
         """Check if turret can shoot (cooldown expired)"""

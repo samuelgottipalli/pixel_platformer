@@ -17,7 +17,7 @@ from config.settings import (BLACK, CHARACTER_COLORS, GRAVITY, JUMP_POWER,
 class Player:
     """Main player character"""
 
-    def __init__(self, x, y, character=0):
+    def __init__(self, x, y, character=0, audio=None):
         """
         Args:
             x, y: Starting position
@@ -60,6 +60,9 @@ class Player:
         self.shoot_cooldown = 0
         self.melee_active = False
         self.melee_timer = 0
+
+        # SFX manager
+        self.audio = audio
 
     def update(self, keys, tiles, hazards):
         """
@@ -180,17 +183,23 @@ class Player:
         if self.on_ground:
             self.dy = JUMP_POWER
             self.jump_count = 1
+            if self.audio:
+                self.audio.player_jump()
             return True
         elif self.on_wall:
             # Wall jump
             self.dy = WALL_JUMP_POWER
             self.dx = -self.wall_direction * WALL_JUMP_PUSH
             self.jump_count = 1
+            if self.audio:
+                self.audio.player_jump()
             return True
         elif self.jump_count < self.max_jumps:
             # Double jump
             self.dy = JUMP_POWER * 0.85
             self.jump_count += 1
+            if self.audio:
+                self.audio.player_double_jump()
             return True
         return False
 
@@ -198,6 +207,8 @@ class Player:
         """Attempt to shoot. Returns True if successful"""
         if self.shoot_cooldown == 0:
             self.shoot_cooldown = SHOOT_BASE_COOLDOWN - (self.weapon_level * 5)
+            if self.audio:
+                self.audio.player_shoot()
             return True
         return False
 
@@ -206,6 +217,8 @@ class Player:
         if self.melee_timer == 0:
             self.melee_active = True
             self.melee_timer = MELEE_DURATION
+            if self.audio:
+                self.audio.player_melee()
             return True
         return False
 
@@ -224,6 +237,8 @@ class Player:
         """Take damage. Handle death if health depletes"""
         if not self.invincible:
             self.health -= damage
+            if self.audio:
+                self.audio.player_hurt()
             if self.health <= 0:
                 self.die()
 
@@ -295,7 +310,7 @@ class Player:
         )
 
         # Thick border
-        pygame.draw.rect(surface, BLACK, rect, 3)
+        pygame.draw.rect(surface, WHITE, rect, 3)
 
         # Eyes
         eye_y = rect.y + 12

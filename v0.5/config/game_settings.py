@@ -290,19 +290,40 @@ class GameSettings:
                 flags
             )
 
-            # Store centering offset for rendering
-            self.fullscreen_offset_x = (native_width - self.width) // 2
-            self.fullscreen_offset_y = (native_height - self.height) // 2
+            # Store centering offset for rendering (game always renders at 1280x720)
+            self.fullscreen_offset_x = (native_width - 1280) // 2
+            self.fullscreen_offset_y = (native_height - 720) // 2
+            self.render_to_temp = True  # Flag to use temp surface
         else:
             # Windowed mode - use selected resolution
             new_screen = pygame.display.set_mode(
                 (self.width, self.height),
                 flags
             )
-            self.fullscreen_offset_x = 0
-            self.fullscreen_offset_y = 0
+            
+            # Calculate scaling for windowed mode
+            if self.width != 1280 or self.height != 720:
+                # Need to scale game (1280x720 base) to window size
+                self.render_to_temp = True
+                self.fullscreen_offset_x = 0
+                self.fullscreen_offset_y = 0
+            else:
+                # Native resolution, no scaling needed
+                self.render_to_temp = False
+                self.fullscreen_offset_x = 0
+                self.fullscreen_offset_y = 0
 
         return new_screen
+
+    def should_use_temp_surface(self):
+        """Check if we should render to temp surface and scale"""
+        return self.render_to_temp
+
+    def get_scale_transform(self):
+        """Get scaling needed for current resolution"""
+        if self.width == 1280 and self.height == 720:
+            return None  # No scaling
+        return (self.width, self.height)  # Scale to this size
 
     def get_render_offset(self):
         """Get offset for centering game in fullscreen"""

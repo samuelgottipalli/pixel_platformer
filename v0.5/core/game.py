@@ -55,6 +55,10 @@ class Game:
         # Game settings
         self.settings = GameSettings()
 
+        # Audio manager
+        from utils.audio_manager import AudioManager
+        self.audio = AudioManager(self.settings)
+
         # On first run, suggest native resolution
         if not os.path.exists("data/settings.json"):
             native_idx = self.settings.get_native_resolution_index()
@@ -62,6 +66,8 @@ class Game:
             self.settings.save_settings()
 
         # Apply video settings at startup
+        from config.settings import update_screen_size
+        update_screen_size(self.settings.width, self.settings.height)
         self.screen = self.settings.apply_video_settings(self.screen)
 
         # Track if settings changed (needs restart)
@@ -141,15 +147,21 @@ class Game:
         self.current_screen = None
         self.previous_state = None  # For returning from options
 
+        # Start menu music
+        self.audio.play_menu_music()
+
     def run(self):
         """Main game loop"""
-        while self.running:
-            self._handle_events()
-            self._update()
-            self._draw()
-            self.clock.tick(FPS)
-
-        pygame.quit()
+        try:
+            while self.running:
+                self._handle_events()
+                self._update()
+                self._draw()
+                self.clock.tick(FPS)
+        finally:
+            # Cleanup audio
+            self.audio.cleanup()
+            pygame.quit()
 
     def _show_popup(self, message, duration=120):
         """Show popup using Popup component"""
@@ -299,6 +311,7 @@ class Game:
             if self.state == GameState.PROFILE_SELECT:
                 self._handle_profile_select_events(event)
             elif self.state == GameState.MENU:
+                self.audio.play_menu_music()
                 self._handle_menu_events(event)
             elif self.state == GameState.DIFFICULTY_SELECT:
                 self._handle_difficulty_select_events(event)
@@ -347,8 +360,11 @@ class Game:
 
         # Create player with current profile's character
         lives = self.difficulty_manager.get_lives(0)
-        self.player = Player(100, 100, self.current_profile.character)
+        self.player = Player(100, 100, self.current_profile.character, self.audio)
         self.player.lives = lives
+
+        # Start level music
+        self.audio.play_music('level')
 
         # Start from level 0
         self._load_level(0)
@@ -403,9 +419,12 @@ class Game:
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
                 self.menu_selection = (self.menu_selection - 1) % 5
+                self.audio.menu_navigate()
             elif controls.check_key_event(event, controls.MENU_DOWN):
                 self.menu_selection = (self.menu_selection + 1) % 5
+                self.audio.menu_navigate()
             elif controls.check_key_event(event, controls.MENU_SELECT):
+                self.audio.menu_select()
                 self._handle_menu_selection()
             elif event.key == pygame.K_ESCAPE:
                 # ESC from main menu returns to profile select (logout)
@@ -415,14 +434,18 @@ class Game:
     def _handle_menu_selection(self):
         """Handle menu option selection"""
         if self.menu_selection == 0:  # New Game
+            # Stop menu music, will start level music when game begins
+            self.audio.stop_music()
             self.state = GameState.DIFFICULTY_SELECT
             self.difficulty_selection = 1  # Default to Normal
 
         elif self.menu_selection == 1:  # Continue Game
+            # Stop menu music, will start level music when game begins
+            self.audio.stop_music()
             save_data = SaveManager.load_game(self.current_profile.name)
             if save_data:
                 # Load from save
-                self.player = Player(100, 100, self.current_profile.character)
+                self.player = Player(100, 100, self.current_profile.character, audio=self.audio)
                 self.current_level_index = save_data["current_level"]
                 self.difficulty = save_data.get("difficulty", "NORMAL")
                 SaveManager.apply_save_to_player(self.player, save_data)
@@ -433,6 +456,9 @@ class Game:
                 self.difficulty_manager = DifficultyManager(
                     self.difficulty, len(self.levels)
                 )
+
+                # Start level music
+                self.audio.play_music('level')
 
                 self._load_level(self.current_level_index)
                 self.state = GameState.PLAYING
@@ -480,11 +506,11 @@ class Game:
         elif self.options_selection == 3:  # Back
             self.state = GameState.MENU
 
-    def _handle_settings_events(self, event):
-        """Handle settings screen - PLACEHOLDER"""
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                self.state = GameState.OPTIONS
+    # def _handle_settings_events(self, event):
+    #     """Handle settings screen - PLACEHOLDER"""
+    #     if event.type == pygame.KEYDOWN:
+    #         if event.key == pygame.K_ESCAPE:
+    #             self.state = GameState.OPTIONS
 
     def _handle_credits_events(self, event):
         """Handle credits screen - PLACEHOLDER"""
@@ -622,8 +648,11 @@ class Game:
         """Handle pause menu option selection"""
         if self.pause_selection == 0:  # Resume
             self.state = GameState.PLAYING
+            self.audio.unpause_music()  # Resume music
         elif self.pause_selection == 1:  # Return to Main Menu
             self._save_game()  # Auto-save before returning
+            self.audio.stop_music()
+            self.audio.play_music('menu')
             self.state = GameState.MENU
             self.menu_selection = 0
         elif self.pause_selection == 2:  # Quit to Profile Select
@@ -826,6 +855,7 @@ class Game:
             if not self.pause_pressed:
                 self.state = GameState.PAUSED
                 self.pause_pressed = True
+                self.audio.pause_music()  # Pause music
         else:
             self.pause_pressed = False
 
@@ -1086,6 +1116,9 @@ class Game:
         """Handle game over"""
         self.state = GameState.GAME_OVER
 
+        # Play game over music
+        self.audio.play_game_over_music()
+
         # Update final profile stats
         if self.current_profile:
             ProfileManager.update_profile_stats(
@@ -1096,6 +1129,9 @@ class Game:
     def _game_complete(self):
         """Handle game completion (victory)"""
         self.state = GameState.VICTORY
+
+        # Play victory music
+        self.audio.play_victory_music()
 
         # Mark difficulty as completed
         if self.current_profile:
@@ -1115,76 +1151,150 @@ class Game:
         """Draw current game state"""
         self.current_screen = None  # Reset at start
 
-        # Create temporary surface for game rendering
-        if self.settings.get_fullscreen():
-            # Render to a surface at game resolution
+        # Always render to 1280x720 base resolution
+        if self.settings.should_use_temp_surface():
             game_surface = pygame.Surface((1280, 720))
             render_target = game_surface
         else:
             render_target = self.screen
 
+        # # Determine render target based on fullscreen mode
+        # if self.settings.get_fullscreen():
+        #     # Create a surface at game resolution for rendering
+        #     game_surface = pygame.Surface((1280, 720))
+        #     render_target = game_surface
+        # else:
+        #     # Render directly to screen
+        #     render_target = self.screen
+
         # Draw to render target
         if self.state == GameState.PROFILE_SELECT:
             self.current_screen = self.menu.draw_profile_select(
-                self.screen, self.profiles, self.profile_selection, self.mouse_pos
+                render_target, self.profiles, self.profile_selection, self.mouse_pos
             )
         elif self.state == GameState.MENU:
             self.current_screen = self.menu.draw_main_menu(
-                self.screen, self.current_profile, self.menu_selection, self.mouse_pos
+                render_target, self.current_profile, self.menu_selection, self.mouse_pos
             )
         elif self.state == GameState.DIFFICULTY_SELECT:
             self.current_screen = self.menu.draw_difficulty_select(
-                self.screen, self.difficulty_selection, self.mouse_pos
+                render_target, self.difficulty_selection, self.mouse_pos
             )
         elif self.state == GameState.CHAR_SELECT:
             self.current_screen = self.menu.draw_char_select(
-                self.screen, self.player_name, self.char_selection, self.mouse_pos
+                render_target, self.player_name, self.char_selection, self.mouse_pos
             )
         elif self.state == GameState.OPTIONS:
             self.current_screen = self.menu.draw_options_menu(
-                self.screen, self.options_selection, self.mouse_pos
+                render_target, self.options_selection, self.mouse_pos
             )
         elif self.state == GameState.CONTROLS:
             self.current_screen = self.menu.draw_controls_screen(
-                self.screen, self.mouse_pos
+                render_target, self.mouse_pos
             )
         elif self.state == GameState.SETTINGS:
             self.current_screen = self.menu.draw_settings_screen(
-                self.screen, self.settings, self.mouse_pos
+                render_target, self.settings, self.mouse_pos
             )
         elif self.state == GameState.CREDITS:
             self.current_screen = self.menu.draw_credits_screen(
-                self.screen, self.mouse_pos
+                render_target, self.mouse_pos
             )
         elif self.state == GameState.LEVEL_MAP:
             self.current_screen = self.menu.draw_level_map_screen(
-                self.screen, self.current_profile, self.mouse_pos
+                render_target, self.current_profile, self.mouse_pos
             )
         elif self.state == GameState.PLAYING:
-            self._draw_game()
+            # For gameplay, always render to temp surface then scale
+            if self.settings.get_fullscreen():
+                self._draw_game_to_surface(game_surface)
+            else:
+                self._draw_game()
         elif self.state == GameState.PAUSED:
-            self._draw_game()
+            if self.settings.get_fullscreen():
+                self._draw_game_to_surface(game_surface)
+            else:
+                self._draw_game()
             self.current_screen = self.menu.draw_pause_menu(
-                self.screen, self.pause_selection, self.mouse_pos
+                render_target, self.pause_selection, self.mouse_pos
             )
         elif self.state == GameState.GAME_OVER:
             self.current_screen = self.menu.draw_game_over(
-                self.screen, self.player.score
+                render_target, self.player.score
             )
         elif self.state == GameState.VICTORY:
-            self.current_screen = self.menu.draw_victory(self.screen, self.player.score)
+            self.current_screen = self.menu.draw_victory(
+                render_target, self.player.score
+            )
 
-        # Draw popup if active
+        # Draw popup if active (to render target)
         if self.show_popup:
-            self.popup.draw(self.screen, self.font_small)
+            self.popup.draw(render_target, self.font_small)
 
-        # If fullscreen, blit game surface centered on screen
-        if self.settings.get_fullscreen():
-            self.screen.fill((0, 0, 0))  # Black bars
-            offset = self.settings.get_render_offset()
-            self.screen.blit(game_surface, offset)
+        # # If fullscreen, blit game surface centered on screen
+        # if self.settings.get_fullscreen():
+        #     self.screen.fill((0, 0, 0))  # Black bars
+        #     offset = self.settings.get_render_offset()
+        #     self.screen.blit(game_surface, offset)
+
+        # Scale/position the final output
+        if self.settings.should_use_temp_surface():
+            if self.settings.get_fullscreen():
+                # Fullscreen: center on native resolution
+                self.screen.fill((0, 0, 0))
+                offset = self.settings.get_render_offset()
+                self.screen.blit(game_surface, offset)
+            else:
+                # Windowed: scale to window size
+                self.screen.fill((0, 0, 0))
+                scale_size = self.settings.get_scale_transform()
+                if scale_size:
+                    scaled_surface = pygame.transform.scale(game_surface, scale_size)
+                    self.screen.blit(scaled_surface, (0, 0))
+                else:
+                    self.screen.blit(game_surface, (0, 0))
 
         pygame.display.flip()
+
+    def _draw_game_to_surface(self, surface):
+        """Draw game to a specific surface (for fullscreen rendering)"""
+        # Same as _draw_game but renders to provided surface instead of self.screen
+        surface.fill((0, 0, 0))
+
+        # Draw background
+        self.level.draw_background(surface, self.camera)
+
+        # Draw level
+        self.level.draw(surface, self.camera)
+
+        # Draw player
+        if self.player:
+            self.player.draw(surface, self.camera)
+
+        # Draw projectiles
+        for proj in self.projectiles:
+            proj.draw(surface, self.camera)
+
+        # Draw particles
+        for particle in self.particles:
+            particle.draw(surface, self.camera)
+
+        # Draw boss if exists
+        if self.boss and not self.boss.defeated:
+            self.boss.draw(surface, self.camera)
+            for proj in self.boss_projectiles:
+                proj.draw(surface, self.camera)
+            for effect in self.boss_effects:
+                effect.draw(surface, self.camera)
+
+        # Draw HUD
+        if self.player:
+            level_name, area_name = self._get_level_info()
+            self.hud.draw(surface, self.player, level_name, area_name, self.difficulty)
+
+        # Draw controls overlay
+        if self.show_controls:
+            self.hud.draw_controls(surface)
 
     def _draw_popup(self):
         """Draw popup overlay"""
@@ -1545,14 +1655,14 @@ class Game:
             # Music toggle
             if components['music_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
                 self.settings.toggle_music()
+                self.settings.set_music_volume(components["music_slider"].get_value())
+                self.audio.update_volumes()
                 self.settings.save_settings()
-                # TODO: Apply to audio manager when implemented
 
             # SFX toggle
             if components['sfx_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
                 self.settings.toggle_sfx()
                 self.settings.save_settings()
-                # TODO: Apply to audio manager when implemented
 
             # Start slider drag
             components['music_slider'].start_drag(self.mouse_pos)
@@ -1575,10 +1685,12 @@ class Game:
             if components['music_slider'].dragging:
                 components['music_slider'].update_drag(self.mouse_pos)
                 self.settings.set_music_volume(components['music_slider'].get_value())
+                self.audio.update_volumes()
 
             if components['sfx_slider'].dragging:
                 components['sfx_slider'].update_drag(self.mouse_pos)
                 self.settings.set_sfx_volume(components['sfx_slider'].get_value())
+
             """Handle settings screen input"""
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:

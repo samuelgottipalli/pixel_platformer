@@ -8,6 +8,14 @@ SCREEN_HEIGHT = 720
 FPS = 60
 TILE_SIZE = 32
 
+
+def update_screen_size(width, height):
+    """Update screen dimensions at runtime"""
+    global SCREEN_WIDTH, SCREEN_HEIGHT
+    SCREEN_WIDTH = width
+    SCREEN_HEIGHT = height
+
+
 # Physics
 GRAVITY = 0.8
 MAX_FALL_SPEED = 15

@@ -14,6 +14,10 @@ data/saves/
 data/profiles.json
 data/completed_games.json
 *.json
+Sound effects Pack 2/
+1*.ogg
+0*.ogg
+montage*
 
 # IDE
 .vscode/
