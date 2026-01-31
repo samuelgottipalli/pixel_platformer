@@ -64,6 +64,12 @@ class Player:
         # SFX manager
         self.audio = audio
 
+        # Achievement tracking
+        self.total_deaths = 0
+        self.enemies_killed_stomp = 0
+        self.enemies_killed_projectile = 0
+        self.enemies_killed_melee = 0
+
     def update(self, keys, tiles, hazards):
         """
         Update player state
@@ -245,9 +251,12 @@ class Player:
     def die(self):
         """Handle player death"""
         self.lives -= 1
+        if self.audio:
+            self.audio.player_die()
         self.health = self.max_health
         if self.lives >= 0:
             self.respawn()
+        self.total_deaths += 1
 
     def respawn(self, spawn_x=100, spawn_y=100):
         """Respawn player at checkpoint"""

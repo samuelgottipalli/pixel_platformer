@@ -93,6 +93,8 @@ class AudioManager:
             'enemy_hit': 'assets/audio/sfx/enemy_hit.wav',
             'enemy_death': 'assets/audio/sfx/enemy_death.wav',
             'player_hurt': 'assets/audio/sfx/player_hurt.wav',
+            'player_die': 'assets/audio/sfx/player_die.wav',
+            'player_heal': 'assets/audio/sfx/player_heal.wav',
             'coin': 'assets/audio/sfx/coin.wav',
             'powerup': 'assets/audio/sfx/powerup.wav',
             'key': 'assets/audio/sfx/key.wav',
@@ -304,6 +306,14 @@ class AudioManager:
     def player_hurt(self):
         """Play player damage sound"""
         self.play_sfx('player_hurt')
+
+    def player_die(self):
+        """Play player death sound"""
+        self.play_sfx('player_die')
+    
+    def player_heal(self):
+        """Play player healing sound"""
+        self.play_sfx('player_heal')
 
     # Collectible sounds
     def collect_coin(self):

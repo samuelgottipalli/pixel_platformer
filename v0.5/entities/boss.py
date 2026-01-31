@@ -3,10 +3,8 @@ Boss entity system - Multi-phase boss fights
 """
 
 import math
-import random
 
 import pygame
-
 from config.settings import (CYAN, GRAVITY, MAX_FALL_SPEED, ORANGE, PURPLE,
                              RED, WHITE, YELLOW)
 

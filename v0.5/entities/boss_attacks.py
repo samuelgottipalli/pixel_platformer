@@ -5,8 +5,7 @@ Boss attack patterns and abilities
 import math
 
 import pygame
-
-from config.settings import CYAN, ORANGE, PURPLE, RED, YELLOW
+from config.settings import RED
 from entities.boss import BossProjectile
 
 

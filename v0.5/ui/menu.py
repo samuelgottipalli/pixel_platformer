@@ -53,7 +53,7 @@ class Menu:
         button_height = 40
         button_x = SCREEN_WIDTH // 2 - button_width // 2
         start_y = 240
-        for i in range(5):  # New Game, Continue, Level Map, Options, Quit
+        for i in range(6):  # New Game, Continue, Level Map, Achievements, Options, Quit
             y = start_y + i * 55
             buttons.append(pygame.Rect(button_x, y - 8, button_width, button_height))
         return buttons
@@ -121,7 +121,7 @@ class Menu:
         title = self.font_large.render("RETRO PLATFORMER", True, UI_HIGHLIGHT)
         surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 100))
 
-        options = ["New Game", "Continue", "Level Map", "Options", "Quit"]
+        options = ["New Game", "Continue", "Level Map", "Achievements", "Options", "Quit"]
         for i, option in enumerate(options):
             y = 240 + i * 55
             is_selected = i == selection
@@ -496,7 +496,7 @@ class Menu:
         return screen
 
     # ========================================================================
-    # PLACEHOLDER SCREENS
+    # CONTROLS SCREEN
     # ========================================================================
 
     def draw_controls_screen(self, surface, mouse_pos=None):
@@ -582,6 +582,10 @@ class Menu:
 
         screen.draw_buttons(surface)
         return screen
+
+    # ========================================================================
+    # SETTINGS SCREEN
+    # ========================================================================
 
     def draw_settings_screen(self, surface, game_settings, mouse_pos=None):
         """Draw functional settings screen with video and audio controls"""
@@ -670,8 +674,12 @@ class Menu:
         # DRAW DROPDOWN LAST (so it appears on top)
         components['res_dropdown'].check_hover(mouse_pos)
         components['res_dropdown'].draw(surface, self.font_tiny)
-        
+
         return screen
+
+    # ========================================================================
+    # CREDITS SCREEN
+    # ========================================================================
 
     def draw_credits_screen(self, surface, mouse_pos=None):
         """Draw credits screen"""
@@ -814,3 +822,20 @@ class Menu:
         text_x = x + button_width // 2 - text_surf.get_width() // 2
         text_y = y
         surface.blit(text_surf, (text_x, text_y))
+
+    # ========================================================================
+    # ACHIEVEMENTS SCREEN
+    # ========================================================================
+    def draw_achievements_screen(self, surface, achievement_manager, mouse_pos=None):
+        """Draw achievements screen"""
+        from ui.achievement_ui import AchievementScreen
+
+        if not hasattr(self, 'achievement_screen'):
+            self.achievement_screen = AchievementScreen(
+                self.font_large,
+                self.font_medium,
+                self.font_small,
+                self.font_tiny
+            )
+
+        self.achievement_screen.draw(surface, achievement_manager, mouse_pos)

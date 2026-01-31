@@ -110,6 +110,12 @@ class Game:
         self.difficulty_selection = 1  # Default to Normal (0=Easy, 1=Normal, 2=Hard)
         self.difficulty_manager = None
 
+        # Achievement manager (initialize when profile selected)
+        self.achievement_manager = None
+
+        # Achievement notifications
+        self.achievement_notifications = []
+
         # Load levels
         self.levels = LevelLoader.create_default_levels()
 
@@ -370,6 +376,11 @@ class Game:
         self._load_level(0)
         self.state = GameState.PLAYING
 
+        import time
+        self.game_start_time = time.time()
+        self.boss_fight_start_time = None
+        self.boss_damage_taken = 0
+
     def _apply_difficulty_selection(self):
         """Apply selected difficulty and proceed to character select"""
         difficulties = ["EASY", "NORMAL", "HARD"]
@@ -470,12 +481,15 @@ class Game:
         elif self.menu_selection == 2:  # Level Map
             self.state = GameState.LEVEL_MAP
             self.level_selection = 0
+        
+        elif self.menu_selection == 3:  # Achievements
+            self.state = GameState.ACHIEVEMENTS
 
-        elif self.menu_selection == 3:  # Options
+        elif self.menu_selection == 4:  # Options
             self.state = GameState.OPTIONS
             self.options_selection = 0
 
-        elif self.menu_selection == 4:  # Quit
+        elif self.menu_selection == 5:  # Quit
             self.running = False
 
     def _handle_options_events(self, event):
@@ -505,12 +519,6 @@ class Game:
             self.state = GameState.CREDITS
         elif self.options_selection == 3:  # Back
             self.state = GameState.MENU
-
-    # def _handle_settings_events(self, event):
-    #     """Handle settings screen - PLACEHOLDER"""
-    #     if event.type == pygame.KEYDOWN:
-    #         if event.key == pygame.K_ESCAPE:
-    #             self.state = GameState.OPTIONS
 
     def _handle_credits_events(self, event):
         """Handle credits screen - PLACEHOLDER"""
@@ -558,6 +566,11 @@ class Game:
         """Load selected profile and go to main menu"""
         if self.profiles:
             self.current_profile = self.profiles[self.profile_selection]
+
+            # Initialize achievement manager for this profile
+            from utils.achievement_manager import AchievementManager
+            self.achievement_manager = AchievementManager(self.current_profile.name)
+
             self.state = GameState.MENU
             self.menu_selection = 0
 
@@ -684,6 +697,36 @@ class Game:
             if self.boss and not self.boss.defeated:
                 self._update_boss()
 
+        # Update achievement notifications
+        self.achievement_notifications = [
+            notif for notif in self.achievement_notifications if notif.update()
+        ]
+
+        # Check for new achievements
+        if self.achievement_manager and self.achievement_manager.recent_unlocks:
+            from ui.achievement_ui import AchievementNotification
+
+            for achievement in self.achievement_manager.recent_unlocks:
+                notif = AchievementNotification(
+                    achievement, self.font_medium, self.font_small
+                )
+                self.achievement_notifications.append(notif)
+
+            # Apply rewards
+            if self.player:
+                rewards = self.achievement_manager.apply_rewards_to_player(self.player)
+
+                # Show reward notification
+                for reward in rewards:
+                    if reward["type"] == "life":
+                        self._show_popup(f"+{reward['value']} Lives!")
+                    elif reward["type"] == "weapon":
+                        self._show_popup("Weapon Upgraded!")
+                    elif reward["type"] == "score":
+                        self._show_popup(f"+{reward['value']} Points!")
+
+            self.achievement_manager.clear_recent_unlocks()
+
     def _update_boss(self):
         """Update boss fight logic"""
         from entities.boss_attacks import BossAttackEffect, BossAttackManager
@@ -759,6 +802,15 @@ class Game:
         """Handle boss defeat"""
         self.boss_defeated = True
         self.player.score += 1000
+        if self.achievement_manager:
+            # Check no damage (track boss_damage_taken)
+            if self.boss_damage_taken == 0:
+                self.achievement_manager.check_boss_no_damage()
+
+            # Check boss speed (track boss_fight_start_time)
+            if hasattr(self, 'boss_fight_start_time'):
+                fight_time = time.time() - self.boss_fight_start_time
+                self.achievement_manager.check_boss_speed(fight_time)
 
         # Spawn portal to next level
         from objects.portal import Portal
@@ -924,6 +976,8 @@ class Game:
                     powerup.collected = True
                     self.player.add_powerup(powerup.type)
                     self.player.score += SCORE_POWERUP
+                    if self.achievement_manager:
+                        self.achievement_manager.add_powerup_collected()
 
         # Keys
         for key in self.level.keys:
@@ -953,6 +1007,14 @@ class Game:
             portal.update()
             if self.player.get_rect().colliderect(portal.get_rect()):
                 if portal.check_unlock(self.player.keys):
+                    # Update achievements
+                    if self.achievement_manager:
+                        # Calculate coin percentage for entire Act
+                        # (You'll need to sum up all coins across all levels)
+                        total_act_coins = self._get_total_act_coins()
+                        self.achievement_manager.check_coin_percentage(
+                            self.player.coins, total_act_coins
+                        )
                     self._transition_to_level(portal.destination)
 
     def _update_enemies(self):
@@ -972,6 +1034,9 @@ class Game:
                         self.player.score += SCORE_MELEE_HIT
                         if enemy.dead:
                             self._create_enemy_death_particles(enemy)
+                            # When enemy dies from melee:
+                            if self.achievement_manager:
+                                self.achievement_manager.add_enemy_kill('melee')
 
     def _handle_enemy_player_collision(self, enemy):
         """Handle collision between player and enemy"""
@@ -985,6 +1050,9 @@ class Game:
             self.player.score += SCORE_ENEMY_KILL
             if enemy.dead:
                 self._create_enemy_death_particles(enemy)
+                # When enemy dies from stomp:
+                if self.achievement_manager:
+                    self.achievement_manager.add_enemy_kill('stomp')
         else:
             self.player.take_damage(enemy.damage)
 
@@ -1036,6 +1104,9 @@ class Game:
                     self.player.score += SCORE_ENEMY_HIT
                     if enemy.dead:
                         self._create_enemy_death_particles(enemy)
+                        # When enemy dies from projectile:
+                        if self.achievement_manager:
+                            self.achievement_manager.add_enemy_kill('projectile')
                     break
 
     def _update_particles(self):
@@ -1129,6 +1200,19 @@ class Game:
     def _game_complete(self):
         """Handle game completion (victory)"""
         self.state = GameState.VICTORY
+
+        # Check achievements
+        if self.achievement_manager:
+            self.achievement_manager.check_difficulty_complete(self.difficulty)
+
+            # Check speedrun time (you'll need to track this)
+            if hasattr(self, "game_start_time"):
+                total_time = time.time() - self.game_start_time
+                self.achievement_manager.check_speedrun_time(total_time)
+
+            # Check no death run
+            if self.player.total_deaths == 0:  # Track this in player
+                self.achievement_manager.check_no_death_run()
 
         # Play victory music
         self.audio.play_victory_music()
@@ -1226,6 +1310,11 @@ class Game:
             self.current_screen = self.menu.draw_victory(
                 render_target, self.player.score
             )
+        elif self.state == GameState.ACHIEVEMENTS:
+            if self.achievement_manager:
+                self.menu.draw_achievements_screen(
+                    self.screen, self.achievement_manager, self.mouse_pos
+                )
 
         # Draw popup if active (to render target)
         if self.show_popup:
@@ -1253,6 +1342,10 @@ class Game:
                     self.screen.blit(scaled_surface, (0, 0))
                 else:
                     self.screen.blit(game_surface, (0, 0))
+
+        # Draw achievement notifications (on top of everything)
+        for notif in self.achievement_notifications:
+            notif.draw(self.screen)
 
         pygame.display.flip()
 
@@ -1762,3 +1855,17 @@ class Game:
                         components['sfx_slider'].update_drag(self.mouse_pos)
                         if components['sfx_slider'].dragging:
                             self.settings.set_sfx_volume(components['sfx_slider'].get_value())
+
+    def _handle_achievements_events(self, event):
+        """Handle achievements screen input"""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.state = GameState.MENU
+            elif event.key == pygame.K_LEFT:
+                self.menu.achievement_screen.change_category(-1)
+            elif event.key == pygame.K_RIGHT:
+                self.menu.achievement_screen.change_category(1)
+            elif event.key == pygame.K_UP:
+                self.menu.achievement_screen.scroll(-1)
+            elif event.key == pygame.K_DOWN:
+                self.menu.achievement_screen.scroll(1)
