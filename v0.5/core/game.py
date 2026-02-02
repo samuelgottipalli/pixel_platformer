@@ -204,7 +204,13 @@ class Game:
                     self.options_selection = 0
                     return
 
-        if self.state == GameState.PROFILE_SELECT:
+        if self.state == GameState.ACHIEVEMENTS:
+            if hasattr(self.menu, 'achievement_screen'):
+                if self.menu.achievement_screen.check_category_tab_click(
+                    self.mouse_pos, mouse_pressed
+                ):
+                    return  # Tab was clicked, handled
+        elif self.state == GameState.PROFILE_SELECT:
             # Check profile boxes
             if self.profiles:
                 y_start = 160
@@ -295,6 +301,8 @@ class Game:
             self.state = GameState.OPTIONS
         elif self.state == GameState.LEVEL_MAP:
             self.state = GameState.MENU
+        elif self.state == GameState.ACHIEVEMENTS:
+            self.state = GameState.MENU
 
     def _handle_options_button(self):
         """Handle options button click - opens options menu"""
@@ -333,6 +341,8 @@ class Game:
                 self._handle_credits_events(event)
             elif self.state == GameState.LEVEL_MAP:
                 self._handle_level_map_events(event)
+            elif self.state == GameState.ACHIEVEMENTS:
+                self._handle_achievements_events(event)
             elif self.state == GameState.PAUSED:
                 self._handle_pause_events(event)
             elif self.state == GameState.GAME_OVER:
@@ -684,6 +694,30 @@ class Game:
             if self.current_profile:
                 SaveManager.delete_save(self.current_profile.name)
             self.state = GameState.MENU  # Stay with current profile
+
+    def _handle_achievements_events(self, event):
+        """Handle achievements screen input"""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.state = GameState.MENU
+            elif event.key == pygame.K_LEFT:
+                if hasattr(self.menu, 'achievement_screen'):
+                    self.menu.achievement_screen.change_category(-1)
+            elif event.key == pygame.K_RIGHT:
+                if hasattr(self.menu, 'achievement_screen'):
+                    self.menu.achievement_screen.change_category(1)
+            elif event.key == pygame.K_UP:
+                if hasattr(self.menu, 'achievement_screen'):
+                    self.menu.achievement_screen.scroll(-1)
+            elif event.key == pygame.K_DOWN:
+                if hasattr(self.menu, 'achievement_screen'):
+                    self.menu.achievement_screen.scroll(1)
+        
+        # ADD MOUSE WHEEL SUPPORT
+        elif event.type == pygame.MOUSEWHEEL:
+            if hasattr(self.menu, 'achievement_screen'):
+                # event.y is positive for scroll up, negative for scroll down
+                self.menu.achievement_screen.scroll(-event.y)
 
     def _update(self):
         """Update game state"""
@@ -1312,7 +1346,7 @@ class Game:
             )
         elif self.state == GameState.ACHIEVEMENTS:
             if self.achievement_manager:
-                self.menu.draw_achievements_screen(
+                self.current_screen = self.menu.draw_achievements_screen(
                     self.screen, self.achievement_manager, self.mouse_pos
                 )
 
@@ -1855,17 +1889,3 @@ class Game:
                         components['sfx_slider'].update_drag(self.mouse_pos)
                         if components['sfx_slider'].dragging:
                             self.settings.set_sfx_volume(components['sfx_slider'].get_value())
-
-    def _handle_achievements_events(self, event):
-        """Handle achievements screen input"""
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                self.state = GameState.MENU
-            elif event.key == pygame.K_LEFT:
-                self.menu.achievement_screen.change_category(-1)
-            elif event.key == pygame.K_RIGHT:
-                self.menu.achievement_screen.change_category(1)
-            elif event.key == pygame.K_UP:
-                self.menu.achievement_screen.scroll(-1)
-            elif event.key == pygame.K_DOWN:
-                self.menu.achievement_screen.scroll(1)

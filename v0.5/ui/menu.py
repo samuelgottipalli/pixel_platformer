@@ -826,16 +826,36 @@ class Menu:
     # ========================================================================
     # ACHIEVEMENTS SCREEN
     # ========================================================================
-    def draw_achievements_screen(self, surface, achievement_manager, mouse_pos=None):
-        """Draw achievements screen"""
-        from ui.achievement_ui import AchievementScreen
 
-        if not hasattr(self, 'achievement_screen'):
+    def draw_achievements_screen(self, surface, achievement_manager, mouse_pos=None):
+        """Draw achievements screen with back button"""
+        from ui.achievement_ui import AchievementScreen
+        from ui.components import Screen
+
+        # Create screen with back button
+        screen = Screen(
+            "ACHIEVEMENTS",
+            self.font_large,
+            self.font_medium,
+            self.font_small,
+            self.font_tiny,
+            show_back=True,
+            show_options=False,
+        )
+
+        screen.draw_background(surface)
+        screen.update_button_hover(mouse_pos)
+
+        # Create achievement screen if needed
+        if not hasattr(self, "achievement_screen"):
             self.achievement_screen = AchievementScreen(
-                self.font_large,
-                self.font_medium,
-                self.font_small,
-                self.font_tiny
+                self.font_large, self.font_medium, self.font_small, self.font_tiny
             )
 
-        self.achievement_screen.draw(surface, achievement_manager, mouse_pos)
+        # Draw achievement content (without title since Screen draws it)
+        self.achievement_screen.draw_content(surface, achievement_manager, mouse_pos)
+
+        # Draw back button
+        screen.draw_buttons(surface)
+
+        return screen

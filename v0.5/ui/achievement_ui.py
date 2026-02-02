@@ -114,24 +114,20 @@ class AchievementScreen:
         self.selected_category = 0
         self.scroll_offset = 0
     
-    def draw(self, surface, achievement_manager, mouse_pos=None):
-        """Draw achievements screen"""
-        surface.fill(BLACK)
+    def draw_content(self, surface, achievement_manager, mouse_pos=None):
+        """Draw achievements content (called by menu, which draws title/back button)"""
+        # Don't fill screen or draw title - that's done by Screen component
         
-        # Title
-        title = self.font_large.render("ACHIEVEMENTS", True, UI_HIGHLIGHT)
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 40))
-        
-        # Stats
+        # Stats (move up since title is handled by Screen)
         stats = achievement_manager.get_stats()
         stats_text = self.font_small.render(
             f"Unlocked: {stats['unlocked']}/{stats['total']} ({stats['completion']}%)",
             True, UI_TEXT
         )
-        surface.blit(stats_text, (SCREEN_WIDTH // 2 - stats_text.get_width() // 2, 90))
+        surface.blit(stats_text, (SCREEN_WIDTH // 2 - stats_text.get_width() // 2, 110))
         
         # Category tabs
-        tab_y = 140
+        tab_y = 160
         tab_width = 140
         tab_height = 40
         tab_spacing = 10
@@ -166,7 +162,7 @@ class AchievementScreen:
         category_id = self.categories[self.selected_category][0]
         achievements = achievement_manager.get_achievements_by_category(category_id)
         
-        list_y = 220
+        list_y = 240
         item_height = 80
         visible_items = 5
         
@@ -191,9 +187,31 @@ class AchievementScreen:
                 surface.blit(arrow_down, (SCREEN_WIDTH // 2 - arrow_down.get_width() // 2, list_y + visible_items * item_height + 10))
         
         # Instructions
-        hint = self.font_tiny.render("ESC Back   LEFT/RIGHT Change Category   UP/DOWN Scroll", True, UI_TEXT_DIM)
+        hint = self.font_tiny.render("ESC/Back Button   LEFT/RIGHT Category   UP/DOWN Scroll", True, UI_TEXT_DIM)
         surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 50))
-    
+
+    def check_category_tab_click(self, mouse_pos, mouse_pressed):
+        """Check if a category tab was clicked"""
+        if not mouse_pressed[0]:
+            return False
+        
+        tab_y = 160
+        tab_width = 140
+        tab_height = 40
+        tab_spacing = 10
+        start_x = (SCREEN_WIDTH - (len(self.categories) * (tab_width + tab_spacing))) // 2
+        
+        for i, (cat_id, cat_name) in enumerate(self.categories):
+            x = start_x + i * (tab_width + tab_spacing)
+            tab_rect = pygame.Rect(x, tab_y, tab_width, tab_height)
+            
+            if tab_rect.collidepoint(mouse_pos):
+                self.selected_category = i
+                self.scroll_offset = 0
+                return True
+        
+        return False
+
     def _draw_achievement_item(self, surface, achievement, x, y, width):
         """Draw individual achievement item"""
         height = 70
