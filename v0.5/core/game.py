@@ -366,6 +366,8 @@ class Game:
     def _start_new_game(self):
         """Start new game with selected difficulty"""
         from utils.difficulty_manager import DifficultyManager
+        if not self.current_profile:
+            return
 
         # Set difficulty
         difficulties = ["EASY", "NORMAL", "HARD"]
@@ -374,15 +376,28 @@ class Game:
         # Initialize difficulty manager
         self.difficulty_manager = DifficultyManager(self.difficulty, len(self.levels))
 
+        # DELETE any existing save file (this is a NEW game, not continue)
+        SaveManager.delete_save(self.current_profile.name)
+
         # Create player with current profile's character
         lives = self.difficulty_manager.get_lives(0)
         self.player = Player(100, 100, self.current_profile.character, self.audio)
         self.player.lives = lives
 
+        # EXPLICITLY reset all player stats for new game
+        self.player.score = 0
+        self.player.coins = 0
+        self.player.health = 100
+        self.player.weapon_level = 1
+        self.player.keys = 0
+        self.player.max_jumps = 2
+        
         # Start level music
         self.audio.play_music('level')
 
-        # Start from level 0
+        # Reset profile level progress (new game starts from level 0)
+        self.current_profile.levels_completed = 0
+        self.current_level_index = 0
         self._load_level(0)
         self.state = GameState.PLAYING
 
@@ -463,30 +478,31 @@ class Game:
         elif self.menu_selection == 1:  # Continue Game
             # Stop menu music, will start level music when game begins
             self.audio.stop_music()
-            save_data = SaveManager.load_game(self.current_profile.name)
-            if save_data:
-                # Load from save
-                self.player = Player(100, 100, self.current_profile.character, audio=self.audio)
-                self.current_level_index = save_data["current_level"]
-                self.difficulty = save_data.get("difficulty", "NORMAL")
-                SaveManager.apply_save_to_player(self.player, save_data)
+            if self.current_profile:
+                save_data = SaveManager.load_game(self.current_profile.name)
+                if save_data:
+                    # Load from save
+                    self.player = Player(100, 100, self.current_profile.character, audio=self.audio)
+                    self.current_level_index = save_data["current_level"]
+                    self.difficulty = save_data.get("difficulty", "NORMAL")
+                    SaveManager.apply_save_to_player(self.player, save_data)
 
-                # Initialize difficulty manager
-                from utils.difficulty_manager import DifficultyManager
+                    # Initialize difficulty manager
+                    from utils.difficulty_manager import DifficultyManager
 
-                self.difficulty_manager = DifficultyManager(
-                    self.difficulty, len(self.levels)
-                )
+                    self.difficulty_manager = DifficultyManager(
+                        self.difficulty, len(self.levels)
+                    )
 
-                # Start level music
-                self.audio.play_music('level')
+                    # Start level music
+                    self.audio.play_music('level')
 
-                self._load_level(self.current_level_index)
-                self.state = GameState.PLAYING
-            else:
-                # NO SAVE FILE - Show popup instead of going to difficulty select
-                self._show_popup("No saved game found! Start a new game.")
-                # Stay on menu, don't change state
+                    self._load_level(self.current_level_index)
+                    self.state = GameState.PLAYING
+                else:
+                    # NO SAVE FILE - Show popup instead of going to difficulty select
+                    self._show_popup("No saved game found! Start a new game.", 15)
+                    # Stay on menu, don't change state
 
         elif self.menu_selection == 2:  # Level Map
             self.state = GameState.LEVEL_MAP
@@ -686,13 +702,20 @@ class Game:
     def _handle_victory_events(self, event):
         """Handle victory screen input"""
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-            self.state = GameState.MENU  # Stay with current profile
+            # Profile was already deleted in _game_complete()
+            self.player = None
+            self.current_profile = None
+            self.state = GameState.PROFILE_SELECT  # Back to profile select
 
     def _handle_game_over_events(self, event):
         """Handle game over screen input"""
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
             if self.current_profile:
                 SaveManager.delete_save(self.current_profile.name)
+            
+            # Clear player so menu doesn't show old score
+            self.player = None
+            
             self.state = GameState.MENU  # Stay with current profile
 
     def _handle_achievements_events(self, event):
