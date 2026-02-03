@@ -156,6 +156,14 @@ class Game:
         # Start menu music
         self.audio.play_menu_music()
 
+        # Game session tracking
+        self.session_start_time = None
+        self.session_id = None
+        self.enemies_defeated = 0
+        self.total_damage_taken = 0
+        self.powerups_collected = 0
+        self.secrets_found = 0
+
     def run(self):
         """Main game loop"""
         try:
@@ -405,6 +413,15 @@ class Game:
         self.game_start_time = time.time()
         self.boss_fight_start_time = None
         self.boss_damage_taken = 0
+
+        # Initialize game session tracking
+        import uuid
+        self.session_start_time = time.time()
+        self.session_id = str(uuid.uuid4())[:8]  # Short ID
+        self.enemies_defeated = 0
+        self.total_damage_taken = 0
+        self.powerups_collected = 0
+        self.secrets_found = 0
 
     def _apply_difficulty_selection(self):
         """Apply selected difficulty and proceed to character select"""
@@ -822,6 +839,7 @@ class Game:
             if self.player.get_rect().colliderect(proj.get_rect()):
                 if not self.player.invincible:
                     self.player.take_damage(proj.damage)
+                    self.total_damage_taken += proj.damage
                 proj.active = False
 
         # Update boss effects
@@ -837,6 +855,7 @@ class Game:
                 if self.player.get_rect().colliderect(damage_rect):
                     if not self.player.invincible:
                         self.player.take_damage(effect.damage)
+                        self.total_damage_taken += effect.damage
 
         # Check player attacks on boss
         if self.player.melee_active:
@@ -1021,6 +1040,7 @@ class Game:
                 coin.update()
                 if self.player.get_rect().colliderect(coin.get_rect()):
                     coin.collected = True
+                    self.coins_collected += 1
                     self.player.coins += coin.value
                     self.player.score += coin.value * SCORE_COIN
                     self._create_coin_particles(coin)
@@ -1031,6 +1051,7 @@ class Game:
                 powerup.update()
                 if self.player.get_rect().colliderect(powerup.get_rect()):
                     powerup.collected = True
+                    self.powerups_collected += 1
                     self.player.add_powerup(powerup.type)
                     self.player.score += SCORE_POWERUP
                     if self.achievement_manager:
@@ -1106,12 +1127,15 @@ class Game:
             self.player.dy = -10
             self.player.score += SCORE_ENEMY_KILL
             if enemy.dead:
+                self.level.enemies.remove(enemy)
+                self.enemies_defeated += 1
                 self._create_enemy_death_particles(enemy)
                 # When enemy dies from stomp:
                 if self.achievement_manager:
                     self.achievement_manager.add_enemy_kill('stomp')
         else:
             self.player.take_damage(enemy.damage)
+            self.total_damage_taken += enemy.damage
 
     def _create_enemy_death_particles(self, enemy):
         """Create particles when enemy dies"""
@@ -1160,6 +1184,8 @@ class Game:
                     proj.active = False
                     self.player.score += SCORE_ENEMY_HIT
                     if enemy.dead:
+                        self.level.enemies.remove(enemy)
+                        self.enemies_defeated += 1
                         self._create_enemy_death_particles(enemy)
                         # When enemy dies from projectile:
                         if self.achievement_manager:
