@@ -81,7 +81,7 @@ class Game:
         # UI
         self.menu = Menu(self.font_large, self.font_medium, self.font_small)
         self.hud = HUD(self.font_small)
-        self.popup = None
+        self.popup = Popup("", 15)
 
         # Game state - START AT PROFILE SELECT
         self.state = GameState.PROFILE_SELECT
@@ -163,6 +163,10 @@ class Game:
         self.total_damage_taken = 0
         self.powerups_collected = 0
         self.secrets_found = 0
+        self.coins_collected = 0
+
+        # Track total coins available in act for achievement
+        self.total_coins_in_act = 0
 
     def run(self):
         """Main game loop"""
@@ -399,7 +403,7 @@ class Game:
         self.player.weapon_level = 1
         self.player.keys = 0
         self.player.max_jumps = 2
-        
+
         # Start level music
         self.audio.play_music('level')
 
@@ -524,7 +528,7 @@ class Game:
         elif self.menu_selection == 2:  # Level Map
             self.state = GameState.LEVEL_MAP
             self.level_selection = 0
-        
+
         elif self.menu_selection == 3:  # Achievements
             self.state = GameState.ACHIEVEMENTS
 
@@ -707,12 +711,14 @@ class Game:
             self.audio.unpause_music()  # Resume music
         elif self.pause_selection == 1:  # Return to Main Menu
             self._save_game()  # Auto-save before returning
+            self._save_game_session("QUIT")
             self.audio.stop_music()
             self.audio.play_music('menu')
             self.state = GameState.MENU
             self.menu_selection = 0
         elif self.pause_selection == 2:  # Quit to Profile Select
             self._save_game()
+            self._save_game_session("QUIT")
             self.current_profile = None
             self.state = GameState.PROFILE_SELECT  # Return to profile select
 
@@ -729,10 +735,10 @@ class Game:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
             if self.current_profile:
                 SaveManager.delete_save(self.current_profile.name)
-            
+
             # Clear player so menu doesn't show old score
             self.player = None
-            
+
             self.state = GameState.MENU  # Stay with current profile
 
     def _handle_achievements_events(self, event):
@@ -752,7 +758,7 @@ class Game:
             elif event.key == pygame.K_DOWN:
                 if hasattr(self.menu, 'achievement_screen'):
                     self.menu.achievement_screen.scroll(1)
-        
+
         # ADD MOUSE WHEEL SUPPORT
         elif event.type == pygame.MOUSEWHEEL:
             if hasattr(self.menu, 'achievement_screen'):
@@ -1089,9 +1095,8 @@ class Game:
                     if self.achievement_manager:
                         # Calculate coin percentage for entire Act
                         # (You'll need to sum up all coins across all levels)
-                        total_act_coins = self._get_total_act_coins()
                         self.achievement_manager.check_coin_percentage(
-                            self.player.coins, total_act_coins
+                            self.player.coins, self.total_coins_in_act
                         )
                     self._transition_to_level(portal.destination)
 
@@ -1111,6 +1116,8 @@ class Game:
                         enemy.take_damage(self.player.weapon_level + 1)
                         self.player.score += SCORE_MELEE_HIT
                         if enemy.dead:
+                            self.level.enemies.remove(enemy)
+                            self.enemies_defeated += 1
                             self._create_enemy_death_particles(enemy)
                             # When enemy dies from melee:
                             if self.achievement_manager:
@@ -1202,6 +1209,10 @@ class Game:
             self.current_level_index = level_index
             self.level = Level(self.levels[level_index])
 
+            # Count total coins in this level
+            level_coin_total = sum(coin.value for coin in self.level.coins)
+            self.total_coins_in_act += level_coin_total
+
             if self.player:
                 self.player.x = self.level.spawn_x
                 self.player.y = self.level.spawn_y
@@ -1269,6 +1280,26 @@ class Game:
     def _game_over(self):
         """Handle game over"""
         self.state = GameState.GAME_OVER
+        # Check achievements
+        if self.achievement_manager:
+            self.achievement_manager.check_difficulty_complete(self.difficulty)
+
+            # Check speedrun time (you'll need to track this)
+            if hasattr(self, "game_start_time"):
+                import time
+
+                total_time = time.time() - self.game_start_time
+                self.achievement_manager.check_speedrun_time(total_time)
+
+            # Check no death run
+            if self.player.total_deaths == 0:  # Track this in player
+                self.achievement_manager.check_no_death_run()
+
+            # Check coin achievement with accurate total
+            if self.total_coins_in_act > 0:
+                self.achievement_manager.check_coin_percentage(
+                    self.player.coins, self.total_coins_in_act
+                )
 
         # Play game over music
         self.audio.play_game_over_music()
@@ -1280,6 +1311,9 @@ class Game:
             )
             ProfileManager.save_profiles(self.profiles)
 
+            # Save game session to history
+            self._save_game_session("GAME_OVER")
+
     def _game_complete(self):
         """Handle game completion (victory)"""
         self.state = GameState.VICTORY
@@ -1290,12 +1324,20 @@ class Game:
 
             # Check speedrun time (you'll need to track this)
             if hasattr(self, "game_start_time"):
+                import time
+
                 total_time = time.time() - self.game_start_time
                 self.achievement_manager.check_speedrun_time(total_time)
 
             # Check no death run
             if self.player.total_deaths == 0:  # Track this in player
                 self.achievement_manager.check_no_death_run()
+
+            # Check coin achievement with accurate total
+            if self.total_coins_in_act > 0:
+                self.achievement_manager.check_coin_percentage(
+                    self.player.coins, self.total_coins_in_act
+                )
 
         # Play victory music
         self.audio.play_victory_music()
@@ -1305,6 +1347,9 @@ class Game:
             DifficultyCompletionTracker.mark_difficulty_complete(
                 self.current_profile.name, self.difficulty
             )
+
+            # Save game session to history (BEFORE deleting profile)
+            self._save_game_session("COMPLETED", speedrun_time)
 
             # Save completed game stats and delete active profile
             ProfileManager.save_completed_game(self.current_profile, self.player.score)
@@ -1938,3 +1983,49 @@ class Game:
                         components['sfx_slider'].update_drag(self.mouse_pos)
                         if components['sfx_slider'].dragging:
                             self.settings.set_sfx_volume(components['sfx_slider'].get_value())
+
+    def _save_game_session(self, result, speedrun_time=0.0):
+        """
+        Save current game session to history
+        Args:
+            result: "COMPLETED", "GAME_OVER", or "QUIT"
+            speedrun_time: Time to complete (for completed runs)
+        """
+        if not self.current_profile or not self.player:
+            return
+
+        from save_system.game_session import GameSession, GameHistoryManager
+        from datetime import datetime
+        import time
+
+        # Calculate time played
+        time_played = 0
+        if hasattr(self, 'session_start_time') and self.session_start_time:
+            time_played = int(time.time() - self.session_start_time)
+
+        # Get session ID
+        session_id = getattr(self, 'session_id', 'unknown')
+
+        # Create session object
+        session = GameSession(
+            player_name=self.current_profile.name,
+            character=self.current_profile.character,
+            difficulty=self.difficulty if hasattr(self, 'difficulty') else 'NORMAL',
+            result=result,
+            final_score=self.player.score,
+            coins_collected=self.player.coins,
+            levels_completed=self.current_level_index + 1,  # +1 because 0-indexed
+            enemies_defeated=self.enemies_defeated,
+            time_played_seconds=time_played,
+            deaths=getattr(self.player, 'total_deaths', 0),
+            damage_taken=self.total_damage_taken,
+            powerups_collected=self.powerups_collected,
+            secrets_found=self.secrets_found,
+            session_date=datetime.now().isoformat(),
+            session_id=session_id,
+            speedrun_time=speedrun_time
+        )
+
+        # Save to history
+        GameHistoryManager.save_session(session)
+        print(f"Game session saved: {result} - Score: {self.player.score}")

@@ -133,4 +133,8 @@ class SaveManager:
         """
         filename = f"save_{profile_name}.json"
         filepath = os.path.join(SAVE_DIR, filename)
-        return os.path.exists(filepath)
+        if os.path.exists(filepath):
+            print(f"Profile already exists for {profile_name}")
+            return True
+        return False
+
