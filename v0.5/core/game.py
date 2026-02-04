@@ -92,7 +92,6 @@ class Game:
             0  # Options menu (0=Controls, 1=Settings, 2=Credits, 3=Back)
         )
         self.pause_selection = 0
-        self.profile_selection = 0
         self.level_selection = 0  # For level select screen
         self.player_name = ""
         self.char_selection = 0
@@ -101,6 +100,8 @@ class Game:
         self.profiles = ProfileManager.load_profiles()
         self.current_profile = None  # Selected profile
         self.profile_action = None  # 'new' or 'load'
+        self.profile_selection = 0
+        self.profile_scroll_offset = 0
 
         self.player = None
         self.current_level_index = 0
@@ -226,12 +227,21 @@ class Game:
             # Check profile boxes
             if self.profiles:
                 y_start = 160
+                item_height = 70
+                visible_items = 5
+                
                 for i in range(len(self.profiles)):
-                    y = y_start + i * 70
+                    y = y_start + i * item_height - self.profile_scroll_offset
+                    
+                    # Skip if not visible
+                    if y < y_start - item_height or y > y_start + visible_items * item_height:
+                        continue
+                    
                     box_width = 500
                     box_height = 60
                     box_x = SCREEN_WIDTH // 2 - box_width // 2
                     box_rect = pygame.Rect(box_x, y, box_width, box_height)
+                    
                     if box_rect.collidepoint(self.mouse_pos):
                         self.profile_selection = i
                         self._load_selected_profile_to_menu()
@@ -590,7 +600,7 @@ class Game:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_q or event.key == pygame.K_ESCAPE:  # Quit game
                 self.running = False
-                
+
             elif event.key == pygame.K_n:  # New profile
                 self.profile_action = "new"
                 self.player_name = ""
@@ -605,12 +615,14 @@ class Game:
                     self.profile_selection = (self.profile_selection - 1) % len(
                         self.profiles
                     )
+                    self._adjust_profile_scroll()
 
             elif controls.check_key_event(event, controls.MENU_DOWN):
                 if self.profiles:
                     self.profile_selection = (self.profile_selection + 1) % len(
                         self.profiles
                     )
+                    self._adjust_profile_scroll()
 
             elif (
                 controls.check_key_event(event, controls.MENU_SELECT) and self.profiles
@@ -620,6 +632,34 @@ class Game:
 
             elif event.key == pygame.K_d and self.profiles:  # Delete profile
                 self._delete_selected_profile()
+        elif event.type == pygame.MOUSEWHEEL:
+            if self.profiles:
+                # Scroll up/down with mouse wheel
+                item_height = 70
+                visible_items = 5
+                max_scroll = max(0, len(self.profiles) * item_height - visible_items * item_height)
+
+                # event.y is positive for scroll up, negative for scroll down
+                self.profile_scroll_offset -= event.y * item_height
+                self.profile_scroll_offset = max(0, min(self.profile_scroll_offset, max_scroll))
+
+    def _adjust_profile_scroll(self):
+        """Adjust scroll offset to keep selected profile visible"""
+        if not self.profiles:
+            return
+
+        item_height = 70  # box_height (60) + spacing (10)
+        visible_items = 5
+
+        # Calculate which "page" the selection is on
+        selected_page_start = (self.profile_selection // visible_items) * visible_items
+
+        # Calculate scroll offset to show that page
+        self.profile_scroll_offset = selected_page_start * item_height
+
+        # Clamp to valid range
+        max_scroll = max(0, len(self.profiles) * item_height - visible_items * item_height)
+        self.profile_scroll_offset = min(self.profile_scroll_offset, max_scroll)
 
     def _load_selected_profile_to_menu(self):
         """Load selected profile and go to main menu"""
@@ -1394,7 +1434,11 @@ class Game:
         # Draw to render target
         if self.state == GameState.PROFILE_SELECT:
             self.current_screen = self.menu.draw_profile_select(
-                render_target, self.profiles, self.profile_selection, self.mouse_pos
+                render_target,
+                self.profiles,
+                self.profile_selection,
+                self.profile_scroll_offset,
+                self.mouse_pos,
             )
         elif self.state == GameState.MENU:
             self.current_screen = self.menu.draw_main_menu(
@@ -1899,7 +1943,7 @@ class Game:
             if components['sfx_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
                 self.settings.toggle_sfx()
                 self.settings.save_settings()
-            
+
             # Colorblind mode toggle
             if components['colorblind_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
                 self.settings.toggle_colorblind_mode()

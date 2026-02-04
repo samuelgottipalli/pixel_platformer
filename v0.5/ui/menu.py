@@ -145,7 +145,7 @@ class Menu:
     # PROFILE SELECT
     # ========================================================================
 
-    def draw_profile_select(self, surface, profiles, selection, mouse_pos=None):
+    def draw_profile_select(self, surface, profiles, selection, scroll_offset, mouse_pos=None):
         """Draw profile selection screen"""
         surface.fill(BLACK)
 
@@ -162,23 +162,33 @@ class Menu:
             surface.blit(inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, 280))
         else:
             y_start = 160
+            box_height = 60
+            box_spacing = 10
+            item_height = box_height + box_spacing
+            visible_items = 5  # Show 5 profiles at a time
+
             for i, profile in enumerate(profiles):
-                y = y_start + i * 70
+                # Calculate y position with scroll offset
+                y = y_start + i * item_height - scroll_offset
+
+                # Skip if not visible
+                if y < y_start - item_height or y > y_start + visible_items * item_height:
+                    continue
+
                 is_selected = i == selection
                 box_width = 500
-                box_height = 60
                 box_x = SCREEN_WIDTH // 2 - box_width // 2
                 box_rect = pygame.Rect(box_x, y, box_width, box_height)
 
+                # Check mouse hover
                 if mouse_pos and box_rect.collidepoint(mouse_pos):
                     is_selected = True
 
                 box_color = UI_HIGHLIGHT if is_selected else UI_BORDER
                 pygame.draw.rect(surface, box_color, box_rect, 2)
+
                 if is_selected:
-                    fill_rect = pygame.Rect(
-                        box_x + 2, y + 2, box_width - 4, box_height - 4
-                    )
+                    fill_rect = pygame.Rect(box_x + 2, y + 2, box_width - 4, box_height - 4)
                     fill_surface = pygame.Surface((box_width - 4, box_height - 4))
                     fill_surface.set_alpha(30)
                     fill_surface.fill(UI_HIGHLIGHT)
@@ -194,6 +204,28 @@ class Menu:
                 )
                 surface.blit(stats_text, (box_x + 20, y + 35))
 
+            # Draw scroll indicators
+            if len(profiles) > visible_items:
+                indicator_x = SCREEN_WIDTH // 2
+
+                # Up arrow
+                if scroll_offset > 0:
+                    arrow_up = self.font_medium.render("▲", True, UI_HIGHLIGHT)
+                    surface.blit(
+                        arrow_up, (indicator_x - arrow_up.get_width() // 2, y_start - 30)
+                    )
+
+                # Down arrow
+                max_scroll = max(
+                    0, len(profiles) * item_height - visible_items * item_height
+                )
+                if scroll_offset < max_scroll:
+                    arrow_down = self.font_medium.render("▼", True, UI_HIGHLIGHT)
+                    arrow_y = y_start + visible_items * item_height + 10
+                    surface.blit(
+                        arrow_down, (indicator_x - arrow_down.get_width() // 2, arrow_y)
+                    )
+
             inst1 = self.font_tiny.render(
                 "UP/DOWN Navigate   ENTER/L Load   D Delete   N New", True, UI_TEXT_DIM
             )
@@ -203,14 +235,14 @@ class Menu:
 
         # Two buttons at bottom: New Profile and Quit
         button_y = SCREEN_HEIGHT - 160 if profiles else 350
-        
+
         # New Profile button
         self._draw_button(surface, "New Profile (N)", button_y, False)
-        
+
         # Quit button
         quit_button_y = button_y + 60
         self._draw_button(surface, "Quit Game (Q)", quit_button_y, False)
-        
+
         # Updated hint at very bottom
         hint = self.font_tiny.render(
             "ESC/Q Quit Game", True, UI_TEXT_DIM
@@ -220,7 +252,7 @@ class Menu:
         )
 
         return None
-    
+
     # ========================================================================
     # DIFFICULTY SELECT
     # ========================================================================
@@ -678,7 +710,7 @@ class Menu:
         # Colorblind mode toggle
         cb_label = self.font_small.render("Colorblind Mode:", True, UI_TEXT)
         surface.blit(cb_label, (150, 590))
-        
+
         components['colorblind_toggle'].enabled = game_settings.get_colorblind_mode()
         components['colorblind_toggle'].check_hover(mouse_pos)
         components['colorblind_toggle'].draw(surface, self.font_tiny)
