@@ -22,25 +22,28 @@ class GameSettings:
 
     # Default settings
     DEFAULTS = {
-        'video': {
-            'resolution_index': 0,  # 1280x720
-            'fullscreen': False,
-            'vsync': True,
+        "video": {
+            "resolution_index": 0,  # 1280x720
+            "fullscreen": False,
+            "vsync": True,
         },
-        'audio': {
-            'music_enabled': True,
-            'music_volume': 70,  # 0-100
-            'sfx_enabled': True,
-            'sfx_volume': 80,  # 0-100
+        "audio": {
+            "music_enabled": True,
+            "music_volume": 70,  # 0-100
+            "sfx_enabled": True,
+            "sfx_volume": 80,  # 0-100
         },
-        'controls': {
+        "accessibility": {
+            "colorblind_mode": False,  # Default OFF for accessibility
+        },
+        "controls": {
             # Key bindings (future)
-            'move_left': pygame.K_LEFT,
-            'move_right': pygame.K_RIGHT,
-            'jump': pygame.K_SPACE,
-            'shoot': pygame.K_z,
-            'melee': pygame.K_x,
-        }
+            "move_left": pygame.K_LEFT,
+            "move_right": pygame.K_RIGHT,
+            "jump": pygame.K_SPACE,
+            "shoot": pygame.K_z,
+            "melee": pygame.K_x,
+        },
     }
 
     def __init__(self, settings_file='data/settings.json'):
@@ -300,7 +303,7 @@ class GameSettings:
                 (self.width, self.height),
                 flags
             )
-            
+
             # Calculate scaling for windowed mode
             if self.width != 1280 or self.height != 720:
                 # Need to scale game (1280x720 base) to window size
@@ -355,3 +358,24 @@ class GameSettings:
     def __repr__(self):
         """String representation for debugging"""
         return f"GameSettings(res={self.resolution_name}, fullscreen={self.get_fullscreen()}, music={self.get_music_volume()}%, sfx={self.get_sfx_volume()}%)"
+
+    # ========================================================================
+    # ACCESSIBILITY SETTINGS
+    # ========================================================================
+
+
+    def get_colorblind_mode(self):
+        """Check if colorblind mode is enabled"""
+        return self.settings["accessibility"]["colorblind_mode"]
+
+
+    def set_colorblind_mode(self, enabled):
+        """Enable/disable colorblind mode"""
+        self.settings["accessibility"]["colorblind_mode"] = enabled
+
+
+    def toggle_colorblind_mode(self):
+        """Toggle colorblind mode on/off"""
+        current = self.settings["accessibility"]["colorblind_mode"]
+        self.settings["accessibility"]["colorblind_mode"] = not current
+        return self.settings["accessibility"]["colorblind_mode"]

@@ -244,6 +244,11 @@ class Game:
                 self.player_name = ""
                 self.char_selection = 0
                 self.state = GameState.CHAR_SELECT
+            # Check Quit button
+            quit_button_rect = self.menu.get_profile_quit_button_rect(self.profiles)
+            if quit_button_rect.collidepoint(self.mouse_pos):
+                self.running = False  # Exit game
+                return
         elif self.state == GameState.MENU:
             idx = self.menu.check_button_click(
                 self.menu.main_buttons, self.mouse_pos, mouse_pressed
@@ -471,7 +476,7 @@ class Game:
         1 = Continue Game (load saved game)
         2 = Level Map (select unlocked levels)
         3 = Options
-        4 = Quit
+        4 = Logout (back to Profile Select)
         """
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
@@ -536,8 +541,12 @@ class Game:
             self.state = GameState.OPTIONS
             self.options_selection = 0
 
-        elif self.menu_selection == 5:  # Quit
-            self.running = False
+        elif self.menu_selection == 5:  # Logout (back to Profile Select)
+            self.current_profile = None
+            self.achievement_manager = None
+            self.player = None
+            self.state = GameState.PROFILE_SELECT
+            self.profile_selection = 0
 
     def _handle_options_events(self, event):
         """
@@ -579,7 +588,10 @@ class Game:
         - Load Profile (L key or select from list)
         """
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_n:  # New profile
+            if event.key == pygame.K_q or event.key == pygame.K_ESCAPE:  # Quit game
+                self.running = False
+                
+            elif event.key == pygame.K_n:  # New profile
                 self.profile_action = "new"
                 self.player_name = ""
                 self.char_selection = 0
@@ -1575,7 +1587,7 @@ class Game:
             effect.draw(self.screen, self.camera.x, self.camera.y)
 
         # Draw player
-        self.player.draw(self.screen, self.camera.x, self.camera.y)
+        self.player.draw(self.screen, self.camera.x, self.camera.y, colorblind_mode=self.settings.get_colorblind_mode())
 
         # Boss health bar
         if self.boss and not self.boss.defeated:
@@ -1711,6 +1723,8 @@ class Game:
         from utils.collision import is_rect_on_screen
         from utils.textures import TextureManager
 
+        colorblind_mode = self.settings.get_colorblind_mode()
+
         for tile in self.level.tiles:
             if is_rect_on_screen(
                 tile["rect"], self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
@@ -1723,22 +1737,22 @@ class Game:
                 if theme == "SCIFI":
                     # Grid pattern for sci-fi
                     TextureManager.draw_grid_rect(
-                        self.screen, rect, color, (200, 200, 200), grid_size=8
+                        self.screen, rect, color, (200, 200, 200), grid_size=8, colorblind_mode=colorblind_mode
                     )
                 elif theme == "NATURE":
                     # Diagonal lines for nature
                     TextureManager.draw_diagonal_lines(
-                        self.screen, rect, color, (150, 200, 150), spacing=6
+                        self.screen, rect, color, (150, 200, 150), spacing=6, colorblind_mode=colorblind_mode
                     )
                 elif theme == "SPACE":
                     # Dots for space
                     TextureManager.draw_dotted_rect(
-                        self.screen, rect, color, (150, 150, 200), dot_size=2, spacing=8
+                        self.screen, rect, color, (150, 150, 200), dot_size=2, spacing=8, colorblind_mode=colorblind_mode
                     )
                 elif theme == "UNDERGROUND":
                     # Brick pattern for underground
                     TextureManager.draw_brick_wall(
-                        self.screen, rect, (80, 60, 40), color
+                        self.screen, rect, (80, 60, 40), color, colorblind_mode=colorblind_mode
                     )
                 elif theme == "UNDERWATER":
                     # Horizontal waves for underwater
@@ -1749,11 +1763,12 @@ class Game:
                         (100, 150, 200),
                         stripe_width=4,
                         vertical=False,
+                        colorblind_mode=colorblind_mode,
                     )
                 else:
                     # Default checkered
                     TextureManager.draw_checkered_rect(
-                        self.screen, rect, color, (120, 120, 120), check_size=8
+                        self.screen, rect, color, (120, 120, 120), check_size=8, colorblind_mode=colorblind_mode
                     )
 
                 # Border
@@ -1762,7 +1777,7 @@ class Game:
     def _draw_hazards(self):
         """Draw hazards"""
         for hazard in self.level.hazards:
-            hazard.draw(self.screen, self.camera.x, self.camera.y)
+            hazard.draw(self.screen, self.camera.x, self.camera.y, colorblind_mode=self.settings.get_colorblind_mode())
 
     def _draw_collectibles(self):
         """Draw coins, power-ups, keys"""
@@ -1786,7 +1801,7 @@ class Game:
     def _draw_enemies(self):
         """Draw enemies"""
         for enemy in self.level.enemies:
-            enemy.draw(self.screen, self.camera.x, self.camera.y)
+            enemy.draw(self.screen, self.camera.x, self.camera.y, colorblind_mode=self.settings.get_colorblind_mode())
 
     def _draw_projectiles(self):
         """Draw projectiles"""
@@ -1883,6 +1898,11 @@ class Game:
             # SFX toggle
             if components['sfx_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
                 self.settings.toggle_sfx()
+                self.settings.save_settings()
+            
+            # Colorblind mode toggle
+            if components['colorblind_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
+                self.settings.toggle_colorblind_mode()
                 self.settings.save_settings()
 
             # Start slider drag

@@ -8,22 +8,37 @@ class TextureManager:
 
     @staticmethod
     def draw_striped_rect(
-        surface, rect, base_color, stripe_color, stripe_width=4, vertical=True
+        surface,
+        rect,
+        base_color,
+        stripe_color,
+        stripe_width=4,
+        vertical=True,
+        colorblind_mode=True,
     ):
         """Draw rectangle with stripes"""
         pygame.draw.rect(surface, base_color, rect)
 
-        if vertical:
-            for x in range(rect.left, rect.right, stripe_width * 2):
-                stripe_rect = pygame.Rect(x, rect.top, stripe_width, rect.height)
-                pygame.draw.rect(surface, stripe_color, stripe_rect)
-        else:
-            for y in range(rect.top, rect.bottom, stripe_width * 2):
-                stripe_rect = pygame.Rect(rect.left, y, rect.width, stripe_width)
-                pygame.draw.rect(surface, stripe_color, stripe_rect)
+        # Only draw patterns if colorblind mode is enabled
+        if colorblind_mode:
+            if vertical:
+                for x in range(rect.left, rect.right, stripe_width * 2):
+                    stripe_rect = pygame.Rect(x, rect.top, stripe_width, rect.height)
+                    pygame.draw.rect(surface, stripe_color, stripe_rect)
+            else:
+                for y in range(rect.top, rect.bottom, stripe_width * 2):
+                    stripe_rect = pygame.Rect(rect.left, y, rect.width, stripe_width)
+                    pygame.draw.rect(surface, stripe_color, stripe_rect)
 
     @staticmethod
-    def draw_checkered_rect(surface, rect, color1, color2, check_size=8):
+    def draw_checkered_rect(
+        surface, rect, color1, color2, check_size=8, colorblind_mode=False
+    ):
+        if not colorblind_mode:
+            # Just draw solid color
+            pygame.draw.rect(surface, color1, rect)
+            return
+
         """Draw rectangle with checkerboard pattern"""
         for y in range(rect.top, rect.bottom, check_size):
             for x in range(rect.left, rect.right, check_size):
@@ -41,9 +56,12 @@ class TextureManager:
                 pygame.draw.rect(surface, color, check_rect)
 
     @staticmethod
-    def draw_dotted_rect(surface, rect, base_color, dot_color, dot_size=2, spacing=6):
+    def draw_dotted_rect(surface, rect, base_color, dot_color, dot_size=2, spacing=6, colorblind_mode=False):
         """Draw rectangle with dot pattern"""
         pygame.draw.rect(surface, base_color, rect)
+
+        if not colorblind_mode:
+            return
 
         for y in range(rect.top + spacing // 2, rect.bottom, spacing):
             for x in range(rect.left + spacing // 2, rect.right, spacing):
@@ -79,10 +97,19 @@ class TextureManager:
 
     @staticmethod
     def draw_diagonal_lines(
-        surface, rect, base_color, line_color, spacing=8, line_width=2
+        surface,
+        rect,
+        base_color,
+        line_color,
+        spacing=8,
+        line_width=2,
+        colorblind_mode=True,
     ):
         """Draw diagonal line pattern"""
         pygame.draw.rect(surface, base_color, rect)
+
+        if not colorblind_mode:
+            return
 
         # Draw diagonal lines from top-left to bottom-right
         for offset in range(-rect.height, rect.width, spacing):
@@ -96,9 +123,14 @@ class TextureManager:
             )
 
     @staticmethod
-    def draw_grid_rect(surface, rect, base_color, grid_color, grid_size=16):
+    def draw_grid_rect(
+        surface, rect, base_color, grid_color, grid_size=16, colorblind_mode=False
+    ):
         """Draw rectangle with grid pattern"""
         pygame.draw.rect(surface, base_color, rect)
+
+        if not colorblind_mode:
+            return
 
         # Vertical lines
         for x in range(rect.left, rect.right, grid_size):

@@ -80,7 +80,7 @@ class Hazard:
         """Get trigger zone for falling blocks"""
         return pygame.Rect(self.x - 50, self.y - 100, self.width + 100, 100)
 
-    def draw(self, surface, camera_x, camera_y):
+    def draw(self, surface, camera_x, camera_y, colorblind_mode=False):
         """Render hazard with high-contrast patterns"""
         from utils.textures import TextureManager
 
@@ -92,7 +92,7 @@ class Hazard:
             # Draw spikes with WARNING pattern (diagonal stripes)
             base = pygame.Rect(rect.x, rect.bottom - 8, rect.width, 8)
             TextureManager.draw_diagonal_lines(
-                surface, base, (100, 0, 0), (255, 255, 0), spacing=6, line_width=2
+                surface, base, (100, 0, 0), (255, 255, 0), spacing=6, line_width=2, colorblind_mode=colorblind_mode
             )
 
             # Triangle spike
@@ -118,7 +118,7 @@ class Hazard:
             color = GRAY if not self.falling else RED
             # Checkered pattern
             TextureManager.draw_checkered_rect(
-                surface, rect, color, (150, 150, 150), check_size=8
+                surface, rect, color, (150, 150, 150), check_size=8, colorblind_mode=colorblind_mode
             )
             pygame.draw.rect(surface, WHITE, rect, 3)
 
@@ -142,7 +142,7 @@ class Hazard:
         elif self.type == HazardType.MOVING_PLATFORM.value:
             # Dotted pattern for moving platforms
             TextureManager.draw_dotted_rect(
-                surface, rect, BLUE, (150, 200, 255), dot_size=3, spacing=10
+                surface, rect, BLUE, (150, 200, 255), dot_size=3, spacing=10, colorblind_mode=colorblind_mode
             )
             pygame.draw.rect(surface, WHITE, rect, 3)
 

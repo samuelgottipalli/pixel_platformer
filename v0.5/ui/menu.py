@@ -102,6 +102,7 @@ class Menu:
             'music_slider': Slider(400, 420, 200, 0, 100, 70, "Music Volume"),
             'sfx_toggle': Toggle(400, 465, 60, 30, True, "SFX"),
             'sfx_slider': Slider(400, 520, 200, 0, 100, 80, "SFX Volume"),
+            'colorblind_toggle': Toggle(400, 585, 60, 30, True, "Colorblind"),
         }
 
     # ========================================================================
@@ -121,7 +122,7 @@ class Menu:
         title = self.font_large.render("RETRO PLATFORMER", True, UI_HIGHLIGHT)
         surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 100))
 
-        options = ["New Game", "Continue", "Level Map", "Achievements", "Options", "Quit"]
+        options = ["New Game", "Continue", "Level Map", "Achievements", "Options", "Logout"]
         for i, option in enumerate(options):
             y = 240 + i * 55
             is_selected = i == selection
@@ -197,14 +198,29 @@ class Menu:
                 "UP/DOWN Navigate   ENTER/L Load   D Delete   N New", True, UI_TEXT_DIM
             )
             surface.blit(
-                inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, SCREEN_HEIGHT - 80)
+                inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, SCREEN_HEIGHT - 100)
             )
 
-        button_y = SCREEN_HEIGHT - 120 if profiles else 350
+        # Two buttons at bottom: New Profile and Quit
+        button_y = SCREEN_HEIGHT - 160 if profiles else 350
+        
+        # New Profile button
         self._draw_button(surface, "New Profile (N)", button_y, False)
+        
+        # Quit button
+        quit_button_y = button_y + 60
+        self._draw_button(surface, "Quit Game (Q)", quit_button_y, False)
+        
+        # Updated hint at very bottom
+        hint = self.font_tiny.render(
+            "ESC/Q Quit Game", True, UI_TEXT_DIM
+        )
+        surface.blit(
+            hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 60)
+        )
 
         return None
-
+    
     # ========================================================================
     # DIFFICULTY SELECT
     # ========================================================================
@@ -655,6 +671,24 @@ class Menu:
         components['sfx_slider'].check_hover(mouse_pos)
         components['sfx_slider'].draw(surface, self.font_tiny)
 
+        # ACCESSIBILITY SETTINGS Section
+        access_title = self.font_medium.render("ACCESSIBILITY", True, UI_HIGHLIGHT)
+        surface.blit(access_title, (150, 560))
+
+        # Colorblind mode toggle
+        cb_label = self.font_small.render("Colorblind Mode:", True, UI_TEXT)
+        surface.blit(cb_label, (150, 590))
+        
+        components['colorblind_toggle'].enabled = game_settings.get_colorblind_mode()
+        components['colorblind_toggle'].check_hover(mouse_pos)
+        components['colorblind_toggle'].draw(surface, self.font_tiny)
+
+        # Description
+        cb_desc = self.font_tiny.render(
+            "Adds visual patterns to help distinguish objects", True, UI_TEXT_DIM
+        )
+        surface.blit(cb_desc, (150, 615))
+
         # Instructions
         hint = self.font_tiny.render(
             "Click to adjust   Changes save automatically   ESC/Back to return",
@@ -859,3 +893,12 @@ class Menu:
         screen.draw_buttons(surface)
 
         return screen
+
+    def get_profile_quit_button_rect(self, profiles):
+        """Get quit button rectangle for profile select screen"""
+        button_width = 280
+        button_height = 40
+        button_x = SCREEN_WIDTH // 2 - button_width // 2
+        button_y = SCREEN_HEIGHT - 160 if profiles else 350
+        quit_button_y = button_y + 60
+        return pygame.Rect(button_x, quit_button_y - 8, button_width, button_height)

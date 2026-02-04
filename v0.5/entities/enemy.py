@@ -116,7 +116,7 @@ class Enemy:
         """Get collision rectangle"""
         return pygame.Rect(self.x, self.y, self.width, self.height)
 
-    def draw(self, surface, camera_x, camera_y):
+    def draw(self, surface, camera_x, camera_y, colorblind_mode=False):
         """Render enemy to screen with distinct patterns"""
         from utils.textures import TextureManager
 
@@ -131,17 +131,17 @@ class Enemy:
         if self.type == EnemyType.GROUND.value:
             # GROUND: Horizontal stripes
             TextureManager.draw_striped_rect(
-                surface, rect, RED, (255, 100, 100), stripe_width=4, vertical=False
+                surface, rect, RED, (255, 100, 100), stripe_width=4, vertical=False, colorblind_mode=colorblind_mode
             )
         elif self.type == EnemyType.FLYING.value:
             # FLYING: Diagonal lines
             TextureManager.draw_diagonal_lines(
-                surface, rect, CYAN, (150, 255, 255), spacing=8, line_width=2
+                surface, rect, CYAN, (150, 255, 255), spacing=8, line_width=2, colorblind_mode=colorblind_mode
             )
         elif self.type == EnemyType.TURRET.value:
             # TURRET: Checkered
             TextureManager.draw_checkered_rect(
-                surface, rect, ORANGE, (255, 200, 100), check_size=8
+                surface, rect, ORANGE, (255, 200, 100), check_size=8, colorblind_mode=colorblind_mode
             )
 
         # Thick border

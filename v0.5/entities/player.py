@@ -298,7 +298,7 @@ class Player:
         """Get collision rectangle"""
         return pygame.Rect(self.x, self.y, self.width, self.height)
 
-    def draw(self, surface, camera_x, camera_y):
+    def draw(self, surface, camera_x, camera_y, colorblind_mode=False):
         """Render player to screen with texture"""
         from utils.textures import TextureManager
 
@@ -315,7 +315,7 @@ class Player:
 
         # PATTERN: Vertical stripes for player
         TextureManager.draw_striped_rect(
-            surface, rect, color, WHITE, stripe_width=3, vertical=True
+            surface, rect, color, WHITE, stripe_width=3, vertical=True, colorblind_mode=colorblind_mode
         )
 
         # Thick border
