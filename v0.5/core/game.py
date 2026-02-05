@@ -2,6 +2,7 @@
 Main game class - handles game loop and state management
 """
 
+import math
 import os
 import random
 
@@ -22,6 +23,7 @@ from config.settings import (
     SCREEN_WIDTH,
     WHITE,
     YELLOW,
+    ORANGE
 )
 from core.camera import Camera
 from entities.boss import Boss
@@ -37,7 +39,7 @@ from save_system.save_manager import SaveManager
 from ui.hud import HUD
 from ui.menu import Menu
 from ui.components import Popup
-from utils.enums import GameState
+from utils.enums import GameState, EnemyType
 
 
 class Game:
@@ -490,10 +492,10 @@ class Game:
         """
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
-                self.menu_selection = (self.menu_selection - 1) % 5
+                self.menu_selection = (self.menu_selection - 1) % 6
                 self.audio.menu_navigate()
             elif controls.check_key_event(event, controls.MENU_DOWN):
-                self.menu_selection = (self.menu_selection + 1) % 5
+                self.menu_selection = (self.menu_selection + 1) % 6
                 self.audio.menu_navigate()
             elif controls.check_key_event(event, controls.MENU_SELECT):
                 self.audio.menu_select()
@@ -1154,9 +1156,42 @@ class Game:
 
     def _update_enemies(self):
         """Update enemies and check collisions"""
+
         for enemy in self.level.enemies:
             if not enemy.dead:
                 enemy.update(self.level.tiles)
+
+                # Turret shooting logic
+                if enemy.type == EnemyType.TURRET.value and enemy.can_shoot():
+                    
+                    # Calculate angle to player
+                    dx = (self.player.x + self.player.width // 2) - (enemy.x + enemy.width // 2)
+                    dy = (self.player.y + self.player.height // 2) - (enemy.y + enemy.height // 2)
+                    distance = math.sqrt(dx**2 + dy**2)
+                    
+                    # Only shoot if player is within range (500 pixels)
+                    if distance < 500:
+                        angle = math.atan2(dy, dx)
+                        
+                        # Create angled projectile
+                        proj = Projectile(
+                            enemy.x + enemy.width // 2 - 6,  # Center horizontally
+                            enemy.y + enemy.height // 2 - 3,  # Center vertically
+                            1,  # Direction doesn't matter for angled shots
+                            4,  # Speed (slower than player shots)
+                            enemy.damage,  # Use enemy's damage value
+                            ORANGE,  # Orange color for enemy projectiles
+                            angle=angle  # Pass angle to projectile for aimed movement
+                        )
+                        
+                        self.projectiles.append(proj)
+                        enemy.reset_shoot_timer()
+
+                        # Debug print (remove later)
+                        print(f"Turret fired! Angle: {angle:.2f} Distance: {distance:.0f}")
+
+                        print(f"Created projectile at ({proj.x}, {proj.y})")
+                        print(f"Player at ({self.player.x}, {self.player.y})")
 
                 # Check collision with player
                 if self.player.get_rect().colliderect(enemy.get_rect()):

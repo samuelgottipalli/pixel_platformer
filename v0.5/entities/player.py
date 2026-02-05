@@ -319,7 +319,7 @@ class Player:
         )
 
         # Thick border
-        pygame.draw.rect(surface, WHITE, rect, 3)
+        pygame.draw.rect(surface, WHITE, rect, 2)
 
         # Eyes
         eye_y = rect.y + 12
