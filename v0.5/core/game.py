@@ -1173,26 +1173,24 @@ class Game:
                     if distance < 500:
                         angle = math.atan2(dy, dx)
                         
+                        spawn_distance = 40
+                        spawn_x = enemy.x + enemy.width // 2 + math.cos(angle) * spawn_distance
+                        spawn_y = enemy.y + enemy.height // 2 + math.sin(angle) * spawn_distance
+
                         # Create angled projectile
                         proj = Projectile(
-                            enemy.x + enemy.width // 2 - 6,  # Center horizontally
-                            enemy.y + enemy.height // 2 - 3,  # Center vertically
-                            1,  # Direction doesn't matter for angled shots
+                            spawn_x - 6,  # Center horizontally
+                            spawn_y - 3,  # Center vertically
+                            1,  # Direction (doesn't matter for angled shots)
                             4,  # Speed (slower than player shots)
-                            enemy.damage,  # Use enemy's damage value
+                            enemy.damage,  # Damage
                             ORANGE,  # Orange color for enemy projectiles
-                            angle=angle  # Pass angle to projectile for aimed movement
+                            angle=angle  # Pass the angle here!
                         )
                         
                         self.projectiles.append(proj)
                         enemy.reset_shoot_timer()
-
-                        # Debug print (remove later)
-                        print(f"Turret fired! Angle: {angle:.2f} Distance: {distance:.0f}")
-
-                        print(f"Created projectile at ({proj.x}, {proj.y})")
-                        print(f"Player at ({self.player.x}, {self.player.y})")
-
+                        
                 # Check collision with player
                 if self.player.get_rect().colliderect(enemy.get_rect()):
                     self._handle_enemy_player_collision(enemy)
@@ -1270,6 +1268,15 @@ class Game:
             if not proj.active:
                 self.projectiles.remove(proj)
                 continue
+
+            # Enemy projectiles (orange = turret shots) damage the player
+            if proj.color == ORANGE:  # Enemy projectile
+                if self.player.get_rect().colliderect(proj.get_rect()):
+                    if not self.player.invincible:
+                        self.player.take_damage(proj.damage)
+                        self.total_damage_taken += proj.damage
+                    proj.active = False
+                    continue  # Skip enemy collision check for enemy projectiles
 
             # Check enemy collision
             for enemy in self.level.enemies:

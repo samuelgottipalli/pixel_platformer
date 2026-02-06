@@ -1,6 +1,7 @@
 """
 Projectile entity
 """
+
 import pygame
 import math
 
@@ -26,7 +27,7 @@ class Projectile:
         self.speed = speed
         self.damage = damage
         self.color = color
-        self.angle = angle
+        self.angle = angle  # NEW - for angled shots
         self.width = 12
         self.height = 6
         self.active = True
@@ -67,6 +68,7 @@ class Projectile:
         rect = pygame.Rect(
             self.x - camera_x, self.y - camera_y, self.width, self.height
         )
+
         # Draw filled rectangle
         pygame.draw.rect(surface, self.color, rect)
         # Draw white border
