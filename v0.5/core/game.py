@@ -1471,26 +1471,9 @@ class Game:
         """Draw current game state"""
         self.current_screen = None  # Reset at start
 
-        # Always render to 1280x720 base resolution
-        if self.settings.should_use_temp_surface():
-            game_surface = pygame.Surface((1280, 720))
-            render_target = game_surface
-        else:
-            render_target = self.screen
-
-        # # Determine render target based on fullscreen mode
-        # if self.settings.get_fullscreen():
-        #     # Create a surface at game resolution for rendering
-        #     game_surface = pygame.Surface((1280, 720))
-        #     render_target = game_surface
-        # else:
-        #     # Render directly to screen
-        #     render_target = self.screen
-
-        # Draw to render target
         if self.state == GameState.PROFILE_SELECT:
             self.current_screen = self.menu.draw_profile_select(
-                render_target,
+                self.screen,
                 self.profiles,
                 self.profile_selection,
                 self.profile_scroll_offset,
@@ -1498,35 +1481,35 @@ class Game:
             )
         elif self.state == GameState.MENU:
             self.current_screen = self.menu.draw_main_menu(
-                render_target, self.current_profile, self.menu_selection, self.mouse_pos
+                self.screen, self.current_profile, self.menu_selection, self.mouse_pos
             )
         elif self.state == GameState.DIFFICULTY_SELECT:
             self.current_screen = self.menu.draw_difficulty_select(
-                render_target, self.difficulty_selection, self.mouse_pos
+                self.screen, self.difficulty_selection, self.mouse_pos
             )
         elif self.state == GameState.CHAR_SELECT:
             self.current_screen = self.menu.draw_char_select(
-                render_target, self.player_name, self.char_selection, self.mouse_pos
+                self.screen, self.player_name, self.char_selection, self.mouse_pos
             )
         elif self.state == GameState.OPTIONS:
             self.current_screen = self.menu.draw_options_menu(
-                render_target, self.options_selection, self.mouse_pos
+                self.screen, self.options_selection, self.mouse_pos
             )
         elif self.state == GameState.CONTROLS:
             self.current_screen = self.menu.draw_controls_screen(
-                render_target, self.mouse_pos
+                self.screen, self.mouse_pos
             )
         elif self.state == GameState.SETTINGS:
             self.current_screen = self.menu.draw_settings_screen(
-                render_target, self.settings, self.mouse_pos
+                self.screen, self.settings, self.mouse_pos
             )
         elif self.state == GameState.CREDITS:
             self.current_screen = self.menu.draw_credits_screen(
-                render_target, self.mouse_pos
+                self.screen, self.mouse_pos
             )
         elif self.state == GameState.LEVEL_MAP:
             self.current_screen = self.menu.draw_level_map_screen(
-                render_target, self.current_profile, self.mouse_pos
+                self.screen, self.current_profile, self.mouse_pos
             )
         elif self.state == GameState.PLAYING:
             # For gameplay, always render to temp surface then scale
@@ -1540,15 +1523,15 @@ class Game:
             else:
                 self._draw_game()
             self.current_screen = self.menu.draw_pause_menu(
-                render_target, self.pause_selection, self.mouse_pos
+                self.screen, self.pause_selection, self.mouse_pos
             )
         elif self.state == GameState.GAME_OVER:
             self.current_screen = self.menu.draw_game_over(
-                render_target, self.player.score
+                self.screen, self.player.score
             )
         elif self.state == GameState.VICTORY:
             self.current_screen = self.menu.draw_victory(
-                render_target, self.player.score
+                self.screen, self.player.score
             )
         elif self.state == GameState.ACHIEVEMENTS:
             if self.achievement_manager:
@@ -1557,29 +1540,7 @@ class Game:
                 )
 
 
-
-        # # If fullscreen, blit game surface centered on screen
-        # if self.settings.get_fullscreen():
-        #     self.screen.fill((0, 0, 0))  # Black bars
-        #     offset = self.settings.get_render_offset()
-        #     self.screen.blit(game_surface, offset)
-
-        # Scale/position the final output
-        if self.settings.should_use_temp_surface():
-            if self.settings.get_fullscreen():
-                # Fullscreen: center on native resolution
-                self.screen.fill((0, 0, 0))
-                offset = self.settings.get_render_offset()
-                self.screen.blit(game_surface, offset)
-            else:
-                # Windowed: scale to window size
-                self.screen.fill((0, 0, 0))
-                scale_size = self.settings.get_scale_transform()
-                if scale_size:
-                    scaled_surface = pygame.transform.scale(game_surface, scale_size)
-                    self.screen.blit(scaled_surface, (0, 0))
-                else:
-                    self.screen.blit(game_surface, (0, 0))
+        self.screen.blit(self.screen, (0, 0))
 
         # Draw achievement notifications (on top of everything)
         for notif in self.achievement_notifications:

@@ -1,8 +1,9 @@
 """
 Camera system for smooth scrolling
+UPDATED: Uses LayoutManager for screen bounds
 """
 
-from config.settings import SCREEN_HEIGHT, SCREEN_WIDTH
+from config.layout_manager import LayoutManager
 
 
 class Camera:
@@ -20,17 +21,21 @@ class Camera:
             target_x, target_y: Target position (usually player center)
             level_width, level_height: Level boundaries
         """
+        # Get screen dimensions from layout
+        screen_width = LayoutManager.get("screen", "width") or 1280
+        screen_height = LayoutManager.get("screen", "height") or 720
+
         # Calculate target camera position (center on target)
-        target_camera_x = target_x - SCREEN_WIDTH // 2
-        target_camera_y = target_y - SCREEN_HEIGHT // 2
+        target_camera_x = target_x - screen_width // 2
+        target_camera_y = target_y - screen_height // 2
 
         # Smooth camera movement
         self.x += (target_camera_x - self.x) * self.smoothing
         self.y += (target_camera_y - self.y) * self.smoothing
 
         # Clamp camera to level boundaries
-        self.x = max(0, min(self.x, level_width - SCREEN_WIDTH))
-        self.y = max(0, min(self.y, level_height - SCREEN_HEIGHT))
+        self.x = max(0, min(self.x, level_width - screen_width))
+        self.y = max(0, min(self.y, level_height - screen_height))
 
     def apply(self, x, y):
         """

@@ -1,22 +1,69 @@
 """
 Game Settings and Constants
+NOW USING LAYOUT MANAGER FOR RESOLUTION-BASED SCALING
 """
 
-# Screen Settings
-SCREEN_WIDTH = 1280
-SCREEN_HEIGHT = 720
+from config.layout_manager import LayoutManager, get_layout, get_screen_size
+
+# Screen Settings - Now Dynamic!
+# These will be updated when LayoutManager loads
+SCREEN_WIDTH = 1280  # Default, will be updated
+SCREEN_HEIGHT = 720  # Default, will be updated
 FPS = 60
-TILE_SIZE = 32
+TILE_SIZE = 32  # Default, will be updated
+
+# Player/Enemy dimensions - backward compatibility
+# These will be updated when layout loads
+PLAYER_WIDTH = 28  # Default
+PLAYER_HEIGHT = 48  # Default
+ENEMY_WIDTH = 32  # Default
+ENEMY_HEIGHT = 32  # Default
 
 
 def update_screen_size(width, height):
-    """Update screen dimensions at runtime"""
-    global SCREEN_WIDTH, SCREEN_HEIGHT
+    """
+    Update screen dimensions and load appropriate layout
+    Called when resolution changes
+    """
+    global SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE
+    global PLAYER_WIDTH, PLAYER_HEIGHT, ENEMY_WIDTH, ENEMY_HEIGHT
+
+    # Load layout for this resolution
+    LayoutManager.load_layout(width, height)
+
+    # Update globals
     SCREEN_WIDTH = width
     SCREEN_HEIGHT = height
 
+    # Update tile size from layout
+    tile_config = LayoutManager.get_object_size("tile")
+    if tile_config:
+        TILE_SIZE = tile_config.get("size", 32)
 
-# Physics
+    # Update player dimensions
+    player_config = LayoutManager.get_object_size("player")
+    if player_config:
+        PLAYER_WIDTH = player_config["width"]
+        PLAYER_HEIGHT = player_config["height"]
+
+    # Update enemy dimensions
+    enemy_config = LayoutManager.get_object_size("enemy")
+    if enemy_config:
+        ENEMY_WIDTH = enemy_config["width"]
+        ENEMY_HEIGHT = enemy_config["height"]
+
+
+def get_screen_width():
+    """Get current screen width from layout"""
+    return LayoutManager.get("screen", "width") or SCREEN_WIDTH
+
+
+def get_screen_height():
+    """Get current screen height from layout"""
+    return LayoutManager.get("screen", "height") or SCREEN_HEIGHT
+
+
+# Physics - These don't scale with resolution
 GRAVITY = 0.8
 MAX_FALL_SPEED = 15
 PLAYER_SPEED = 6
@@ -24,9 +71,7 @@ JUMP_POWER = -15
 WALL_JUMP_POWER = -14
 WALL_JUMP_PUSH = 8
 
-# Player Settings
-PLAYER_WIDTH = 28
-PLAYER_HEIGHT = 48
+# Player Settings - Now using layout for dimensions
 PLAYER_MAX_HEALTH = 100
 PLAYER_START_LIVES = 3
 PLAYER_MAX_JUMPS = 2
@@ -101,24 +146,15 @@ GREEN = (80, 200, 120)  # Soft green
 BLUE = (90, 150, 230)  # Soft blue
 YELLOW = (240, 200, 80)  # Soft yellow
 PURPLE = (180, 100, 220)  # Soft purple
-CYAN = (100, 200, 220)  # Soft cyan
-ORANGE = (230, 140, 70)  # Soft orange
+CYAN = (80, 200, 230)  # Soft cyan
+ORANGE = (240, 140, 80)  # Soft orange
 
-# UI-specific Colors
-UI_BG = (25, 25, 35)  # UI background
-UI_BORDER = (100, 100, 120)  # UI borders
-UI_HIGHLIGHT = (120, 180, 240)  # Selection highlight
-UI_TEXT = (220, 220, 230)  # Primary text
-UI_TEXT_DIM = (150, 150, 160)  # Secondary text
-
-# Theme Background Colors (slightly muted)
-THEME_BACKGROUNDS = {
-    "SCIFI": (15, 20, 35),
-    "NATURE": (30, 45, 35),
-    "SPACE": (8, 8, 18),
-    "UNDERGROUND": (25, 18, 15),
-    "UNDERWATER": (12, 25, 45),
-}
+# UI Colors
+UI_BG = (25, 25, 35)  # Dark background
+UI_BORDER = (100, 100, 120)  # Border color
+UI_HIGHLIGHT = (140, 180, 240)  # Highlight color
+UI_TEXT = WHITE  # Main text
+UI_TEXT_DIM = LIGHT_GRAY  # Dimmed text
 
 # Theme Tile Colors (muted)
 THEME_TILE_COLORS = {
@@ -129,32 +165,34 @@ THEME_TILE_COLORS = {
     "UNDERWATER": (45, 85, 120),
 }
 
-# Character Colors (slightly muted)
-CHARACTER_COLORS = [
-    (90, 150, 230),  # Blue
-    (80, 200, 120),  # Green
-    (180, 100, 220),  # Purple
-    (230, 140, 70),  # Orange
-]
+# Enemy Colors
+ENEMY_GROUND_COLOR = RED
+ENEMY_FLYING_COLOR = PURPLE
+ENEMY_TURRET_COLOR = ORANGE
 
-# Legacy colors for compatibility
-DARK_BLUE = (30, 50, 100)
-DARK_GREEN = (40, 100, 60)
+# Scoring
+SCORE_COIN = 10
+SCORE_POWERUP = 50
+SCORE_KEY = 100
+SCORE_ENEMY_HIT = 5
+SCORE_ENEMY_KILL = 25
+SCORE_MELEE_HIT = 10
+SCORE_BOSS_HIT = 50
 
 # Enemy Settings
 ENEMY_GROUND_SPEED = 2
 ENEMY_FLYING_SPEED = 2
 ENEMY_BASE_HEALTH = 3
 ENEMY_BASE_DAMAGE = 1
-ENEMY_SHOOT_COOLDOWN = 120
+ENEMY_SHOOT_COOLDOWN = 120  # frames (~2 seconds)
 
-# Score Values
-SCORE_COIN = 10
-SCORE_ENEMY_KILL = 50
-SCORE_ENEMY_HIT = 10
-SCORE_MELEE_HIT = 25
-SCORE_POWERUP = 50
-SCORE_KEY = 100
+# Character Colors
+CHARACTER_COLORS = [
+    (100, 150, 250),  # Blue
+    (250, 100, 100),  # Red
+    (100, 250, 150),  # Green
+    (250, 200, 100),  # Yellow
+]
 
 # Paths
 SAVE_DIR = "data/saves"
