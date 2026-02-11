@@ -10,6 +10,14 @@ import pygame
 
 from config import controls
 from config.game_settings import GameSettings
+from config.layout_manager import (
+    LayoutManager,
+    get_layout,
+    get_screen_size,
+    get_font_size,
+    get_object_size,
+    get_ui_element,
+)
 from config.settings import (
     CYAN,
     FPS,

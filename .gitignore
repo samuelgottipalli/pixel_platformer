@@ -13,7 +13,7 @@ ENV/
 data/saves/
 data/profiles.json
 data/completed_games.json
-*.json
+data/*.json
 Sound effects Pack 2/
 1*.ogg
 0*.ogg

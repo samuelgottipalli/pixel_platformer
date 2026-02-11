@@ -1,0 +1,125 @@
+{
+  "resolution": {
+    "width": 2560,
+    "height": 1440,
+    "scale_factor": 2.0
+  },
+  "screen": {
+    "width": 2560,
+    "height": 1440
+  },
+  "fonts": {
+    "large": 144,
+    "medium": 96,
+    "small": 64,
+    "tiny": 44
+  },
+  "game_objects": {
+    "player": {
+      "width": 56,
+      "height": 96
+    },
+    "enemy": {
+      "width": 64,
+      "height": 64
+    },
+    "projectile": {
+      "width": 24,
+      "height": 12
+    },
+    "tile": {
+      "size": 64
+    },
+    "coin": {
+      "width": 32,
+      "height": 32
+    },
+    "powerup": {
+      "width": 48,
+      "height": 48
+    },
+    "portal": {
+      "width": 96,
+      "height": 128
+    },
+    "key": {
+      "width": 48,
+      "height": 48
+    },
+    "boss": {
+      "width": 240,
+      "height": 240
+    }
+  },
+  "ui": {
+    "main_menu": {
+      "title_y": 200,
+      "button_start_y": 480,
+      "button_spacing": 110,
+      "button_width": 560,
+      "button_height": 80
+    },
+    "profile_select": {
+      "title_y": 160,
+      "list_start_y": 320,
+      "item_height": 140,
+      "item_spacing": 20,
+      "visible_items": 10,
+      "new_profile_button_y": 1160
+    },
+    "difficulty_select": {
+      "title_y": 200,
+      "button_start_y": 440,
+      "button_spacing": 140,
+      "button_width": 600,
+      "button_height": 100
+    },
+    "char_select": {
+      "title_y": 160,
+      "name_label_y": 320,
+      "name_text_y": 380,
+      "char_start_y": 560,
+      "char_spacing": 240,
+      "char_width": 112,
+      "char_height": 192
+    },
+    "pause_menu": {
+      "title_y": 300,
+      "button_start_y": 620,
+      "button_spacing": 110,
+      "button_width": 600,
+      "button_height": 80
+    },
+    "hud": {
+      "health_bar_x": 40,
+      "health_bar_y": 40,
+      "health_bar_width": 400,
+      "health_bar_height": 40,
+      "lives_x": 40,
+      "lives_y": 100,
+      "score_x": 40,
+      "score_y": 160,
+      "coins_x": 40,
+      "coins_y": 220,
+      "level_name_y": 40,
+      "weapon_level_x": 480,
+      "weapon_level_y": 40
+    },
+    "popup": {
+      "width": 1200,
+      "height": 300
+    },
+    "achievement_notification": {
+      "width": 800,
+      "height": 200,
+      "margin_right": 40,
+      "margin_top": 40
+    },
+    "scroll_indicator": {
+      "size": 40
+    }
+  },
+  "camera": {
+    "smoothing": 0.1
+  }
+}
