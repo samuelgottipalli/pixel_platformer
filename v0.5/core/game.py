@@ -39,6 +39,7 @@ from save_system.save_manager import SaveManager
 from ui.hud import HUD
 from ui.menu import Menu
 from ui.components import Popup
+from utils.achievement_manager import AchievementManager
 from utils.enums import GameState, EnemyType
 
 
@@ -83,7 +84,7 @@ class Game:
         # UI
         self.menu = Menu(self.font_large, self.font_medium, self.font_small)
         self.hud = HUD(self.font_small)
-        self.popup = Popup("", 15)
+        self.popup = Popup("", 30)
 
         # Game state - START AT PROFILE SELECT
         self.state = GameState.PROFILE_SELECT
@@ -189,6 +190,7 @@ class Game:
         from ui.components import Popup
 
         self.popup = Popup(message, duration)
+        self.show_popup = True
 
     def _handle_mouse_click(self):
         """Handle mouse clicks on buttons"""
@@ -407,6 +409,7 @@ class Game:
 
         # DELETE any existing save file (this is a NEW game, not continue)
         SaveManager.delete_save(self.current_profile.name)
+        AchievementManager(self.current_profile.name)._delete_achievements()
 
         # Create player with current profile's character
         lives = self.difficulty_manager.get_lives(0)
@@ -539,7 +542,7 @@ class Game:
                     self.state = GameState.PLAYING
                 else:
                     # NO SAVE FILE - Show popup instead of going to difficulty select
-                    self._show_popup("No saved game found! Start a new game.", 15)
+                    self._show_popup("No saved game found! Start a new game.")
                     # Stay on menu, don't change state
 
         elif self.menu_selection == 2:  # Level Map
@@ -683,6 +686,7 @@ class Game:
         profile = self.profiles[self.profile_selection]
         SaveManager.delete_save(profile.name)
         ProfileManager.delete_profile(profile.name)
+        AchievementManager(profile.name)._delete_achievements()  # Delete achievements for this profile
         self.profiles = ProfileManager.load_profiles()
 
         if self.profile_selection >= len(self.profiles):
@@ -822,8 +826,10 @@ class Game:
     def _update(self):
         """Update game state"""
         # Update popup timer
-        if self.show_popup:
+        if self.show_popup and self.popup:
             self.popup.update()
+            # if not self.popup.is_active():
+            #     self.show_popup = False  # Hide when timer expires
 
         if self.state == GameState.PLAYING:
             self._update_game()
@@ -1542,9 +1548,7 @@ class Game:
                     self.screen, self.achievement_manager, self.mouse_pos
                 )
 
-        # Draw popup if active (to render target)
-        if self.show_popup:
-            self.popup.draw(render_target, self.font_small)
+
 
         # # If fullscreen, blit game surface centered on screen
         # if self.settings.get_fullscreen():
@@ -1572,6 +1576,10 @@ class Game:
         # Draw achievement notifications (on top of everything)
         for notif in self.achievement_notifications:
             notif.draw(self.screen)
+        
+        # Draw popup if active (ALWAYS to self.screen, after scaling)
+        if self.show_popup and self.popup:
+            self.popup.draw(self.screen, self.font_small)
 
         pygame.display.flip()
 
