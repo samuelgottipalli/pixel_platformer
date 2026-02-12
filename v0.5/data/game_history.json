@@ -70,5 +70,23 @@
     "session_date": "2026-02-12T08:33:46.561994",
     "session_id": "ec270866",
     "speedrun_time": 0.0
+  },
+  {
+    "player_name": "sam",
+    "character": 2,
+    "difficulty": "EASY",
+    "result": "QUIT",
+    "final_score": 4830,
+    "coins_collected": 167,
+    "levels_completed": 4,
+    "enemies_defeated": 40,
+    "time_played_seconds": 386,
+    "deaths": 3,
+    "damage_taken": 101,
+    "powerups_collected": 13,
+    "secrets_found": 0,
+    "session_date": "2026-02-12T09:30:01.450705",
+    "session_id": "248662b7",
+    "speedrun_time": 0.0
   }
 ]

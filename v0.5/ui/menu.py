@@ -946,6 +946,26 @@ class Menu:
         text_y = y
         surface.blit(text_surf, (text_x, text_y))
 
+    def refresh_buttons(self):
+        """Recreate all button rectangles - call this after resolution change"""
+        self.main_buttons = self._create_main_buttons()
+        self.pause_buttons = self._create_pause_buttons()
+        self.char_buttons = self._create_char_buttons()
+        self.options_buttons = self._create_options_buttons()
+        
+        # Also refresh fonts
+        from config.layout_manager import get_font_size
+        
+        large_size = get_font_size('large') or 52
+        medium_size = get_font_size('medium') or 32
+        small_size = get_font_size('small') or 22
+        tiny_size = get_font_size('tiny') or 18
+        
+        self.font_large = pygame.font.Font(None, large_size)
+        self.font_medium = pygame.font.Font(None, medium_size)
+        self.font_small = pygame.font.Font(None, small_size)
+        self.font_tiny = pygame.font.Font(None, tiny_size)
+
     # ========================================================================
     # ACHIEVEMENTS SCREEN
     # ========================================================================

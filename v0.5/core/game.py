@@ -1904,13 +1904,26 @@ class Game:
                 new_res = components['res_dropdown'].get_selected_index()
                 if new_res != old_res:
                     self.settings.set_resolution(new_res)
+                    # Apply immediately
+                    self.screen = self.settings.apply_video_settings(self.screen)
                     self.settings_changed = True
+                    
+                    # REFRESH MENU BUTTONS FOR NEW RESOLUTION
+                    from config.settings import update_screen_size
+                    update_screen_size(self.settings.width, self.settings.height)
+                    self.menu.refresh_buttons()
+                    self.hud = HUD(self.font_small)  # Recreate HUD too
 
             # Fullscreen toggle
             if components['fullscreen_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
                 self.settings.toggle_fullscreen()
                 # Apply immediately
                 self.screen = self.settings.apply_video_settings(self.screen)
+                # REFRESH MENU BUTTONS
+                from config.settings import update_screen_size
+                update_screen_size(self.settings.width, self.settings.height)
+                self.menu.refresh_buttons()
+                self.hud = HUD(self.font_small)
                 self.settings.save_settings()
 
             # Music toggle

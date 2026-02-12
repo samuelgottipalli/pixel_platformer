@@ -9,10 +9,10 @@
     "height": 1080
   },
   "fonts": {
-    "large": 108,
-    "medium": 72,
-    "small": 48,
-    "tiny": 33
+    "large": 72,
+    "medium": 48,
+    "small": 32,
+    "tiny": 24
   },
   "game_objects": {
     "player": {
