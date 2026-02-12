@@ -14,8 +14,12 @@ class HUD:
 
     def __init__(self, font_small):
         """Initialize HUD with cleaner fonts"""
-        self.font = pygame.font.Font(None, 20)  # Stats font
-        self.font_large = pygame.font.Font(None, 24)  # Level name font
+        from config.layout_manager import get_font_size
+
+        large_size = get_font_size("large") or 24
+        small_size = get_font_size("small") or 22
+        self.font = pygame.font.Font(None, small_size)  # Stats font
+        self.font_large = pygame.font.Font(None, large_size)  # Level name font
 
     def draw(self, surface, player, current_level, area_name="", level_name=""):
         """

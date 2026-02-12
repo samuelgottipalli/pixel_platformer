@@ -85,9 +85,15 @@ class Game:
         self.settings_changed = False
 
         # Fonts
-        self.font_large = pygame.font.Font(None, 72)
-        self.font_medium = pygame.font.Font(None, 48)
-        self.font_small = pygame.font.Font(None, 32)
+        from config.layout_manager import get_font_size
+
+        font_large_size = get_font_size('large') or 72
+        font_medium_size = get_font_size('medium') or 48
+        font_small_size = get_font_size('small') or 32
+
+        self.font_large = pygame.font.Font(None, font_large_size)
+        self.font_medium = pygame.font.Font(None, font_medium_size)
+        self.font_small = pygame.font.Font(None, font_small_size)
 
         # UI
         self.menu = Menu(self.font_large, self.font_medium, self.font_small)
@@ -1468,9 +1474,12 @@ class Game:
             self.profiles = ProfileManager.load_profiles()
 
     def _draw(self):
-        """Draw current game state"""
+        """Draw current game state - NATIVE RENDERING, NO SCALING"""
         self.current_screen = None  # Reset at start
 
+        # Draw directly to self.screen at native resolution
+        # NO MORE game_surface or render_target - just draw to self.screen!
+        
         if self.state == GameState.PROFILE_SELECT:
             self.current_screen = self.menu.draw_profile_select(
                 self.screen,
@@ -1512,16 +1521,12 @@ class Game:
                 self.screen, self.current_profile, self.mouse_pos
             )
         elif self.state == GameState.PLAYING:
-            # For gameplay, always render to temp surface then scale
-            if self.settings.get_fullscreen():
-                self._draw_game_to_surface(game_surface)
-            else:
-                self._draw_game()
+            # Draw game directly to screen
+            self._draw_game()
+            
         elif self.state == GameState.PAUSED:
-            if self.settings.get_fullscreen():
-                self._draw_game_to_surface(game_surface)
-            else:
-                self._draw_game()
+            # Draw game, then pause menu on top
+            self._draw_game()
             self.current_screen = self.menu.draw_pause_menu(
                 self.screen, self.pause_selection, self.mouse_pos
             )
@@ -1539,58 +1544,15 @@ class Game:
                     self.screen, self.achievement_manager, self.mouse_pos
                 )
 
-
-        self.screen.blit(self.screen, (0, 0))
-
         # Draw achievement notifications (on top of everything)
         for notif in self.achievement_notifications:
             notif.draw(self.screen)
         
-        # Draw popup if active (ALWAYS to self.screen, after scaling)
+        # Draw popup (on top of EVERYTHING)
         if self.show_popup and self.popup:
             self.popup.draw(self.screen, self.font_small)
 
         pygame.display.flip()
-
-    def _draw_game_to_surface(self, surface):
-        """Draw game to a specific surface (for fullscreen rendering)"""
-        # Same as _draw_game but renders to provided surface instead of self.screen
-        surface.fill((0, 0, 0))
-
-        # Draw background
-        self.level.draw_background(surface, self.camera)
-
-        # Draw level
-        self.level.draw(surface, self.camera)
-
-        # Draw player
-        if self.player:
-            self.player.draw(surface, self.camera)
-
-        # Draw projectiles
-        for proj in self.projectiles:
-            proj.draw(surface, self.camera)
-
-        # Draw particles
-        for particle in self.particles:
-            particle.draw(surface, self.camera)
-
-        # Draw boss if exists
-        if self.boss and not self.boss.defeated:
-            self.boss.draw(surface, self.camera)
-            for proj in self.boss_projectiles:
-                proj.draw(surface, self.camera)
-            for effect in self.boss_effects:
-                effect.draw(surface, self.camera)
-
-        # Draw HUD
-        if self.player:
-            level_name, area_name = self._get_level_info()
-            self.hud.draw(surface, self.player, level_name, area_name, self.difficulty)
-
-        # Draw controls overlay
-        if self.show_controls:
-            self.hud.draw_controls(surface)
 
     def _draw_popup(self):
         """Draw popup overlay"""

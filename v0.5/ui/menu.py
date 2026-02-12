@@ -4,12 +4,11 @@ Cleaner, more maintainable menu code with reusable components
 """
 
 import pygame
+from config.layout_manager import get_screen_size, get_ui_element, get_font_size
 from config.settings import (
     BLACK,
     CHARACTER_COLORS,
     CYAN,
-    SCREEN_HEIGHT,
-    SCREEN_WIDTH,
     UI_BG,
     UI_BORDER,
     UI_HIGHLIGHT,
@@ -27,10 +26,18 @@ class Menu:
 
     def __init__(self, font_large, font_medium, font_small):
         # Fonts
-        self.font_large = pygame.font.Font(None, 52)
-        self.font_medium = pygame.font.Font(None, 32)
-        self.font_small = pygame.font.Font(None, 22)
-        self.font_tiny = pygame.font.Font(None, 18)
+        from config.layout_manager import get_font_size
+
+        # Get font sizes from layout (with fallbacks)
+        large_size = get_font_size('large') or 52
+        medium_size = get_font_size('medium') or 32
+        small_size = get_font_size('small') or 22
+        tiny_size = get_font_size('tiny') or 18
+
+        self.font_large = pygame.font.Font(None, large_size)
+        self.font_medium = pygame.font.Font(None, medium_size)
+        self.font_small = pygame.font.Font(None, small_size)
+        self.font_tiny = pygame.font.Font(None, tiny_size)
 
         # Button groups for each screen
         self.main_buttons = self._create_main_buttons()
@@ -48,46 +55,83 @@ class Menu:
 
     def _create_main_buttons(self):
         """Create button rectangles for main menu"""
+        from config.layout_manager import get_ui_element, get_screen_size
+
         buttons = []
-        button_width = 280
-        button_height = 40
-        button_x = SCREEN_WIDTH // 2 - button_width // 2
-        start_y = 240
-        for i in range(6):  # New Game, Continue, Level Map, Achievements, Options, Quit
-            y = start_y + i * 55
+        screen_width, _ = get_screen_size()
+
+        # Get layout values
+        button_width = get_ui_element("main_menu", "button_width") or 280
+        button_height = get_ui_element("main_menu", "button_height") or 40
+        button_start_y = get_ui_element("main_menu", "button_start_y") or 240
+        button_spacing = get_ui_element("main_menu", "button_spacing") or 55
+
+        button_x = screen_width // 2 - button_width // 2
+
+        for i in range(
+            6
+        ):  # New Game, Continue, Level Map, Achievements, Options, Logout
+            y = button_start_y + i * button_spacing
             buttons.append(pygame.Rect(button_x, y - 8, button_width, button_height))
         return buttons
 
     def _create_pause_buttons(self):
         """Create button rectangles for pause menu"""
+        from config.layout_manager import get_ui_element, get_screen_size
+
         buttons = []
-        button_width = 300
-        button_height = 40
-        button_x = SCREEN_WIDTH // 2 - button_width // 2
-        start_y = SCREEN_HEIGHT // 2 - 50
+        screen_width, screen_height = get_screen_size()
+
+        # Get layout values
+        button_width = get_ui_element("pause_menu", "button_width") or 300
+        button_height = get_ui_element("pause_menu", "button_height") or 40
+        button_start_y = get_ui_element("pause_menu", "button_start_y") or (
+            screen_height // 2 - 50
+        )
+        button_spacing = get_ui_element("pause_menu", "button_spacing") or 55
+
+        button_x = screen_width // 2 - button_width // 2
+
         for i in range(3):  # Resume, Return to Menu, Logout
-            y = start_y + i * 55
+            y = button_start_y + i * button_spacing
             buttons.append(pygame.Rect(button_x, y - 8, button_width, button_height))
         return buttons
 
     def _create_char_buttons(self):
         """Create button rectangles for character selection"""
+        from config.layout_manager import get_ui_element, get_screen_size
+
         buttons = []
-        char_y = 280
+        screen_width, _ = get_screen_size()
+
+        # Get layout values
+        char_y = get_ui_element("char_select", "char_start_y") or 280
+        char_spacing = get_ui_element("char_select", "char_spacing") or 120
+        char_width = get_ui_element("char_select", "char_width") or 56
+        char_height = get_ui_element("char_select", "char_height") or 96
+
         for i in range(4):
-            x = SCREEN_WIDTH // 2 - 250 + i * 120
-            buttons.append(pygame.Rect(x, char_y, 56, 96))
+            x = screen_width // 2 - 250 + i * char_spacing
+            buttons.append(pygame.Rect(x, char_y, char_width, char_height))
         return buttons
 
     def _create_options_buttons(self):
         """Create button rectangles for options menu"""
+        from config.layout_manager import get_ui_element, get_screen_size
+
         buttons = []
-        button_width = 280
-        button_height = 40
-        button_x = SCREEN_WIDTH // 2 - button_width // 2
-        start_y = 220
+        screen_width, _ = get_screen_size()
+
+        # Get layout values
+        button_width = get_ui_element('main_menu', 'button_width') or 280
+        button_height = get_ui_element('main_menu', 'button_height') or 40
+        button_start_y = 220  # Options menu specific
+        button_spacing = get_ui_element('main_menu', 'button_spacing') or 55
+
+        button_x = screen_width // 2 - button_width // 2
+
         for i in range(4):  # Controls, Settings, Credits, Back
-            y = start_y + i * 55
+            y = button_start_y + i * button_spacing
             buttons.append(pygame.Rect(button_x, y - 8, button_width, button_height))
         return buttons
 
@@ -111,6 +155,7 @@ class Menu:
 
     def draw_main_menu(self, surface, current_profile, selection, mouse_pos=None):
         """Draw main menu using components"""
+        screen_width, screen_height = get_screen_size()
         surface.fill(BLACK)
 
         if current_profile:
@@ -120,7 +165,7 @@ class Menu:
             surface.blit(profile_text, (20, 20))
 
         title = self.font_large.render("RETRO PLATFORMER", True, UI_HIGHLIGHT)
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 100))
+        surface.blit(title, (screen_width // 2 - title.get_width() // 2, 100))
 
         options = ["New Game", "Continue", "Level Map", "Achievements", "Options", "Logout"]
         for i, option in enumerate(options):
@@ -136,7 +181,7 @@ class Menu:
             "UP/DOWN Navigate   ENTER Select   ESC Logout", True, UI_TEXT_DIM
         )
         surface.blit(
-            hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 60)
+            hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 60)
         )
 
         return None
@@ -147,19 +192,20 @@ class Menu:
 
     def draw_profile_select(self, surface, profiles, selection, scroll_offset, mouse_pos=None):
         """Draw profile selection screen"""
+        screen_width, screen_height = get_screen_size()
         surface.fill(BLACK)
 
         title = self.font_large.render("SELECT PROFILE", True, UI_HIGHLIGHT)
-        surface.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 60))
+        surface.blit(title, (screen_width // 2 - title.get_width() // 2, 60))
 
         if not profiles:
             msg = self.font_medium.render("No profiles found", True, UI_TEXT)
-            surface.blit(msg, (SCREEN_WIDTH // 2 - msg.get_width() // 2, 200))
+            surface.blit(msg, (screen_width // 2 - msg.get_width() // 2, 200))
 
             inst1 = self.font_small.render(
                 "Press N to create new profile", True, UI_HIGHLIGHT
             )
-            surface.blit(inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, 280))
+            surface.blit(inst1, (screen_width // 2 - inst1.get_width() // 2, 280))
         else:
             y_start = 160
             box_height = 60
@@ -177,7 +223,7 @@ class Menu:
 
                 is_selected = i == selection
                 box_width = 500
-                box_x = SCREEN_WIDTH // 2 - box_width // 2
+                box_x = screen_width // 2 - box_width // 2
                 box_rect = pygame.Rect(box_x, y, box_width, box_height)
 
                 # Check mouse hover
@@ -206,7 +252,7 @@ class Menu:
 
             # Draw scroll indicators
             if len(profiles) > visible_items:
-                indicator_x = SCREEN_WIDTH // 2
+                indicator_x = screen_width // 2
 
                 # Up arrow
                 if scroll_offset > 0:
@@ -230,12 +276,11 @@ class Menu:
                 "UP/DOWN Navigate   ENTER/L Load   D Delete   N New", True, UI_TEXT_DIM
             )
             surface.blit(
-                inst1, (SCREEN_WIDTH // 2 - inst1.get_width() // 2, SCREEN_HEIGHT - 100)
+                inst1, (screen_width // 2 - inst1.get_width() // 2, screen_height - 100)
             )
 
         # Two buttons at bottom: New Profile and Quit
-        button_y = SCREEN_HEIGHT - 160 if profiles else 350
-
+        button_y = screen_height - 160 if profiles else 350
         # New Profile button
         self._draw_button(surface, "New Profile (N)", button_y, False)
 
@@ -248,7 +293,7 @@ class Menu:
             "ESC/Q Quit Game", True, UI_TEXT_DIM
         )
         surface.blit(
-            hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 60)
+            hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 60)
         )
 
         return None
@@ -259,6 +304,7 @@ class Menu:
 
     def draw_difficulty_select(self, surface, selection, mouse_pos=None):
         """Draw difficulty selection"""
+        screen_width, screen_height = get_screen_size()
         screen = Screen(
             "SELECT DIFFICULTY",
             self.font_large,
@@ -276,7 +322,7 @@ class Menu:
         subtitle = self.font_small.render(
             "Choose your challenge level", True, UI_TEXT_DIM
         )
-        surface.blit(subtitle, (SCREEN_WIDTH // 2 - subtitle.get_width() // 2, 140))
+        surface.blit(subtitle, (screen_width // 2 - subtitle.get_width() // 2, 140))
 
         difficulties = [
             ("EASY", "5 Lives - More Resources - 2x Time", (100, 200, 100)),
@@ -290,7 +336,7 @@ class Menu:
             is_selected = i == selection
             box_width = 500
             box_height = 100
-            box_x = SCREEN_WIDTH // 2 - box_width // 2
+            box_x = screen_width // 2 - box_width // 2
             box_rect = pygame.Rect(box_x, y, box_width, box_height)
 
             if mouse_pos and box_rect.collidepoint(mouse_pos):
@@ -319,7 +365,7 @@ class Menu:
             "UP/DOWN Select   ENTER Confirm   ESC/Back Button", True, UI_TEXT_DIM
         )
         surface.blit(
-            hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 40)
+            hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 40)
         )
 
         screen.draw_buttons(surface)
@@ -331,6 +377,7 @@ class Menu:
 
     def draw_char_select(self, surface, player_name, char_selection, mouse_pos=None):
         """Draw character selection"""
+        screen_width, screen_height = get_screen_size()
         screen = Screen(
             "CHARACTER SELECT",
             self.font_large,
@@ -346,14 +393,14 @@ class Menu:
         screen.draw_title(surface, 80)
 
         name_label = self.font_small.render("Enter Name:", True, UI_TEXT_DIM)
-        surface.blit(name_label, (SCREEN_WIDTH // 2 - name_label.get_width() // 2, 160))
+        surface.blit(name_label, (screen_width // 2 - name_label.get_width() // 2, 160))
 
         name_text = self.font_medium.render(f"{player_name}_", True, WHITE)
-        surface.blit(name_text, (SCREEN_WIDTH // 2 - name_text.get_width() // 2, 190))
+        surface.blit(name_text, (screen_width // 2 - name_text.get_width() // 2, 190))
 
         char_y = 280
         for i in range(4):
-            x = SCREEN_WIDTH // 2 - 250 + i * 120
+            x = screen_width // 2 - 250 + i * 120
             rect = pygame.Rect(x, char_y, 56, 96)
             is_selected = i == char_selection
 
@@ -376,7 +423,7 @@ class Menu:
             "Type name   LEFT/RIGHT Select   ENTER Start", True, UI_TEXT_DIM
         )
         surface.blit(
-            inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, SCREEN_HEIGHT - 50)
+            inst, (screen_width // 2 - inst.get_width() // 2, screen_height - 50)
         )
 
         screen.draw_buttons(surface)
@@ -388,6 +435,7 @@ class Menu:
 
     def draw_options_menu(self, surface, selection, mouse_pos=None):
         """Draw options menu"""
+        screen_width, screen_height = get_screen_size()
         screen = Screen(
             "OPTIONS",
             self.font_large,
@@ -416,7 +464,7 @@ class Menu:
             "UP/DOWN Navigate   ENTER Select   ESC/Back Button", True, UI_TEXT_DIM
         )
         surface.blit(
-            hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 60)
+            hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 60)
         )
 
         screen.draw_buttons(surface)
@@ -428,27 +476,28 @@ class Menu:
 
     def draw_pause_menu(self, surface, selection, mouse_pos=None):
         """Draw pause menu overlay"""
+        screen_width, screen_height = get_screen_size()
         # Semi-transparent overlay
-        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay = pygame.Surface((screen_width, screen_height))
         overlay.set_alpha(180)
         overlay.fill(BLACK)
         surface.blit(overlay, (0, 0))
 
         # Options button top-right
         options_btn = IconButton(
-            SCREEN_WIDTH - 140, 20, 120, 40, Icon.SETTINGS, "Options", self.font_tiny
+            screen_width - 140, 20, 120, 40, Icon.SETTINGS, "Options", self.font_tiny
         )
         options_btn.check_hover(mouse_pos)
         options_btn.draw(surface)
 
         text = self.font_large.render("PAUSED", True, YELLOW)
         surface.blit(
-            text, (SCREEN_WIDTH // 2 - text.get_width() // 2, SCREEN_HEIGHT // 2 - 140)
+            text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - 140)
         )
 
         options = ["Resume", "Save & Return to Menu", "Save & Logout"]
         for i, option in enumerate(options):
-            y = SCREEN_HEIGHT // 2 - 50 + i * 55
+            y = screen_height // 2 - 50 + i * 55
             is_selected = i == selection
             if mouse_pos:
                 button = self.pause_buttons[i]
@@ -460,7 +509,7 @@ class Menu:
             "UP/DOWN Navigate   ENTER Select", True, UI_TEXT_DIM
         )
         surface.blit(
-            hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT // 2 + 140)
+            hint, (screen_width // 2 - hint.get_width() // 2, screen_height // 2 + 140)
         )
 
         # Return options button for click detection
@@ -472,6 +521,7 @@ class Menu:
 
     def draw_level_map_screen(self, surface, current_profile, mouse_pos=None):
         """Draw level map with all levels"""
+        screen_width, screen_height = get_screen_size()
         screen = Screen(
             "LEVEL MAP",
             self.font_large,
@@ -503,7 +553,7 @@ class Menu:
         subtitle = self.font_small.render(
             f"Unlocked: {unlocked_count} / {len(level_names)}", True, UI_TEXT
         )
-        surface.blit(subtitle, (SCREEN_WIDTH // 2 - subtitle.get_width() // 2, 130))
+        surface.blit(subtitle, (screen_width // 2 - subtitle.get_width() // 2, 130))
 
         y_positions = LayoutHelper.create_vertical_layout(200, len(level_names), 50)
 
@@ -532,12 +582,12 @@ class Menu:
                 "Complete levels to unlock them here", True, UI_TEXT_DIM
             )
         surface.blit(
-            inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, SCREEN_HEIGHT - 100)
+            inst, (screen_width // 2 - inst.get_width() // 2, screen_height - 100)
         )
 
         hint = self.font_tiny.render("ESC/Back Button to return", True, UI_TEXT_DIM)
         surface.blit(
-            hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 60)
+            hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 60)
         )
 
         screen.draw_buttons(surface)
@@ -549,6 +599,7 @@ class Menu:
 
     def draw_controls_screen(self, surface, mouse_pos=None):
         """Draw controls screen"""
+        screen_width, screen_height = get_screen_size()
         screen = Screen(
             "CONTROLS",
             self.font_large,
@@ -625,7 +676,7 @@ class Menu:
 
         hint = self.font_tiny.render("ESC/Back Button to return", True, UI_TEXT_DIM)
         surface.blit(
-            hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 50)
+            hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 50)
         )
 
         screen.draw_buttons(surface)
@@ -637,6 +688,7 @@ class Menu:
 
     def draw_settings_screen(self, surface, game_settings, mouse_pos=None):
         """Draw functional settings screen with video and audio controls"""
+        screen_width, screen_height = get_screen_size()
         screen = Screen("SETTINGS", self.font_large, self.font_medium,
                     self.font_small, self.font_tiny,
                     show_back=True, show_options=False)
@@ -726,7 +778,7 @@ class Menu:
             "Click to adjust   Changes save automatically   ESC/Back to return",
             True, UI_TEXT_DIM
         )
-        surface.blit(hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 60))
+        surface.blit(hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 60))
 
         # Draw restart warning if resolution changed
         if hasattr(game_settings, "_resolution_changed"):
@@ -749,6 +801,7 @@ class Menu:
 
     def draw_credits_screen(self, surface, mouse_pos=None):
         """Draw credits screen"""
+        screen_width, screen_height = get_screen_size()
         screen = Screen(
             "CREDITS",
             self.font_large,
@@ -787,23 +840,23 @@ class Menu:
                 text1 = self.font_small.render(
                     line1, True, UI_TEXT if not line2 else UI_TEXT_DIM
                 )
-                surface.blit(text1, (SCREEN_WIDTH // 2 - text1.get_width() // 2, y))
+                surface.blit(text1, (screen_width// 2 - text1.get_width() // 2, y))
             if line2:
                 y += 25
                 text2 = self.font_small.render(
                     line2, True, UI_TEXT if not line1 else UI_TEXT_DIM
                 )
-                surface.blit(text2, (SCREEN_WIDTH // 2 - text2.get_width() // 2, y))
+                surface.blit(text2, (screen_width// 2 - text2.get_width() // 2, y))
             y += 30
 
         version = self.font_tiny.render("Version 0.4 Alpha", True, UI_TEXT_DIM)
         surface.blit(
-            version, (SCREEN_WIDTH // 2 - version.get_width() // 2, SCREEN_HEIGHT - 100)
+            version, (screen_width // 2 - version.get_width() // 2, screen_height - 100)
         )
 
         hint = self.font_tiny.render("ESC/Back Button to return", True, UI_TEXT_DIM)
         surface.blit(
-            hint, (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 60)
+            hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 60)
         )
 
         screen.draw_buttons(surface)
@@ -815,42 +868,44 @@ class Menu:
 
     def draw_game_over(self, surface, score):
         """Draw game over screen"""
+        screen_width, screen_height = get_screen_size()
         surface.fill(BLACK)
         text = self.font_large.render("GAME OVER", True, (220, 80, 80))
         surface.blit(
-            text, (SCREEN_WIDTH // 2 - text.get_width() // 2, SCREEN_HEIGHT // 2 - 100)
+            text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - 100)
         )
 
         score_text = self.font_medium.render(f"Final Score: {score}", True, WHITE)
         surface.blit(
             score_text,
-            (SCREEN_WIDTH // 2 - score_text.get_width() // 2, SCREEN_HEIGHT // 2),
+            (screen_width // 2 - score_text.get_width() // 2, screen_height // 2),
         )
 
         inst = self.font_tiny.render("ENTER to return to menu", True, UI_TEXT_DIM)
         surface.blit(
-            inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, SCREEN_HEIGHT // 2 + 100)
+            inst, (screen_width // 2 - inst.get_width() // 2, screen_height // 2 + 100)
         )
 
         return None
 
     def draw_victory(self, surface, score):
         """Draw victory screen"""
+        screen_width, screen_height = get_screen_size()
         surface.fill(BLACK)
         text = self.font_large.render("VICTORY!", True, (100, 255, 100))
         surface.blit(
-            text, (SCREEN_WIDTH // 2 - text.get_width() // 2, SCREEN_HEIGHT // 2 - 100)
+            text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - 100)
         )
 
         score_text = self.font_medium.render(f"Final Score: {score}", True, WHITE)
         surface.blit(
             score_text,
-            (SCREEN_WIDTH // 2 - score_text.get_width() // 2, SCREEN_HEIGHT // 2),
+            (screen_width // 2 - score_text.get_width() // 2, screen_height // 2),
         )
 
         inst = self.font_tiny.render("ENTER to return to menu", True, UI_TEXT_DIM)
         surface.blit(
-            inst, (SCREEN_WIDTH // 2 - inst.get_width() // 2, SCREEN_HEIGHT // 2 + 100)
+            inst, (screen_width // 2 - inst.get_width() // 2, screen_height // 2 + 100)
         )
 
         return None
@@ -861,6 +916,7 @@ class Menu:
 
     def check_button_click(self, buttons, mouse_pos, mouse_pressed):
         """Check if any button was clicked"""
+        screen_width, screen_height = get_screen_size()
         if not mouse_pressed[0]:
             return -1
         for i, button in enumerate(buttons):
@@ -870,9 +926,10 @@ class Menu:
 
     def _draw_button(self, surface, text, y, is_selected):
         """Helper to draw a consistent button"""
+        screen_width, screen_height = get_screen_size()
         button_width = 280
         button_height = 40
-        x = SCREEN_WIDTH // 2 - button_width // 2
+        x = screen_width// 2 - button_width // 2
         button_rect = pygame.Rect(x, y - 8, button_width, button_height)
 
         if is_selected:
@@ -928,9 +985,10 @@ class Menu:
 
     def get_profile_quit_button_rect(self, profiles):
         """Get quit button rectangle for profile select screen"""
+        screen_width, screen_height = get_screen_size()
         button_width = 280
         button_height = 40
-        button_x = SCREEN_WIDTH // 2 - button_width // 2
-        button_y = SCREEN_HEIGHT - 160 if profiles else 350
+        button_x = screen_width // 2 - button_width // 2
+        button_y = screen_height - 160 if profiles else 350
         quit_button_y = button_y + 60
         return pygame.Rect(button_x, quit_button_y - 8, button_width, button_height)

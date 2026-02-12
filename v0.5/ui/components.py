@@ -1,110 +1,104 @@
 """
-Updated UI Components with Icon Support
-Added IconButton for back/options buttons on all screens
+UI Components - Buttons, Screens, Popups  
+UPDATED: Popup and Screen use LayoutManager for responsive positioning
 """
 
 import pygame
-from config.settings import (BLACK, CYAN, GRAY, SCREEN_HEIGHT, SCREEN_WIDTH,
-                             UI_BG, UI_BORDER, UI_HIGHLIGHT, UI_TEXT,
-                             UI_TEXT_DIM, WHITE, YELLOW)
-from ui.icons import Icon
+from config.settings import UI_BG, UI_BORDER, UI_HIGHLIGHT, UI_TEXT, UI_TEXT_DIM, WHITE, BLACK, SCREEN_WIDTH, SCREEN_HEIGHT
+from config.layout_manager import get_screen_size, get_ui_element
+
+
+class Icon:
+    """Icon rendering helper"""
+    BACK_ARROW = "back"
+    SETTINGS = "settings"
+    
+    @staticmethod
+    def draw(surface, icon_type, x, y, size, color=WHITE):
+        """Draw icon"""
+        if icon_type == Icon.BACK_ARROW:
+            # Draw left arrow
+            points = [(x + size, y), (x, y + size // 2), (x + size, y + size)]
+            pygame.draw.lines(surface, color, False, points, 3)
+        elif icon_type == Icon.SETTINGS:
+            # Draw gear icon (simplified)
+            center = (x + size // 2, y + size // 2)
+            pygame.draw.circle(surface, color, center, size // 3, 2)
 
 
 class Button:
-    """Reusable button component"""
+    """Interactive button component"""
     
-    def __init__(self, x, y, width, height, text, font):
+    def __init__(self, x, y, width, height, text, text_color=UI_TEXT):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
-        self.font = font
-        self.is_hovered = False
+        self.text_color = text_color
+        self.hovered = False
         self.is_selected = False
         
     def check_hover(self, mouse_pos):
-        """Check if mouse is over button"""
-        self.is_hovered = self.rect.collidepoint(mouse_pos) if mouse_pos else False
-        return self.is_hovered
+        """Check if mouse is hovering over button"""
+        if mouse_pos:
+            self.hovered = self.rect.collidepoint(mouse_pos)
+        return self.hovered
     
     def check_click(self, mouse_pos, mouse_pressed):
         """Check if button was clicked"""
-        if mouse_pressed[0] and self.rect.collidepoint(mouse_pos):
-            return True
+        if mouse_pos and mouse_pressed[0]:
+            return self.rect.collidepoint(mouse_pos)
         return False
     
-    def draw(self, surface, custom_colors=None):
-        """Draw button with selection/hover state"""
-        is_active = self.is_selected or self.is_hovered
+    def draw(self, surface, font):
+        """Render button"""
+        color = UI_HIGHLIGHT if (self.hovered or self.is_selected) else UI_BORDER
+        pygame.draw.rect(surface, UI_BG, self.rect)
+        pygame.draw.rect(surface, color, self.rect, 2)
         
-        # Default colors
-        bg_color = UI_HIGHLIGHT if is_active else UI_BG
-        border_color = WHITE if is_active else UI_BORDER
-        text_color = BLACK if is_active else UI_TEXT
-        border_width = 2 if is_active else 1
-        
-        # Apply custom colors if provided
-        if custom_colors:
-            bg_color = custom_colors.get('bg', bg_color)
-            border_color = custom_colors.get('border', border_color)
-            text_color = custom_colors.get('text', text_color)
-        
-        # Draw button
-        pygame.draw.rect(surface, bg_color, self.rect, border_radius=5)
-        pygame.draw.rect(surface, border_color, self.rect, border_width, border_radius=5)
-        
-        # Draw text
-        text_surf = self.font.render(self.text, True, text_color)
-        text_x = self.rect.x + self.rect.width // 2 - text_surf.get_width() // 2
-        text_y = self.rect.y + self.rect.height // 2 - text_surf.get_height() // 2
+        text_surf = font.render(self.text, True, self.text_color)
+        text_x = self.rect.centerx - text_surf.get_width() // 2
+        text_y = self.rect.centery - text_surf.get_height() // 2
         surface.blit(text_surf, (text_x, text_y))
 
 
 class IconButton:
-    """Button with icon (for back, options, etc)"""
+    """Button with icon and text"""
     
     def __init__(self, x, y, width, height, icon_type, text, font):
         self.rect = pygame.Rect(x, y, width, height)
         self.icon_type = icon_type
         self.text = text
         self.font = font
-        self.is_hovered = False
+        self.hovered = False
         
     def check_hover(self, mouse_pos):
-        """Check if mouse is over button"""
-        self.is_hovered = self.rect.collidepoint(mouse_pos) if mouse_pos else False
-        return self.is_hovered
+        """Check if mouse is hovering"""
+        if mouse_pos:
+            self.hovered = self.rect.collidepoint(mouse_pos)
+        return self.hovered
     
     def check_click(self, mouse_pos, mouse_pressed):
-        """Check if button was clicked"""
-        if mouse_pressed[0] and self.rect.collidepoint(mouse_pos):
-            return True
+        """Check if clicked"""
+        if mouse_pos and mouse_pressed[0]:
+            return self.rect.collidepoint(mouse_pos)
         return False
     
     def draw(self, surface):
-        """Draw icon button"""
-        is_active = self.is_hovered
-        
-        # Colors
-        bg_color = UI_HIGHLIGHT if is_active else UI_BG
-        border_color = WHITE if is_active else UI_BORDER
-        text_color = BLACK if is_active else UI_TEXT
-        icon_color = BLACK if is_active else WHITE
-        
-        # Draw button
-        pygame.draw.rect(surface, bg_color, self.rect, border_radius=5)
-        pygame.draw.rect(surface, border_color, self.rect, 1, border_radius=5)
+        """Draw button with icon"""
+        color = UI_HIGHLIGHT if self.hovered else UI_BORDER
+        pygame.draw.rect(surface, UI_BG, self.rect)
+        pygame.draw.rect(surface, color, self.rect, 2, border_radius=5)
         
         # Draw icon
-        icon_size = min(self.rect.height - 10, 20)
-        icon_x = self.rect.x + 8
-        icon_y = self.rect.y + self.rect.height // 2 - icon_size // 2
-        Icon.draw(surface, self.icon_type, icon_x, icon_y, icon_size, icon_color)
+        Icon.draw(surface, self.icon_type, 
+                 self.rect.x + 10, 
+                 self.rect.y + self.rect.height // 2 - 10,
+                 20, UI_TEXT if self.hovered else UI_TEXT_DIM)
         
         # Draw text
-        if self.text:
-            text_surf = self.font.render(self.text, True, text_color)
-            text_x = self.rect.x + icon_size + 16
-            text_y = self.rect.y + self.rect.height // 2 - text_surf.get_height() // 2
-            surface.blit(text_surf, (text_x, text_y))
+        text_surf = self.font.render(self.text, True, UI_TEXT if self.hovered else UI_TEXT_DIM)
+        text_x = self.rect.x + 40
+        text_y = self.rect.y + self.rect.height // 2 - text_surf.get_height() // 2
+        surface.blit(text_surf, (text_x, text_y))
 
 
 class TextBox:
@@ -154,37 +148,25 @@ class SelectableBox:
         if not self.is_unlocked:
             border_color = UI_TEXT_DIM
             text_color = UI_TEXT_DIM
-            icon_type = Icon.LOCK
+            icon = "🔒"
             icon_color = (150, 150, 150)
         elif is_active:
             border_color = UI_HIGHLIGHT
             text_color = UI_HIGHLIGHT
-            icon_type = Icon.CHECKMARK
-            icon_color = (100, 255, 100)
+            icon = "✓"
+            icon_color = UI_HIGHLIGHT
         else:
             border_color = UI_BORDER
             text_color = UI_TEXT
-            icon_type = Icon.CHECKMARK
-            icon_color = (100, 200, 100)
+            icon = ""
+            icon_color = UI_TEXT
         
         # Draw box
         pygame.draw.rect(surface, UI_BG, self.rect, border_radius=8)
-        pygame.draw.rect(surface, border_color, self.rect, 2, border_radius=8)
-        
-        # Highlight if active
-        if is_active:
-            fill_rect = pygame.Rect(self.rect.x + 2, self.rect.y + 2,
-                                   self.rect.width - 4, self.rect.height - 4)
-            fill_surface = pygame.Surface((fill_rect.width, fill_rect.height))
-            fill_surface.set_alpha(30)
-            fill_surface.fill(UI_HIGHLIGHT)
-            surface.blit(fill_surface, (fill_rect.x, fill_rect.y))
+        pygame.draw.rect(surface, border_color, self.rect, 3, border_radius=8)
         
         # Draw icon
-        Icon.draw(surface, icon_type, 
-                 self.rect.x + 15, 
-                 self.rect.y + self.rect.height // 2 - 10,
-                 20, icon_color)
+        Icon.draw(surface, icon, self.rect.x + 15, self.rect.y + 15, 20, icon_color)
         
         # Draw label
         label_surf = font_small.render(self.label, True, text_color)
@@ -258,32 +240,41 @@ class ButtonGroup:
 
 
 class Screen:
-    """Base class for reusable screen layouts with back/options buttons"""
+    """Base screen layout with optional back/options buttons - USES LAYOUT MANAGER"""
     
-    def __init__(self, title, font_large, font_medium, font_small, font_tiny,
-                 show_back=True, show_options=False):
+    def __init__(self, title, font_large, font_medium, font_small, font_tiny, 
+                 show_back=False, show_options=False):
         self.title = title
         self.font_large = font_large
         self.font_medium = font_medium
         self.font_small = font_small
         self.font_tiny = font_tiny
-        self.components = []
         
-        # Create back button (top-left)
+        # Get screen size from layout
+        screen_width, screen_height = get_screen_size()
+        
+        # Back button (bottom left)
         self.back_button = None
         if show_back:
-            self.back_button = IconButton(20, 20, 100, 40, Icon.BACK_ARROW, 
-                                         "Back", font_tiny)
+            self.back_button = Button(
+                20, screen_height - 60, 120, 40, 
+                "Back", UI_TEXT_DIM
+            )
         
-        # Create options button (top-right)
+        # Options button (bottom right)
         self.options_button = None
         if show_options:
-            self.options_button = IconButton(SCREEN_WIDTH - 140, 20, 120, 40,
-                                            Icon.SETTINGS, "Options", font_tiny)
-        
-    def add_component(self, component):
-        """Add a UI component to the screen"""
-        self.components.append(component)
+            self.options_button = Button(
+                screen_width - 140, screen_height - 60, 120, 40,
+                "Options", UI_TEXT_DIM
+            )
+    
+    def update_button_hover(self, mouse_pos):
+        """Update button hover states"""
+        if self.back_button:
+            self.back_button.check_hover(mouse_pos)
+        if self.options_button:
+            self.options_button.check_hover(mouse_pos)
     
     def check_back_click(self, mouse_pos, mouse_pressed):
         """Check if back button was clicked"""
@@ -297,43 +288,39 @@ class Screen:
             return self.options_button.check_click(mouse_pos, mouse_pressed)
         return False
     
-    def update_button_hover(self, mouse_pos):
-        """Update hover states for back/options buttons"""
+    def draw_buttons(self, surface):
+        """Draw back/options buttons"""
         if self.back_button:
-            self.back_button.check_hover(mouse_pos)
+            self.back_button.draw(surface, self.font_small)
         if self.options_button:
-            self.options_button.check_hover(mouse_pos)
-        
-    def draw_title(self, surface, y=80):
+            self.options_button.draw(surface, self.font_small)
+    
+    def draw_title(self, surface, y=100):
         """Draw screen title"""
+        screen_width, _ = get_screen_size()
         title_surf = self.font_large.render(self.title, True, UI_HIGHLIGHT)
-        title_x = SCREEN_WIDTH // 2 - title_surf.get_width() // 2
+        title_x = screen_width // 2 - title_surf.get_width() // 2
         surface.blit(title_surf, (title_x, y))
     
     def draw_subtitle(self, surface, text, y=140):
         """Draw subtitle text"""
+        screen_width, _ = get_screen_size()
         subtitle_surf = self.font_small.render(text, True, UI_TEXT_DIM)
-        subtitle_x = SCREEN_WIDTH // 2 - subtitle_surf.get_width() // 2
+        subtitle_x = screen_width // 2 - subtitle_surf.get_width() // 2
         surface.blit(subtitle_surf, (subtitle_x, y))
     
     def draw_hint(self, surface, text, y=None):
         """Draw hint text at bottom of screen"""
+        screen_width, screen_height = get_screen_size()
         if y is None:
-            y = SCREEN_HEIGHT - 60
+            y = screen_height - 60
         hint_surf = self.font_tiny.render(text, True, UI_TEXT_DIM)
-        hint_x = SCREEN_WIDTH // 2 - hint_surf.get_width() // 2
+        hint_x = screen_width // 2 - hint_surf.get_width() // 2
         surface.blit(hint_surf, (hint_x, y))
     
     def draw_background(self, surface):
         """Draw screen background"""
         surface.fill(BLACK)
-    
-    def draw_buttons(self, surface):
-        """Draw back and options buttons"""
-        if self.back_button:
-            self.back_button.draw(surface)
-        if self.options_button:
-            self.options_button.draw(surface)
 
 
 class LayoutHelper:
@@ -342,12 +329,14 @@ class LayoutHelper:
     @staticmethod
     def center_x(width):
         """Get X position to center element"""
-        return SCREEN_WIDTH // 2 - width // 2
+        screen_width, _ = get_screen_size()
+        return screen_width // 2 - width // 2
     
     @staticmethod
     def center_y(height):
         """Get Y position to center element"""
-        return SCREEN_HEIGHT // 2 - height // 2
+        _, screen_height = get_screen_size()
+        return screen_height // 2 - height // 2
     
     @staticmethod
     def create_vertical_layout(start_y, count, spacing=55):
@@ -372,15 +361,20 @@ class LayoutHelper:
 
 
 class Popup:
-    """Reusable popup message overlay"""
+    """Reusable popup message overlay - NOW WITH LAYOUT MANAGER"""
     
-    def __init__(self, message, duration=120, width=600, height=150):
+    def __init__(self, message, duration=120):
         self.message = message
         self.duration = duration
         self.timer = duration
-        self.width = width
-        self.height = height
         self.active = True
+        
+        # Get dimensions from layout
+        popup_width = get_ui_element('popup', 'width')
+        popup_height = get_ui_element('popup', 'height')
+        
+        self.width = popup_width if popup_width else 600
+        self.height = popup_height if popup_height else 150
         
     def update(self):
         """Update popup timer"""
@@ -394,9 +388,12 @@ class Popup:
         if not self.active:
             return
         
+        # Get screen size for centering
+        screen_width, screen_height = get_screen_size()
+        
         # Center position
-        overlay_x = SCREEN_WIDTH // 2 - self.width // 2
-        overlay_y = SCREEN_HEIGHT // 2 - self.height // 2
+        overlay_x = screen_width // 2 - self.width // 2
+        overlay_y = screen_height // 2 - self.height // 2
         
         # Semi-transparent overlay
         overlay = pygame.Surface((self.width, self.height))
