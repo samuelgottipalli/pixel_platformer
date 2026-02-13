@@ -357,14 +357,31 @@ class Game:
 
     def _handle_events(self):
         """Handle pygame events"""
-        self.mouse_pos = pygame.mouse.get_pos()
+        # self.mouse_pos = pygame.mouse.get_pos()
 
+        # DEBUG: Print mouse and first button position
+        # if self.state == GameState.MENU and self.menu.main_buttons:
+        #     print(f"Mouse: {self.mouse_pos}, First button: {self.menu.main_buttons[0]}")
+        
+        # Initialize mouse_pos from last known position
+        if not hasattr(self, 'mouse_pos'):
+            self.mouse_pos = (0, 0)
+            
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
 
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                self._handle_mouse_click()
+            # if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            #     self._handle_mouse_click()
+
+            # Update mouse position from motion events
+            if event.type == pygame.MOUSEMOTION:
+                self.mouse_pos = event.pos  # This is correct relative to render surface!
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                self.mouse_pos = event.pos  # Update on click too
+                if event.button == 1:
+                    self._handle_mouse_click()
 
             # Route to appropriate handler based on state
             if self.state == GameState.PROFILE_SELECT:

@@ -6,6 +6,7 @@ import math
 
 import pygame
 
+from config.layout_manager import get_object_size
 from config.settings import (CYAN, ENEMY_BASE_DAMAGE, ENEMY_BASE_HEALTH,
                              ENEMY_FLYING_SPEED, ENEMY_GROUND_SPEED,
                              ENEMY_SHOOT_COOLDOWN, GRAVITY, MAX_FALL_SPEED,
@@ -28,8 +29,8 @@ class Enemy:
         self.start_x = x
         self.start_y = y
         self.type = enemy_type
-        self.width = 32
-        self.height = 32
+        self.width = get_object_size("enemy")["width"]
+        self.height = get_object_size("enemy")["height"]
         self.health = ENEMY_BASE_HEALTH
         self.damage = ENEMY_BASE_DAMAGE
         self.direction = 1

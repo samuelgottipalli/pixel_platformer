@@ -4,12 +4,13 @@ Player entity
 
 import pygame
 
+from config.layout_manager import get_object_size
 from config.settings import (BLACK, CHARACTER_COLORS, GRAVITY, JUMP_POWER,
                              MAX_FALL_SPEED, MELEE_DURATION, MELEE_RANGE,
-                             PLAYER_HEIGHT, PLAYER_MAX_HEALTH,
+                             PLAYER_MAX_HEALTH,
                              PLAYER_MAX_JUMPS, PLAYER_SPEED,
                              PLAYER_SPEED_BOOST_MULTIPLIER, PLAYER_START_LIVES,
-                             PLAYER_WIDTH, SHOOT_BASE_COOLDOWN,
+                             SHOOT_BASE_COOLDOWN,
                              WALL_JUMP_POWER, WALL_JUMP_PUSH,
                              WEAPON_UPGRADE_COSTS, WHITE, YELLOW)
 
@@ -26,8 +27,10 @@ class Player:
         # Position and physics
         self.x = x
         self.y = y
-        self.width = PLAYER_WIDTH
-        self.height = PLAYER_HEIGHT
+        # Get scaled dimensions from layout
+        player_size = get_object_size("player")
+        self.width = player_size["width"]
+        self.height = player_size["height"]
         self.dx = 0
         self.dy = 0
         self.direction = 1  # 1 = right, -1 = left

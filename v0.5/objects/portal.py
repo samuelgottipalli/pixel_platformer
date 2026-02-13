@@ -6,6 +6,7 @@ import math
 
 import pygame
 
+from config.layout_manager import get_object_size
 from config.settings import PURPLE
 
 
@@ -22,8 +23,9 @@ class Portal:
         """
         self.x = x
         self.y = y
-        self.width = 48
-        self.height = 64
+        portal_size = get_object_size("portal")
+        self.width = portal_size["width"]
+        self.height = portal_size["height"]
         self.destination = destination_level
         self.color = color if color else PURPLE
         self.required_keys = required_keys if required_keys else []

@@ -5,7 +5,9 @@ Collectible objects (coins, keys, power-ups)
 import math
 
 import pygame
+from tomlkit import key
 
+from config.layout_manager import get_object_size
 from config.settings import CYAN, ORANGE, PURPLE, RED, WHITE, YELLOW
 from utils.enums import PowerUpType
 
@@ -22,8 +24,9 @@ class Coin:
         self.x = x
         self.y = y
         self.value = value
-        self.width = 20
-        self.height = 20
+        coin_size = get_object_size("coin")
+        self.width = coin_size["width"]
+        self.height = coin_size["height"]
         self.collected = False
         self.rotation = 0
 
@@ -75,8 +78,9 @@ class Key:
         self.x = x
         self.y = y
         self.color = color
-        self.width = 24
-        self.height = 24
+        key_size = get_object_size("key")
+        self.width = key_size["width"]
+        self.height = key_size["height"]
         self.collected = False
 
     def get_rect(self):
@@ -109,8 +113,9 @@ class PowerUp:
         self.x = x
         self.y = y
         self.type = ptype
-        self.width = 24
-        self.height = 24
+        powerup_size = get_object_size("powerup")
+        self.width = powerup_size["width"]
+        self.height = powerup_size["height"]
         self.collected = False
         self.float_offset = 0
 

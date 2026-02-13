@@ -5,6 +5,8 @@ Boss entity system - Multi-phase boss fights
 import math
 
 import pygame
+
+from config.layout_manager import get_object_size
 from config.settings import (CYAN, GRAVITY, MAX_FALL_SPEED, ORANGE, PURPLE,
                              RED, WHITE, YELLOW)
 
@@ -35,8 +37,9 @@ class Boss:
         self.difficulty = difficulty
 
         # Size
-        self.width = 96
-        self.height = 96
+        boss_size = get_object_size("boss")
+        self.width = boss_size["width"]
+        self.height = boss_size["height"]
 
         # Health system
         self.max_health = self._get_max_health()

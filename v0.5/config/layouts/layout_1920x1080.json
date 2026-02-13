@@ -23,6 +23,10 @@
       "width": 48,
       "height": 48
     },
+    "moving_platform": {
+      "width": 144,
+      "height": 48
+    },
     "projectile": {
       "width": 18,
       "height": 9

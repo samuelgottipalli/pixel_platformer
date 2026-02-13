@@ -6,7 +6,7 @@ UPDATED: Now loads complete Act 1 (Levels 0-6)
 import json
 import os
 
-from config.settings import LEVELS_DIR, TILE_SIZE
+from config.settings import LEVELS_DIR
 
 
 class LevelLoader:
@@ -88,4 +88,3 @@ class LevelLoader:
         except ImportError as e:
             print(f"⚠️  Could not import Act 1 levels: {e}")
             print("⚠️  Falling back to demo levels")
-            

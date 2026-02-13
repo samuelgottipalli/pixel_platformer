@@ -5,6 +5,7 @@ Projectile entity
 import pygame
 import math
 
+from config.layout_manager import get_object_size
 from config.settings import WHITE
 
 
@@ -28,8 +29,9 @@ class Projectile:
         self.damage = damage
         self.color = color
         self.angle = angle  # NEW - for angled shots
-        self.width = 12
-        self.height = 6
+        proj_size = get_object_size("projectile")
+        self.width = proj_size["width"]
+        self.height = proj_size["height"]
         self.active = True
 
         # Add lifetime to prevent projectiles from living forever

@@ -168,8 +168,13 @@ class Menu:
         surface.blit(title, (screen_width // 2 - title.get_width() // 2, 100))
 
         options = ["New Game", "Continue", "Level Map", "Achievements", "Options", "Logout"]
+
+        # Get layout values with fallbacks
+        button_start_y = get_ui_element("main_menu", "button_start_y") or 240
+        button_spacing = get_ui_element("main_menu", "button_spacing") or 55
+
         for i, option in enumerate(options):
-            y = 240 + i * 55
+            y = button_start_y + i * button_spacing
             is_selected = i == selection
             if mouse_pos:
                 button = self.main_buttons[i]
@@ -330,9 +335,12 @@ class Menu:
             ("HARD", "1 Life - Extreme Challenge - 2x Score", (220, 80, 80)),
         ]
 
-        y_start = 220
+        # Get layout values with fallbacks
+        button_start_y = get_ui_element("difficulty_select", "button_start_y") or 220
+        button_spacing = get_ui_element("difficulty_select", "button_spacing") or 120
+
         for i, (name, desc, color) in enumerate(difficulties):
-            y = y_start + i * 120
+            y = button_start_y + i * button_spacing
             is_selected = i == selection
             box_width = 500
             box_height = 100
@@ -450,9 +458,13 @@ class Menu:
         screen.update_button_hover(mouse_pos)
         screen.draw_title(surface, 100)
 
+        # Get layout values with fallbacks
+        button_start_y = get_ui_element("main_menu", "button_start_y") or 240
+        button_spacing = get_ui_element("main_menu", "button_spacing") or 55
+
         options = ["Controls", "Settings", "Credits", "Back to Menu"]
         for i, option in enumerate(options):
-            y = 220 + i * 55
+            y = button_start_y + i * button_spacing
             is_selected = i == selection
             if mouse_pos:
                 button = self.options_buttons[i]
@@ -495,9 +507,12 @@ class Menu:
             text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - 140)
         )
 
+        # Get layout values with fallbacks
+        button_start_y = get_ui_element("pause_menu", "button_start_y") or 240
+        button_spacing = get_ui_element("pause_menu", "button_spacing") or 55
         options = ["Resume", "Save & Return to Menu", "Save & Logout"]
         for i, option in enumerate(options):
-            y = screen_height // 2 - 50 + i * 55
+            y = button_start_y + i * button_spacing
             is_selected = i == selection
             if mouse_pos:
                 button = self.pause_buttons[i]
@@ -926,12 +941,20 @@ class Menu:
 
     def _draw_button(self, surface, text, y, is_selected):
         """Helper to draw a consistent button"""
-        screen_width, screen_height = get_screen_size()
-        button_width = 280
-        button_height = 40
-        x = screen_width// 2 - button_width // 2
+        from config.layout_manager import get_ui_element
+
+        screen_width, _ = get_screen_size()
+
+        # Get dimensions from layout to match created buttons
+        button_width = get_ui_element("main_menu", "button_width") or 280
+        button_height = get_ui_element("main_menu", "button_height") or 40
+
+        x = screen_width // 2 - button_width // 2
+
+        # Create rect at y-8 to match button creation
         button_rect = pygame.Rect(x, y - 8, button_width, button_height)
 
+        # Draw button background and border
         if is_selected:
             pygame.draw.rect(surface, UI_HIGHLIGHT, button_rect, border_radius=5)
             pygame.draw.rect(surface, WHITE, button_rect, 2, border_radius=5)
@@ -941,9 +964,10 @@ class Menu:
             pygame.draw.rect(surface, UI_BORDER, button_rect, 1, border_radius=5)
             text_color = UI_TEXT
 
+        # Draw text CENTERED IN THE RECT (not at y!)
         text_surf = self.font_medium.render(text, True, text_color)
-        text_x = x + button_width // 2 - text_surf.get_width() // 2
-        text_y = y
+        text_x = button_rect.x + button_width // 2 - text_surf.get_width() // 2
+        text_y = button_rect.y + button_height // 2 - text_surf.get_height() // 2  # ← FIX: Center in rect!
         surface.blit(text_surf, (text_x, text_y))
 
     def refresh_buttons(self):
@@ -952,15 +976,15 @@ class Menu:
         self.pause_buttons = self._create_pause_buttons()
         self.char_buttons = self._create_char_buttons()
         self.options_buttons = self._create_options_buttons()
-        
+
         # Also refresh fonts
         from config.layout_manager import get_font_size
-        
+
         large_size = get_font_size('large') or 52
         medium_size = get_font_size('medium') or 32
         small_size = get_font_size('small') or 22
         tiny_size = get_font_size('tiny') or 18
-        
+
         self.font_large = pygame.font.Font(None, large_size)
         self.font_medium = pygame.font.Font(None, medium_size)
         self.font_small = pygame.font.Font(None, small_size)

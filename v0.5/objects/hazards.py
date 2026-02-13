@@ -4,7 +4,8 @@ Hazard objects (spikes, falling blocks, moving platforms)
 
 import pygame
 
-from config.settings import BLUE, GRAVITY, GRAY, RED, SCREEN_HEIGHT, WHITE
+from config.layout_manager import get_object_size
+from config.settings import BLUE, GRAVITY, GRAY, RED, WHITE
 from utils.enums import HazardType
 
 
@@ -23,8 +24,9 @@ class Hazard:
         self.start_x = x
         self.start_y = y
         self.type = hazard_type
-        self.width = width
-        self.height = height
+        hazard_size = get_object_size("enemy" if hazard_type != HazardType.MOVING_PLATFORM.value else "moving_platform")
+        self.width = hazard_size["width"]
+        self.height = hazard_size["height"]
         self.damage = 1
 
         # Falling block state
@@ -57,8 +59,10 @@ class Hazard:
             self.dy += GRAVITY
             self.y += self.dy
 
+        from config.settings import get_screen_height
+        screen_height = get_screen_height()
         # Respawn after falling off screen
-        if self.y > SCREEN_HEIGHT + 100:
+        if self.y > screen_height + 100:
             self.respawn_timer += 1
             if self.respawn_timer > 300:
                 self.y = self.start_y
