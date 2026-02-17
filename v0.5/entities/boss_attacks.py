@@ -5,8 +5,9 @@ Boss attack patterns and abilities
 import math
 
 import pygame
-from config.settings import RED
+from config.settings import RED, get_projectile_speed
 from entities.boss import BossProjectile
+from config.layout_manager import get_scale_factor
 
 
 class BossAttackManager:
@@ -46,7 +47,7 @@ class BossAttackManager:
         angle = math.atan2(dy, dx)
 
         projectile = BossProjectile(
-            spawn_x, spawn_y, angle, speed=5, damage=10, color=boss.colors["accent"]
+            spawn_x, spawn_y, angle, speed=get_projectile_speed() - (3 * get_scale_factor()), damage=10, color=boss.colors["accent"]
         )
 
         return [projectile]
@@ -71,7 +72,12 @@ class BossAttackManager:
             angle = base_angle + offset
 
             projectile = BossProjectile(
-                spawn_x, spawn_y, angle, speed=4, damage=8, color=boss.colors["accent"]
+                spawn_x,
+                spawn_y,
+                angle,
+                speed=get_projectile_speed() - (4 * get_scale_factor()),
+                damage=8,
+                color=boss.colors["accent"],
             )
             projectiles.append(projectile)
 

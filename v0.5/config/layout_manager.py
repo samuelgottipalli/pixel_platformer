@@ -185,6 +185,11 @@ class LayoutManager:
             cls._current_resolution = None
             return cls.load_layout(width, height)
         return False
+    
+    @classmethod
+    def get_physics(cls, physics_name):
+        """Get physics value from layout"""
+        return cls.get('physics', physics_name)
 
 
 # Convenience functions for global access

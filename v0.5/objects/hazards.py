@@ -5,7 +5,7 @@ Hazard objects (spikes, falling blocks, moving platforms)
 import pygame
 
 from config.layout_manager import get_object_size
-from config.settings import BLUE, GRAVITY, GRAY, RED, WHITE
+from config.settings import BLUE, get_gravity, GRAY, RED, WHITE
 from utils.enums import HazardType
 
 
@@ -56,7 +56,7 @@ class Hazard:
             self.falling = True
 
         if self.falling:
-            self.dy += GRAVITY
+            self.dy += get_gravity()
             self.y += self.dy
 
         from config.settings import get_screen_height

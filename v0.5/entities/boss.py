@@ -7,7 +7,7 @@ import math
 import pygame
 
 from config.layout_manager import get_object_size
-from config.settings import (CYAN, GRAVITY, MAX_FALL_SPEED, ORANGE, PURPLE,
+from config.settings import (CYAN, get_gravity, get_max_fall_speed, ORANGE, PURPLE,
                              RED, WHITE, YELLOW)
 
 
@@ -201,8 +201,8 @@ class Boss:
         self.x += self.dx
 
         # Apply gravity
-        self.dy += GRAVITY
-        self.dy = min(self.dy, MAX_FALL_SPEED)
+        self.dy += get_gravity()
+        self.dy = min(self.dy, get_max_fall_speed())
         self.y += self.dy
 
     def _update_attacks(self, player, current_time):

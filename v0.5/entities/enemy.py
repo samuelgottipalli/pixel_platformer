@@ -8,8 +8,8 @@ import pygame
 
 from config.layout_manager import get_object_size
 from config.settings import (CYAN, ENEMY_BASE_DAMAGE, ENEMY_BASE_HEALTH,
-                             ENEMY_FLYING_SPEED, ENEMY_GROUND_SPEED,
-                             ENEMY_SHOOT_COOLDOWN, GRAVITY, MAX_FALL_SPEED,
+                             get_enemy_flying_speed, get_enemy_ground_speed,
+                             ENEMY_SHOOT_COOLDOWN, get_gravity, get_max_fall_speed, get_projectile_speed,
                              ORANGE, RED, WHITE)
 from utils.enums import EnemyType
 
@@ -42,9 +42,9 @@ class Enemy:
 
         # Set speed based on type
         if self.type == EnemyType.GROUND.value:
-            self.speed = ENEMY_GROUND_SPEED
+            self.speed = get_enemy_ground_speed()
         elif self.type == EnemyType.FLYING.value:
-            self.speed = ENEMY_FLYING_SPEED
+            self.speed = get_enemy_flying_speed()
         else:
             self.speed = 0
 
@@ -72,8 +72,8 @@ class Enemy:
             self.direction *= -1
 
         # Apply gravity
-        self.dy += GRAVITY
-        self.dy = min(self.dy, MAX_FALL_SPEED)
+        self.dy += get_gravity()
+        self.dy = min(self.dy, get_max_fall_speed())
         self.y += self.dy
 
         # Check ground collision
@@ -146,7 +146,7 @@ class Enemy:
             )
 
         # Thick border
-        pygame.draw.rect(surface, WHITE, rect, 3)
+        pygame.draw.rect(surface, WHITE, rect, 2)
 
         # Eyes with X pattern for enemies
         pygame.draw.line(

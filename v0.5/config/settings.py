@@ -3,7 +3,7 @@ Game Settings and Constants
 NOW USING LAYOUT MANAGER FOR RESOLUTION-BASED SCALING
 """
 
-from config.layout_manager import LayoutManager, get_layout, get_screen_size
+from config.layout_manager import LayoutManager
 
 # Screen Settings - Now Dynamic!
 # These will be updated when LayoutManager loads
@@ -63,13 +63,30 @@ def get_screen_height():
     return LayoutManager.get("screen", "height") or SCREEN_HEIGHT
 
 
-# Physics - These don't scale with resolution
-GRAVITY = 0.8
-MAX_FALL_SPEED = 15
-PLAYER_SPEED = 6
-JUMP_POWER = -15
-WALL_JUMP_POWER = -14
-WALL_JUMP_PUSH = 8
+# Physics Settings
+def get_gravity():
+    return LayoutManager.get_physics("gravity") or 0.8
+
+
+def get_max_fall_speed():
+    return LayoutManager.get_physics("max_fall_speed") or 15
+
+
+def get_player_speed():
+    return LayoutManager.get_physics("player_speed") or 5
+
+
+def get_jump_power():
+    return LayoutManager.get_physics("jump_power") or -12
+
+
+def get_wall_jump_power():
+    return LayoutManager.get_physics("wall_jump_power") or -14
+
+
+def get_wall_jump_push():
+    return LayoutManager.get_physics("wall_jump_push") or 8
+
 
 # Player Settings - Now using layout for dimensions
 PLAYER_MAX_HEALTH = 100
@@ -79,10 +96,15 @@ PLAYER_INVINCIBILITY_DURATION = 120  # frames
 PLAYER_SPEED_BOOST_DURATION = 600  # frames
 PLAYER_SPEED_BOOST_MULTIPLIER = 1.5
 
+
 # Combat
 SHOOT_BASE_COOLDOWN = 30  # frames
 MELEE_DURATION = 20  # frames
-MELEE_RANGE = 32
+def get_melee_range():
+    return LayoutManager.get_physics("melee_range") or 40
+
+def get_projectile_speed():
+    return LayoutManager.get_physics("projectile_speed") or 8
 
 # Weapon Upgrade Costs
 WEAPON_UPGRADE_COSTS = {
@@ -179,9 +201,14 @@ SCORE_ENEMY_KILL = 25
 SCORE_MELEE_HIT = 10
 SCORE_BOSS_HIT = 50
 
+
 # Enemy Settings
-ENEMY_GROUND_SPEED = 2
-ENEMY_FLYING_SPEED = 2
+def get_enemy_ground_speed():
+    return LayoutManager.get_physics("enemy_ground_speed") or 2
+
+def get_enemy_flying_speed():
+    return LayoutManager.get_physics("enemy_flying_speed") or 2
+
 ENEMY_BASE_HEALTH = 3
 ENEMY_BASE_DAMAGE = 1
 ENEMY_SHOOT_COOLDOWN = 120  # frames (~2 seconds)

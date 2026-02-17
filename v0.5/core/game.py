@@ -13,6 +13,7 @@ from config.game_settings import GameSettings
 from config.layout_manager import (
     LayoutManager,
     get_layout,
+    get_scale_factor,
     get_screen_size,
     get_font_size,
     get_object_size,
@@ -29,7 +30,8 @@ from config.settings import (
     SCORE_POWERUP,
     WHITE,
     YELLOW,
-    ORANGE
+    ORANGE,
+    get_projectile_speed
 )
 from core.camera import Camera
 from entities.boss import Boss
@@ -90,8 +92,6 @@ class Game:
         self.settings_changed = False
 
         # Fonts
-        from config.layout_manager import get_font_size
-
         font_large_size = get_font_size('large') or 72
         font_medium_size = get_font_size('medium') or 48
         font_small_size = get_font_size('small') or 32
@@ -1123,7 +1123,7 @@ class Game:
     def _create_projectile(self):
         """Create projectile from player"""
         damage = self.player.weapon_level
-        speed = 8 + self.player.weapon_level
+        speed = get_projectile_speed() + (self.player.weapon_level * get_scale_factor())
         proj = Projectile(
             self.player.x + (self.player.width if self.player.direction > 0 else 0),
             self.player.y + self.player.height // 2,
@@ -1224,7 +1224,7 @@ class Game:
                             spawn_x - 6,  # Center horizontally
                             spawn_y - 3,  # Center vertically
                             1,  # Direction (doesn't matter for angled shots)
-                            4,  # Speed (slower than player shots)
+                            get_projectile_speed() * 0.7,  # Speed (slower than player shots)
                             enemy.damage,  # Damage
                             ORANGE,  # Orange color for enemy projectiles
                             angle=angle  # Pass the angle here!

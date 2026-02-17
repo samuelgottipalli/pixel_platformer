@@ -14,6 +14,18 @@
     "small": 22,
     "tiny": 18
   },
+  "physics": {
+    "gravity": 0.8,
+    "max_fall_speed": 15,
+    "player_speed": 5,
+    "jump_power": -12,
+    "wall_jump_power": -10,
+    "wall_jump_push": 6,
+    "enemy_ground_speed": 2,
+    "enemy_flying_speed": 3,
+    "projectile_speed": 8,
+    "melee_range": 40
+  },
   "game_objects": {
     "player": {
       "width": 28,

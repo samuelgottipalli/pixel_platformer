@@ -5,14 +5,27 @@ Player entity
 import pygame
 
 from config.layout_manager import get_object_size
-from config.settings import (BLACK, CHARACTER_COLORS, GRAVITY, JUMP_POWER,
-                             MAX_FALL_SPEED, MELEE_DURATION, MELEE_RANGE,
-                             PLAYER_MAX_HEALTH,
-                             PLAYER_MAX_JUMPS, PLAYER_SPEED,
-                             PLAYER_SPEED_BOOST_MULTIPLIER, PLAYER_START_LIVES,
-                             SHOOT_BASE_COOLDOWN,
-                             WALL_JUMP_POWER, WALL_JUMP_PUSH,
-                             WEAPON_UPGRADE_COSTS, WHITE, YELLOW)
+from config.settings import (
+    BLACK,
+    CHARACTER_COLORS,
+    MELEE_DURATION,
+    PLAYER_MAX_HEALTH,
+    PLAYER_MAX_JUMPS,
+    PLAYER_SPEED_BOOST_MULTIPLIER,
+    PLAYER_START_LIVES,
+    SHOOT_BASE_COOLDOWN,
+    WEAPON_UPGRADE_COSTS,
+    WHITE,
+    YELLOW,
+    get_gravity,
+    get_max_fall_speed,
+    get_player_speed,
+    get_jump_power,
+    get_wall_jump_power,
+    get_wall_jump_push,
+    get_melee_range,
+    get_projectile_speed,
+)
 
 
 class Player:
@@ -88,8 +101,8 @@ class Player:
         self._handle_movement(keys)
 
         # Apply gravity
-        self.dy += GRAVITY
-        self.dy = min(self.dy, MAX_FALL_SPEED)
+        self.dy += get_gravity()
+        self.dy = min(self.dy, get_max_fall_speed())
 
         # Wall slide
         if self.on_wall and not self.on_ground and self.dy > 0:
@@ -130,7 +143,7 @@ class Player:
         """Handle player movement input"""
         from config.controls import MOVE_LEFT, MOVE_RIGHT, check_key_pressed
 
-        speed = PLAYER_SPEED * (
+        speed = get_player_speed() * (
             PLAYER_SPEED_BOOST_MULTIPLIER if self.speed_boost else 1
         )
 
@@ -190,22 +203,22 @@ class Player:
     def jump(self):
         """Attempt to jump. Returns True if successful"""
         if self.on_ground:
-            self.dy = JUMP_POWER
+            self.dy = get_jump_power()
             self.jump_count = 1
             if self.audio:
                 self.audio.player_jump()
             return True
         elif self.on_wall:
             # Wall jump
-            self.dy = WALL_JUMP_POWER
-            self.dx = -self.wall_direction * WALL_JUMP_PUSH
+            self.dy = get_wall_jump_power()
+            self.dx = -self.wall_direction * get_wall_jump_push()
             self.jump_count = 1
             if self.audio:
                 self.audio.player_jump()
             return True
         elif self.jump_count < self.max_jumps:
             # Double jump
-            self.dy = JUMP_POWER * 0.85
+            self.dy = get_jump_power() * 0.85
             self.jump_count += 1
             if self.audio:
                 self.audio.player_double_jump()
@@ -235,9 +248,9 @@ class Player:
         """Get melee attack hit box"""
         if self.melee_active:
             return pygame.Rect(
-                self.x + (self.width if self.direction > 0 else -MELEE_RANGE),
+                self.x + (self.width if self.direction > 0 else -get_melee_range()),
                 self.y + 10,
-                MELEE_RANGE,
+                get_melee_range(),
                 28,
             )
         return pygame.Rect(0, 0, 0, 0)
