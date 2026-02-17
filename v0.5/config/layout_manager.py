@@ -69,9 +69,9 @@ class LayoutManager:
             LayoutManager.get('fonts', 'large')  # Returns font size
             LayoutManager.get('game_objects', 'player', 'width')  # Returns player width
         """
-        if cls._current_layout is None:
-            # Auto-load default layout
-            cls.load_layout(1280, 720)
+        # if cls._current_layout is None:
+        #     # Auto-load default layout
+        #     cls.load_layout(1280, 720)
         
         value = cls._current_layout
         for key in path:
@@ -83,14 +83,14 @@ class LayoutManager:
         
         return value
     
-    @classmethod  
+    @classmethod
     def get_screen_size(cls):
         """Get current screen dimensions"""
         return (
             cls.get('screen', 'width'),
             cls.get('screen', 'height')
         )
-    
+
     @classmethod
     def get_font_size(cls, size_name):
         """
@@ -103,7 +103,7 @@ class LayoutManager:
             Font size in pixels
         """
         return cls.get('fonts', size_name)
-    
+
     @classmethod
     def get_object_size(cls, object_type):
         """
@@ -196,6 +196,10 @@ def get_layout(*path):
 def get_screen_size():
     """Shorthand for LayoutManager.get_screen_size()"""
     return LayoutManager.get_screen_size()
+
+def get_scale_factor():
+    """Shorthand for LayoutManager.get_scale_factor()"""
+    return LayoutManager.get_scale_factor()
 
 
 def get_font_size(size_name):

@@ -1,7 +1,7 @@
 {
   "video": {
-    "resolution_index": 1,
-    "fullscreen": false,
+    "resolution_index": 2,
+    "fullscreen": true,
     "vsync": true
   },
   "audio": {

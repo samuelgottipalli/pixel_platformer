@@ -12,12 +12,12 @@ SCREEN_HEIGHT = 720  # Default, will be updated
 FPS = 60
 TILE_SIZE = 32  # Default, will be updated
 
-# Player/Enemy dimensions - backward compatibility
-# These will be updated when layout loads
-PLAYER_WIDTH = 28  # Default
-PLAYER_HEIGHT = 48  # Default
-ENEMY_WIDTH = 32  # Default
-ENEMY_HEIGHT = 32  # Default
+# # Player/Enemy dimensions - backward compatibility
+# # These will be updated when layout loads
+# PLAYER_WIDTH = 28  # Default
+# PLAYER_HEIGHT = 48  # Default
+# ENEMY_WIDTH = 32  # Default
+# ENEMY_HEIGHT = 32  # Default
 
 
 def update_screen_size(width, height):
@@ -25,15 +25,15 @@ def update_screen_size(width, height):
     Update screen dimensions and load appropriate layout
     Called when resolution changes
     """
-    global SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE
-    global PLAYER_WIDTH, PLAYER_HEIGHT, ENEMY_WIDTH, ENEMY_HEIGHT
+    # global SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE
+    # global PLAYER_WIDTH, PLAYER_HEIGHT, ENEMY_WIDTH, ENEMY_HEIGHT
 
     # Load layout for this resolution
     LayoutManager.load_layout(width, height)
 
     # Update globals
-    SCREEN_WIDTH = width
-    SCREEN_HEIGHT = height
+    # SCREEN_WIDTH = width
+    # SCREEN_HEIGHT = height
 
     # Update tile size from layout
     tile_config = LayoutManager.get_object_size("tile")

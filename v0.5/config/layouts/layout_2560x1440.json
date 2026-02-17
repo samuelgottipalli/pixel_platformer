@@ -63,6 +63,13 @@
       "button_width": 560,
       "button_height": 80
     },
+    "options_menu": {
+      "title_y": 200,
+      "button_start_y": 480,
+      "button_spacing": 110,
+      "button_width": 560,
+      "button_height": 80
+    },
     "profile_select": {
       "title_y": 160,
       "list_start_y": 320,

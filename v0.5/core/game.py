@@ -27,8 +27,6 @@ from config.settings import (
     SCORE_KEY,
     SCORE_MELEE_HIT,
     SCORE_POWERUP,
-    SCREEN_HEIGHT,
-    SCREEN_WIDTH,
     WHITE,
     YELLOW,
     ORANGE
@@ -57,29 +55,36 @@ class Game:
     def __init__(self):
         """Initialize game"""
         pygame.init()
-
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Retro Pixel Platformer")
-        self.clock = pygame.time.Clock()
-        self.running = True
-
+        
         # Game settings
         self.settings = GameSettings()
-
-        # Audio manager
-        from utils.audio_manager import AudioManager
-        self.audio = AudioManager(self.settings)
 
         # On first run, suggest native resolution
         if not os.path.exists("data/settings.json"):
             native_idx = self.settings.get_native_resolution_index()
             self.settings.set_resolution(native_idx)
             self.settings.save_settings()
+        else:
+            self.settings._load_settings()
+
+        self.screen_width = self.settings.width
+        self.screen_height = self.settings.height
+        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        pygame.display.set_caption("Retro Pixel Platformer")
+        self.clock = pygame.time.Clock()
+        self.running = True
 
         # Apply video settings at startup
         from config.settings import update_screen_size
         update_screen_size(self.settings.width, self.settings.height)
         self.screen = self.settings.apply_video_settings(self.screen)
+
+
+        # Audio manager
+        from utils.audio_manager import AudioManager
+        self.audio = AudioManager(self.settings)
+
+        
 
         # Track if settings changed (needs restart)
         self.settings_changed = False
@@ -257,7 +262,7 @@ class Game:
                     
                     box_width = 500
                     box_height = 60
-                    box_x = SCREEN_WIDTH // 2 - box_width // 2
+                    box_x = self.screen_width // 2 - box_width // 2
                     box_rect = pygame.Rect(box_x, y, box_width, box_height)
                     
                     if box_rect.collidepoint(self.mouse_pos):
@@ -265,8 +270,8 @@ class Game:
                         self._load_selected_profile_to_menu()
                         return
             # Check New Profile button
-            button_y = SCREEN_HEIGHT - 120 if self.profiles else 350
-            button_rect = pygame.Rect(SCREEN_WIDTH // 2 - 140, button_y - 8, 280, 40)
+            button_y = self.screen_height - 120 if self.profiles else 350
+            button_rect = pygame.Rect(self.screen_width // 2 - 140, button_y - 8, 280, 40)
             if button_rect.collidepoint(self.mouse_pos):
                 self.profile_action = "new"
                 self.player_name = ""
@@ -299,7 +304,7 @@ class Game:
             y_start = 220
             box_width = 500
             box_height = 100
-            box_x = SCREEN_WIDTH // 2 - box_width // 2
+            box_x = self.screen_width // 2 - box_width // 2
             for i in range(3):
                 y = y_start + i * 120
                 box_rect = pygame.Rect(box_x, y, box_width, box_height)
@@ -1040,7 +1045,7 @@ class Game:
         self._update_particles()
 
         # Check death
-        if self.player.y > SCREEN_HEIGHT + 100:
+        if self.player.y > self.screen_height + 100:
             self.player.die()
 
         # Check game over
@@ -1364,10 +1369,9 @@ class Game:
         if self.current_level_index in boss_levels:
             boss_type = boss_levels[self.current_level_index]
             # Spawn boss at center-top of screen
-            from config.settings import SCREEN_WIDTH
 
             self.boss = Boss(
-                SCREEN_WIDTH // 2 - 48,  # Center horizontally
+                self.screen_width // 2 - 48,  # Center horizontally
                 100,  # Near top of screen
                 boss_type,
                 self.difficulty,
@@ -1494,9 +1498,6 @@ class Game:
         """Draw current game state - NATIVE RENDERING, NO SCALING"""
         self.current_screen = None  # Reset at start
 
-        # Draw directly to self.screen at native resolution
-        # NO MORE game_surface or render_target - just draw to self.screen!
-        
         if self.state == GameState.PROFILE_SELECT:
             self.current_screen = self.menu.draw_profile_select(
                 self.screen,
@@ -1585,23 +1586,23 @@ class Game:
 
         if theme == "SCIFI":
             BackgroundManager.draw_scifi_background(
-                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+                self.screen, self.camera.x, self.camera.y, self.screen_width, self.screen_height
             )
         elif theme == "NATURE":
             BackgroundManager.draw_nature_background(
-                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+                self.screen, self.camera.x, self.camera.y, self.screen_width, self.screen_height
             )
         elif theme == "SPACE":
             BackgroundManager.draw_space_background(
-                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+                self.screen, self.camera.x, self.camera.y, self.screen_width, self.screen_height
             )
         elif theme == "UNDERGROUND":
             BackgroundManager.draw_underground_background(
-                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+                self.screen, self.camera.x, self.camera.y, self.screen_width, self.screen_height
             )
         elif theme == "UNDERWATER":
             BackgroundManager.draw_underwater_background(
-                self.screen, self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+                self.screen, self.camera.x, self.camera.y, self.screen_width, self.screen_height
             )
         else:
             # Fallback
@@ -1769,7 +1770,7 @@ class Game:
 
         for tile in self.level.tiles:
             if is_rect_on_screen(
-                tile["rect"], self.camera.x, self.camera.y, SCREEN_WIDTH, SCREEN_HEIGHT
+                tile["rect"], self.camera.x, self.camera.y, self.screen_width, self.screen_height
             ):
                 rect = self.camera.apply_rect(tile["rect"])
                 theme = tile.get("theme", "SCIFI")
