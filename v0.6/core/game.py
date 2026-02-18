@@ -162,6 +162,7 @@ class Game:
         self.boss_projectiles = []
         self.boss_effects = []
         self.boss_defeated = False
+        self.boss_damage_taken = 0
 
         # UI enhancements
         self.show_controls = False

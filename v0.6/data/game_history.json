@@ -1,3 +1,38 @@
 [
-  
+  {
+    "player_name": "test",
+    "character": 0,
+    "difficulty": "EASY",
+    "result": "QUIT",
+    "final_score": 1620,
+    "coins_collected": 112,
+    "levels_completed": 3,
+    "enemies_defeated": 14,
+    "time_played_seconds": 105,
+    "deaths": 0,
+    "damage_taken": 34,
+    "powerups_collected": 4,
+    "secrets_found": 0,
+    "session_date": "2026-02-17T16:33:34.213507",
+    "session_id": "0e67e5c6",
+    "speedrun_time": 0.0
+  },
+  {
+    "player_name": "test",
+    "character": 0,
+    "difficulty": "NORMAL",
+    "result": "QUIT",
+    "final_score": 12705,
+    "coins_collected": 203,
+    "levels_completed": 7,
+    "enemies_defeated": 0,
+    "time_played_seconds": 0,
+    "deaths": 2,
+    "damage_taken": 252,
+    "powerups_collected": 2,
+    "secrets_found": 0,
+    "session_date": "2026-02-17T17:29:54.303909",
+    "session_id": null,
+    "speedrun_time": 0.0
+  }
 ]

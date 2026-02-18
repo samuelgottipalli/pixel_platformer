@@ -8,7 +8,7 @@ env/
 venv/
 ENV/
 *.pyc
-test*.*
+*test*.*
 
 # Game data
 data/saves/

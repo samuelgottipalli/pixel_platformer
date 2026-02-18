@@ -703,48 +703,127 @@ def get_complete_act1_levels():
     # LEVEL 6: "GUARDIAN'S LAIR" - BOSS FIGHT
     # ============================================================
 
+    # boss_arena = {
+    #     "width": 1280,
+    #     "height": 720,
+    #     "theme": "SCIFI",
+    #     "spawn_x": 200,
+    #     "spawn_y": 580,
+    #     "time_limit": "none",
+    #     "tiles": [
+    #         # Floor
+    #         *[{"x": i * TILE_SIZE, "y": 640, "solid": True} for i in range(40)],
+    #         # Side walls (prevent escape)
+    #         *[{"x": 0, "y": i * TILE_SIZE, "solid": True} for i in range(22)],
+    #         *[{"x": 1248, "y": i * TILE_SIZE, "solid": True} for i in range(22)],
+    #         # Ceiling
+    #         *[{"x": i * TILE_SIZE, "y": 0, "solid": True} for i in range(40)],
+    #         # Small platforms for player mobility
+    #         {"x": 200, "y": 550, "solid": True},
+    #         {"x": 232, "y": 550, "solid": True},
+    #         {"x": 400, "y": 500, "solid": True},
+    #         {"x": 432, "y": 500, "solid": True},
+    #         {"x": 600, "y": 450, "solid": True},
+    #         {"x": 632, "y": 450, "solid": True},
+    #         {"x": 800, "y": 500, "solid": True},
+    #         {"x": 832, "y": 500, "solid": True},
+    #         {"x": 1000, "y": 550, "solid": True},
+    #         {"x": 1032, "y": 550, "solid": True},
+    #     ],
+    #     "enemies": [],
+    #     "hazards": [
+    #         # Corner spikes (activate in phase 3)
+    #         {"x": 64, "y": 640, "type": "spike"},
+    #         {"x": 1184, "y": 640, "type": "spike"},
+    #     ],
+    #     "coins": [],
+    #     "powerups": [
+    #         # Health pickups for long fight
+    #         {"x": 200, "y": 510, "type": "health"},
+    #         {"x": 1000, "y": 510, "type": "health"},
+    #     ],
+    #     "keys": [],
+    #     "portals": [],
+    # }
+    
     boss_arena = {
-        "width": 1280,
+        "width": 1280,  # Single screen
         "height": 720,
         "theme": "SCIFI",
         "spawn_x": 200,
         "spawn_y": 580,
         "time_limit": "none",
         "tiles": [
-            # Floor
+            # FLOOR - Main ground level
             *[{"x": i * TILE_SIZE, "y": 640, "solid": True} for i in range(40)],
-            # Side walls (prevent escape)
-            *[{"x": 0, "y": i * TILE_SIZE, "solid": True} for i in range(22)],
-            *[{"x": 1248, "y": i * TILE_SIZE, "solid": True} for i in range(22)],
-            # Ceiling
-            *[{"x": i * TILE_SIZE, "y": 0, "solid": True} for i in range(40)],
-            # Small platforms for player mobility
-            {"x": 200, "y": 550, "solid": True},
-            {"x": 232, "y": 550, "solid": True},
-            {"x": 400, "y": 500, "solid": True},
-            {"x": 432, "y": 500, "solid": True},
-            {"x": 600, "y": 450, "solid": True},
-            {"x": 632, "y": 450, "solid": True},
-            {"x": 800, "y": 500, "solid": True},
-            {"x": 832, "y": 500, "solid": True},
-            {"x": 1000, "y": 550, "solid": True},
-            {"x": 1032, "y": 550, "solid": True},
+            
+            # SIDE WALLS (prevent escape)
+            *[{"x": 0, "y": i * TILE_SIZE, "solid": True} for i in range(20)],
+            *[{"x": 1248, "y": i * TILE_SIZE, "solid": True} for i in range(20)],
+            
+            # BOTTOM TIER PLATFORMS (Safe zones - wide and low)
+            {"x": 100, "y": 600, "solid": True},
+            {"x": 132, "y": 600, "solid": True},
+            {"x": 164, "y": 600, "solid": True},
+            {"x": 196, "y": 600, "solid": True},
+            {"x": 228, "y": 600, "solid": True},  # Left safe platform (5 tiles wide)
+            
+            {"x": 1020, "y": 600, "solid": True},
+            {"x": 1052, "y": 600, "solid": True},
+            {"x": 1084, "y": 600, "solid": True},
+            {"x": 1116, "y": 600, "solid": True},
+            {"x": 1148, "y": 600, "solid": True},  # Right safe platform (5 tiles wide)
+            
+            # MID TIER PLATFORMS (Tactical positions)
+            # Left-mid platform
+            {"x": 300, "y": 500, "solid": True},
+            {"x": 332, "y": 500, "solid": True},
+            {"x": 364, "y": 500, "solid": True},
+            {"x": 396, "y": 500, "solid": True},  # 4 tiles wide
+            
+            # Center platform (key position)
+            {"x": 608, "y": 450, "solid": True},
+            {"x": 640, "y": 450, "solid": True},
+            {"x": 672, "y": 450, "solid": True},  # 3 tiles wide at center
+            
+            # Right-mid platform
+            {"x": 884, "y": 500, "solid": True},
+            {"x": 916, "y": 500, "solid": True},
+            {"x": 948, "y": 500, "solid": True},
+            {"x": 980, "y": 500, "solid": True},  # 4 tiles wide
+            
+            # UPPER TIER PLATFORMS (High risk, better angles)
+            # Left upper
+            {"x": 448, "y": 320, "solid": True},
+            {"x": 480, "y": 320, "solid": True},
+            {"x": 512, "y": 320, "solid": True},  # 3 tiles wide
+            
+            # Right upper
+            {"x": 768, "y": 320, "solid": True},
+            {"x": 800, "y": 320, "solid": True},
+            {"x": 832, "y": 320, "solid": True},  # 3 tiles wide
+            
+            # TOP CENTER PLATFORM (Highest risk/reward)
+            {"x": 608, "y": 200, "solid": True},
+            {"x": 640, "y": 200, "solid": True},
+            {"x": 672, "y": 200, "solid": True},  # 3 tiles at top center
         ],
-        "enemies": [],
+        "enemies": [],  # Boss spawns automatically
         "hazards": [
-            # Corner spikes (activate in phase 3)
-            {"x": 64, "y": 640, "type": "spike"},
-            {"x": 1184, "y": 640, "type": "spike"},
+            # Corner spikes (slight danger, not too punishing)
+            {"x": 32, "y": 640, "type": "spike"},
+            {"x": 1216, "y": 640, "type": "spike"},
         ],
-        "coins": [],
+        "coins": [],  # No coins during boss fight
         "powerups": [
-            # Health pickups for long fight
-            {"x": 200, "y": 510, "type": "health"},
-            {"x": 1000, "y": 510, "type": "health"},
+            # Health pickups on safe platforms (regenerate over time in actual game)
+            {"x": 164, "y": 560, "type": "health"},   # Left safe platform
+            {"x": 1084, "y": 560, "type": "health"},  # Right safe platform
         ],
         "keys": [],
-        "portals": [],
+        "portals": [],  # Spawns on boss defeat
     }
+    
     levels.append(boss_arena)
 
     return levels

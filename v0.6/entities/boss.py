@@ -68,6 +68,9 @@ class Boss:
 
         # Animation
         self.animation_timer = 0
+        self.pattern_timer = 0  # For movement patterns
+        self.pattern_center_x = x + self.width // 2  # Arena center
+        self.pattern_center_y = y  # Base Y position
         self.float_offset = 0
 
         # Colors based on type
@@ -148,8 +151,14 @@ class Boss:
         # Speed up attacks
         self.attack_cooldown = max(60, self.attack_cooldown - 20)
 
-        # Speed up movement
-        self.speed += 0.5
+        # Phase 3 gets faster movement
+        if self.phase == 3:
+            self.speed += 1.0  # Significant speed boost for dash phase
+        elif self.phase == 2:
+            self.speed += 0.3  # Slight speed boost
+
+        # Reset pattern timer for new phase
+        self.pattern_timer = 0
 
     def _update_timers(self):
         """Update all timers"""
@@ -172,21 +181,104 @@ class Boss:
             # Ground-based movement
             self._ground_movement(player)
 
+    # def _floating_movement(self, player):
+    #     """Floating boss movement (most bosses)"""
+    #     # Move toward player horizontally
+    #     if self.x < player.x - 100:
+    #         self.dx = self.speed
+    #     elif self.x > player.x + 100:
+    #         self.dx = -self.speed
+    #     else:
+    #         self.dx *= 0.9
+
+    #     self.x += self.dx
+
+    #     # Sine wave vertical movement
+    #     self.float_offset = math.sin(pygame.time.get_ticks() / 300) * 30
+    #     self.y = self.start_y + self.float_offset
+
     def _floating_movement(self, player):
-        """Floating boss movement (most bosses)"""
-        # Move toward player horizontally
-        if self.x < player.x - 100:
-            self.dx = self.speed
-        elif self.x > player.x + 100:
-            self.dx = -self.speed
+        """Pattern-based floating movement - phase dependent"""
+        self.pattern_timer += 1
+
+        if self.phase == 1:
+            # Phase 1: Circular pattern (predictable, learnable)
+            self._pattern_circular(player)
+        elif self.phase == 2:
+            # Phase 2: Alternates between chase and pattern
+            self._pattern_chase_and_retreat(player)
         else:
-            self.dx *= 0.9
+            # Phase 3: Aggressive dash with vulnerable pauses
+            self._pattern_dash_and_pause(player)
 
-        self.x += self.dx
+    def _pattern_circular(self, player):
+        """Phase 1: Circular movement pattern"""
+        # Move in a circle around arena center
+        radius = 200
+        angle = (self.pattern_timer / 120) * math.pi * 2  # Full circle every 2 seconds
 
-        # Sine wave vertical movement
-        self.float_offset = math.sin(pygame.time.get_ticks() / 300) * 30
-        self.y = self.start_y + self.float_offset
+        target_x = self.pattern_center_x + math.cos(angle) * radius
+        target_y = self.pattern_center_y + math.sin(angle) * radius
+
+        # Smooth movement toward pattern position
+        self.x += (target_x - self.x) * 0.05
+        self.y += (target_y - self.y) * 0.05
+
+    def _pattern_chase_and_retreat(self, player):
+        """Phase 2: Alternates between chasing and retreating"""
+        cycle_time = self.pattern_timer % 360  # 6-second cycle
+
+        if cycle_time < 180:  # 3 seconds chase
+            # Chase player, but maintain minimum distance
+            distance = math.hypot(player.x - self.x, player.y - self.y)
+
+            if distance > 250:  # Too far - chase
+                dx = player.x - self.x
+                dy = player.y - self.y
+                length = math.sqrt(dx*dx + dy*dy)
+
+                if length > 0:
+                    self.x += (dx/length) * self.speed * 1.5
+                    self.y += (dy/length) * self.speed * 1.5
+            else:  # Too close - back away
+                dx = self.x - player.x
+                dy = self.y - player.y
+                length = math.sqrt(dx*dx + dy*dy)
+
+                if length > 0:
+                    self.x += (dx/length) * self.speed
+                    self.y += (dy/length) * self.speed
+        else:  # 3 seconds figure-8 pattern
+            # Figure-8 pattern (gives player breathing room)
+            t = ((cycle_time - 180) % 180) / 180.0
+
+            self.x = self.pattern_center_x + math.sin(t * math.pi * 2) * 300
+            self.y = self.pattern_center_y + math.sin(t * math.pi * 4) * 100
+
+    def _pattern_dash_and_pause(self, player):
+        """Phase 3: Quick dashes with vulnerable pauses"""
+        cycle_time = self.pattern_timer % 150  # 2.5 second cycle
+
+        if cycle_time < 60:  # 1 second dash
+            # Fast dash toward player
+            angle = math.atan2(player.y - self.y, player.x - self.x)
+            self.x += math.cos(angle) * self.speed * 3
+            self.y += math.sin(angle) * self.speed * 3
+            self.invulnerable = True  # Can't be hit while dashing
+
+        elif cycle_time < 90:  # 0.5 second pause (VULNERABLE!)
+            # STOP - this is when player can hit boss
+            self.invulnerable = False
+            self.damage_flash = 5  # Flash to indicate vulnerability
+            # Stay in place
+
+        else:  # 1 second teleport prep
+            # Teleport to random position
+            if cycle_time == 90:  # Only teleport once at start of this phase
+                import random
+                self.x = random.randint(self.pattern_center_x - 300, self.pattern_center_x + 300)
+                self.y = random.randint(self.pattern_center_y - 100, self.pattern_center_y + 100)
+                self.pattern_timer = 0  # Reset for next cycle
 
     def _ground_movement(self, player):
         """Ground boss movement"""
@@ -206,27 +298,63 @@ class Boss:
         self.y += self.dy
 
     def _update_attacks(self, player, current_time):
-        """Update boss attacks"""
+        # """Update boss attacks"""
+        # if self.attack_timer < self.attack_cooldown:
+        #     return
+
+        # # Choose attack based on phase and distance to player
+        # distance = abs(self.x - player.x)
+
+        # if self.phase == 1:
+        #     # Phase 1: Simple projectile attacks
+        #     attack = "projectile"
+        # elif self.phase == 2:
+        #     # Phase 2: Projectile + spread attack
+        #     attack = "projectile" if distance > 200 else "projectile_spread"
+        # else:
+        #     # Phase 3: All attacks
+        #     if distance > 300:
+        #         attack = "projectile_spread"
+        #     elif distance > 150:
+        #         attack = "projectile"
+        #     else:
+        #         attack = "slam"
+
+        # self.current_attack = attack
+        # self.attack_state = 0
+        # self.attack_timer = 0
+        """Update boss attacks - phase-based patterns"""
         if self.attack_timer < self.attack_cooldown:
             return
 
-        # Choose attack based on phase and distance to player
+        # Don't attack during pause window in phase 3
+        if (
+            self.phase == 3
+            and (self.pattern_timer % 150) >= 60
+            and (self.pattern_timer % 150) < 90
+        ):
+            return  # No attacks during vulnerable pause
+
+        # Choose attack based on phase
         distance = abs(self.x - player.x)
 
         if self.phase == 1:
-            # Phase 1: Simple projectile attacks
+            # Phase 1: Simple projectile from pattern position
             attack = "projectile"
+
         elif self.phase == 2:
-            # Phase 2: Projectile + spread attack
-            attack = "projectile" if distance > 200 else "projectile_spread"
-        else:
-            # Phase 3: All attacks
-            if distance > 300:
-                attack = "projectile_spread"
-            elif distance > 150:
+            # Phase 2: Spread shots when close, single when far
+            if distance > 200:
                 attack = "projectile"
             else:
-                attack = "slam"
+                attack = "projectile_spread"
+
+        else:  # Phase 3
+            # Phase 3: All attacks, more aggressive
+            if distance > 300:
+                attack = "projectile_spread"
+            else:
+                attack = "projectile"  # Remove slam for now, focus on projectiles
 
         self.current_attack = attack
         self.attack_state = 0
