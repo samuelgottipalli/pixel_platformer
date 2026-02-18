@@ -1,0 +1,150 @@
+{
+  "resolution": {
+    "width": 1280,
+    "height": 720,
+    "scale_factor": 1.0
+  },
+  "screen": {
+    "width": 1280,
+    "height": 720
+  },
+  "fonts": {
+    "large": 52,
+    "medium": 32,
+    "small": 22,
+    "tiny": 18
+  },
+  "physics": {
+    "gravity": 0.8,
+    "max_fall_speed": 15,
+    "player_speed": 5,
+    "jump_power": -12,
+    "wall_jump_power": -10,
+    "wall_jump_push": 6,
+    "enemy_ground_speed": 2,
+    "enemy_flying_speed": 3,
+    "projectile_speed": 8,
+    "melee_range": 40
+  },
+  "game_objects": {
+    "player": {
+      "width": 28,
+      "height": 48
+    },
+    "enemy": {
+      "width": 32,
+      "height": 32
+    },
+    "moving_platform": {
+      "width": 96,
+      "height": 32
+    },
+    "projectile": {
+      "width": 12,
+      "height": 6
+    },
+    "tile": {
+      "size": 32
+    },
+    "coin": {
+      "width": 16,
+      "height": 16
+    },
+    "powerup": {
+      "width": 24,
+      "height": 24
+    },
+    "portal": {
+      "width": 48,
+      "height": 64
+    },
+    "key": {
+      "width": 24,
+      "height": 24
+    },
+    "boss": {
+      "width": 120,
+      "height": 120
+    }
+  },
+
+  "ui": {
+    "main_menu": {
+      "title_y": 100,
+      "button_start_y": 240,
+      "button_spacing": 55,
+      "button_width": 280,
+      "button_height": 40
+    },
+    "options_menu": {
+      "title_y": 100,
+      "button_start_y": 240,
+      "button_spacing": 55,
+      "button_width": 280,
+      "button_height": 40
+    },
+    "profile_select": {
+      "title_y": 80,
+      "list_start_y": 160,
+      "item_height": 70,
+      "item_spacing": 10,
+      "visible_items": 5,
+      "new_profile_button_y": 580
+    },
+    "difficulty_select": {
+      "title_y": 100,
+      "button_start_y": 220,
+      "button_spacing": 70,
+      "button_width": 300,
+      "button_height": 50
+    },
+    "char_select": {
+      "title_y": 80,
+      "name_label_y": 160,
+      "name_text_y": 190,
+      "char_start_y": 280,
+      "char_spacing": 120,
+      "char_width": 56,
+      "char_height": 96
+    },
+    "pause_menu": {
+      "title_y": 150,
+      "button_start_y": 310,
+      "button_spacing": 55,
+      "button_width": 300,
+      "button_height": 40
+    },
+    "hud": {
+      "health_bar_x": 20,
+      "health_bar_y": 20,
+      "health_bar_width": 200,
+      "health_bar_height": 20,
+      "lives_x": 20,
+      "lives_y": 50,
+      "score_x": 20,
+      "score_y": 80,
+      "coins_x": 20,
+      "coins_y": 110,
+      "level_name_y": 20,
+      "weapon_level_x": 240,
+      "weapon_level_y": 20
+    },
+    "popup": {
+      "width": 600,
+      "height": 150
+    },
+    "achievement_notification": {
+      "width": 400,
+      "height": 100,
+      "margin_right": 20,
+      "margin_top": 20
+    },
+    "scroll_indicator": {
+      "size": 20
+    }
+  },
+
+  "camera": {
+    "smoothing": 0.1
+  }
+}
