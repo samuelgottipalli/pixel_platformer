@@ -5,7 +5,6 @@ Collectible objects (coins, keys, power-ups)
 import math
 
 import pygame
-from tomlkit import key
 
 from config.layout_manager import get_object_size
 from config.settings import CYAN, ORANGE, PURPLE, RED, WHITE, YELLOW

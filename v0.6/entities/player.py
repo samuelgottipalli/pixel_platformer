@@ -3,7 +3,6 @@ Player entity
 """
 
 import pygame
-
 from config.layout_manager import get_object_size
 from config.settings import (
     BLACK,
@@ -26,6 +25,7 @@ from config.settings import (
     get_melee_range,
     get_projectile_speed,
 )
+from entities.weapons import create_weapon
 
 
 class Player:
@@ -86,6 +86,17 @@ class Player:
         self.enemies_killed_projectile = 0
         self.enemies_killed_melee = 0
 
+        # WEAPON SYSTEM
+        self.weapons = {
+            'standard': create_weapon('standard', 1, 1),
+            'dual_back': None,
+            'spread': None,
+            'dual_front': None,
+            'explosive': None
+        }
+        self.current_weapon_id = 'standard'
+        self.weapon_cooldown = 0  # Shooting cooldown timer
+
     def update(self, keys, tiles, hazards):
         """
         Update player state
@@ -118,6 +129,10 @@ class Player:
         # Check hazards
         if not self.invincible:
             self._check_hazard_collision(hazards)
+        
+        # Update weapon cooldown
+        if self.weapon_cooldown > 0:
+            self.weapon_cooldown -= 1
 
     def _update_timers(self):
         """Update all active timers"""
@@ -226,13 +241,96 @@ class Player:
         return False
 
     def shoot(self):
-        """Attempt to shoot. Returns True if successful"""
-        if self.shoot_cooldown == 0:
-            self.shoot_cooldown = SHOOT_BASE_COOLDOWN - (self.weapon_level * 5)
-            if self.audio:
-                self.audio.player_shoot()
+        """
+        Shoot current weapon
+        Returns list of projectiles
+        """
+        if self.weapon_cooldown > 0:
+            return []
+        
+        # Get current weapon
+        weapon = self.weapons.get(self.current_weapon_id)
+        if not weapon:
+            return []
+        
+        # Create projectiles
+        projectiles = weapon.create_projectiles(
+            self.x,
+            self.y,
+            self.width,
+            self.height,
+            self.direction
+        )
+        
+        # Set cooldown
+        self.weapon_cooldown = weapon.get_cooldown()
+        
+        # Play sound
+        if self.audio:
+            self.audio.player_shoot()
+        
+        return projectiles
+
+    def switch_weapon(self, weapon_id):
+        """Switch to different weapon"""
+        if self.weapons.get(weapon_id):
+            self.current_weapon_id = weapon_id
             return True
         return False
+    
+    def unlock_weapon(self, weapon_id):
+        """Unlock a new weapon"""
+        if weapon_id not in self.weapons or self.weapons[weapon_id] is None:
+            self.weapons[weapon_id] = create_weapon(weapon_id, 1, 1)
+            return True
+        return False
+    
+    def upgrade_weapon_power(self, weapon_id):
+        """Upgrade weapon power"""
+        weapon = self.weapons.get(weapon_id)
+        if weapon:
+            return weapon.upgrade_power()
+        return False
+    
+    def upgrade_weapon_speed(self, weapon_id):
+        """Upgrade weapon speed"""
+        weapon = self.weapons.get(weapon_id)
+        if weapon:
+            return weapon.upgrade_speed()
+        return False
+    
+    def get_weapon_state(self):
+        """
+        Get weapon state for saving/shop
+        Returns dict of all weapons and their levels
+        """
+        weapon_state = {}
+        for weapon_id, weapon in self.weapons.items():
+            if weapon:
+                weapon_state[weapon_id] = {
+                    'unlocked': True,
+                    'power_level': weapon.power_level,
+                    'speed_level': weapon.speed_level
+                }
+            else:
+                weapon_state[weapon_id] = {
+                    'unlocked': False,
+                    'power_level': 0,
+                    'speed_level': 0
+                }
+        return weapon_state
+    
+    def restore_weapon_state(self, weapon_state):
+        """Restore weapons from save data"""
+        for weapon_id, state in weapon_state.items():
+            if state['unlocked']:
+                self.weapons[weapon_id] = create_weapon(
+                    weapon_id,
+                    state['power_level'],
+                    state['speed_level']
+                )
+            else:
+                self.weapons[weapon_id] = None
 
     def melee_attack(self):
         """Attempt melee attack. Returns True if successful"""

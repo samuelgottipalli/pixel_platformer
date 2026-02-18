@@ -192,6 +192,10 @@ class Game:
         # Track total coins available in act for achievement
         self.total_coins_in_act = 0
 
+        # Shop UI
+        self.shop = Shop()
+        self.shop_player_data = {}
+
     def run(self):
         """Main game loop"""
         try:

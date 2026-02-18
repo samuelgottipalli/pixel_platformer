@@ -19,10 +19,11 @@ class GameState(Enum):
     VICTORY = 9
     OPTIONS = 10  # Options menu (controls, settings, credits)
     CONTROLS = 11  # Controls screen (inside options)
-    SETTINGS = 12  # Settings screen (inside options) - placeholder
-    CREDITS = 13  # Credits screen (inside options) - placeholder
+    SETTINGS = 12  # Settings screen (inside options)
+    CREDITS = 13  # Credits screen (inside options)
     LEVEL_MAP = 14  # Level selection (unlocked levels only)
     ACHIEVEMENTS = 15
+    SHOP = 16
 
 
 class Theme(Enum):
