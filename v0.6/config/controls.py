@@ -33,6 +33,17 @@ TOGGLE_CONTROLS = [pygame.K_F1]
 # Debug Controls
 DEBUG_TOGGLE = [pygame.K_F3]
 
+# Weapon Switching
+STANDARD = [pygame.K_1]
+DUAL_BACK = [pygame.K_2]
+SPREAD = [pygame.K_3]
+DUAL_FRONT = [pygame.K_4]
+EXPLOSIVE = [pygame.K_5]
+# WEAPON_6 = [pygame.K_6]
+# WEAPON_7 = [pygame.K_7]
+# TOGGLE_WEAPON = [pygame.K_t, pygame.K_TAB]
+
+
 
 def check_key_pressed(keys, key_list):
     """Check if any key in key_list is pressed"""

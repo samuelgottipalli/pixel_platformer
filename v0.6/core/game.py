@@ -47,6 +47,7 @@ from save_system.save_manager import SaveManager
 from ui.hud import HUD
 from ui.menu import Menu
 from ui.components import Popup
+from ui.shop import Shop
 from utils.achievement_manager import AchievementManager
 from utils.enums import GameState, EnemyType
 
@@ -531,15 +532,17 @@ class Game:
         0 = New Game (start from Level 0)
         1 = Continue Game (load saved game)
         2 = Level Map (select unlocked levels)
-        3 = Options
-        4 = Logout (back to Profile Select)
+        3 = Achievements
+        4 = Options
+        5 = Shop
+        6 = Logout (back to Profile Select)
         """
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
-                self.menu_selection = (self.menu_selection - 1) % 6
+                self.menu_selection = (self.menu_selection - 1) % 7
                 self.audio.menu_navigate()
             elif controls.check_key_event(event, controls.MENU_DOWN):
-                self.menu_selection = (self.menu_selection + 1) % 6
+                self.menu_selection = (self.menu_selection + 1) % 7
                 self.audio.menu_navigate()
             elif controls.check_key_event(event, controls.MENU_SELECT):
                 self.audio.menu_select()
@@ -597,12 +600,89 @@ class Game:
             self.state = GameState.OPTIONS
             self.options_selection = 0
 
-        elif self.menu_selection == 5:  # Logout (back to Profile Select)
+        elif self.menu_selection == 5:  # Shop
+            self.state = GameState.SHOP
+
+        elif self.menu_selection == 6:  # Logout (back to Profile Select)
             self.current_profile = None
             self.achievement_manager = None
             self.player = None
             self.state = GameState.PROFILE_SELECT
             self.profile_selection = 0
+
+    def _enter_shop(self):
+        """Enter shop from menu"""
+        self.state = GameState.SHOP
+        
+        # Prepare player data for shop
+        self.shop_player_data = {
+            'coins': self.current_profile.coins if self.current_profile else 0,
+            'weapons': self.player.get_weapon_state() if self.player else {},
+            'max_hp': self.player.max_health if self.player else 100,
+            'max_lives': self.player.lives if self.player else 3
+        }
+
+    def _handle_shop_events(self, event):
+        """Handle shop input"""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                # Exit shop
+                self.state = GameState.MENU
+                return
+
+            elif event.key == pygame.K_TAB:
+                # Switch tab
+                self.shop.switch_tab()
+
+            elif event.key == pygame.K_UP:
+                self.shop.navigate_up()
+
+            elif event.key == pygame.K_DOWN:
+                self.shop.navigate_down()
+
+            elif event.key == pygame.K_LEFT:
+                self.shop.navigate_left()
+
+            elif event.key == pygame.K_RIGHT:
+                self.shop.navigate_right()
+
+            elif event.key == pygame.K_RETURN:
+                # Attempt purchase
+                self._attempt_purchase()
+
+    def _attempt_purchase(self):
+        """Attempt to buy selected item"""
+        purchase = self.shop.get_selected_purchase(self.shop_player_data)
+
+        if not purchase:
+            return  # Nothing selected
+
+        # Check if can afford
+        if self.shop_player_data['coins'] < purchase['cost']:
+            # TODO: Show "not enough coins" message
+            return
+
+        # Process purchase
+        if purchase['type'] == 'weapon_unlock':
+            # Unlock weapon
+            if self.player.unlock_weapon(purchase['weapon_id']):
+                self.shop_player_data['coins'] -= purchase['cost']
+                self.shop_player_data['weapons'] = self.player.get_weapon_state()
+                # TODO: Show "weapon unlocked" message
+
+        elif purchase['type'] == 'weapon_power':
+            # Upgrade power
+            if self.player.upgrade_weapon_power(purchase['weapon_id']):
+                self.shop_player_data['coins'] -= purchase['cost']
+                self.shop_player_data['weapons'] = self.player.get_weapon_state()
+                # TODO: Show "power upgraded" message
+
+        elif purchase['type'] == 'weapon_speed':
+            # Upgrade speed
+            if self.player.upgrade_weapon_speed(purchase['weapon_id']):
+                self.shop_player_data['coins'] -= purchase['cost']
+                self.shop_player_data['weapons'] = self.player.get_weapon_state()
+                # TODO: Show "speed upgraded" message
 
     def _handle_options_events(self, event):
         """
@@ -1111,6 +1191,18 @@ class Game:
         else:
             self.controls_toggle_pressed = False
 
+        # Weapon switching (number keys)
+        if controls.check_key_pressed(keys, controls.STANDARD):
+            self.player.switch_weapon('standard')
+        elif controls.check_key_pressed(keys, controls.DUAL_BACK):
+            self.player.switch_weapon('dual_back')
+        elif controls.check_key_pressed(keys, controls.SPREAD):
+            self.player.switch_weapon('spread')
+        elif controls.check_key_pressed(keys, controls.DUAL_FRONT):
+            self.player.switch_weapon('dual_front')
+        elif controls.check_key_pressed(keys, controls.EXPLOSIVE):
+            self.player.switch_weapon('explosive')
+
     def _create_jump_particles(self):
         """Create particles for jump effect"""
         for _ in range(5):
@@ -1137,7 +1229,8 @@ class Game:
             damage,
             CYAN,
         )
-        self.projectiles.append(proj)
+        # self.projectiles.append(proj)
+        self.projectiles.extend(proj)
 
     def _update_collectibles(self):
         """Update coins, power-ups, keys"""
@@ -1566,6 +1659,8 @@ class Game:
                 self.current_screen = self.menu.draw_achievements_screen(
                     self.screen, self.achievement_manager, self.mouse_pos
                 )
+        elif self.state == GameState.SHOP:
+             self.current_screen = self.shop.draw(self.screen, self.shop_player_data, self.mouse_pos)
 
         # Draw achievement notifications (on top of everything)
         for notif in self.achievement_notifications:

@@ -38,6 +38,8 @@ class SaveManager:
                     "weapon_level": player.weapon_level,
                     "keys": player.keys,
                     "max_jumps": player.max_jumps,
+                    "weapons": player.get_weapon_state(),
+                    "current_weapon": player.current_weapon_id,
                 },
             }
 
@@ -98,6 +100,8 @@ class SaveManager:
         player.weapon_level = p["weapon_level"]
         player.keys = p["keys"]
         player.max_jumps = p.get("max_jumps", 2)
+        player.restore_weapon_state(p["weapons"])
+        player.current_weapon_id = p["current_weapon"]
 
     @staticmethod
     def delete_save(profile_name):
@@ -137,4 +141,3 @@ class SaveManager:
             print(f"Profile already exists for {profile_name}")
             return True
         return False
-

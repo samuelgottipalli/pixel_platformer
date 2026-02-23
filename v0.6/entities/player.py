@@ -12,7 +12,6 @@ from config.settings import (
     PLAYER_MAX_JUMPS,
     PLAYER_SPEED_BOOST_MULTIPLIER,
     PLAYER_START_LIVES,
-    SHOOT_BASE_COOLDOWN,
     WEAPON_UPGRADE_COSTS,
     WHITE,
     YELLOW,
@@ -247,12 +246,12 @@ class Player:
         """
         if self.weapon_cooldown > 0:
             return []
-        
+
         # Get current weapon
         weapon = self.weapons.get(self.current_weapon_id)
         if not weapon:
             return []
-        
+
         # Create projectiles
         projectiles = weapon.create_projectiles(
             self.x,
@@ -261,14 +260,14 @@ class Player:
             self.height,
             self.direction
         )
-        
+
         # Set cooldown
         self.weapon_cooldown = weapon.get_cooldown()
-        
+
         # Play sound
         if self.audio:
             self.audio.player_shoot()
-        
+
         return projectiles
 
     def switch_weapon(self, weapon_id):

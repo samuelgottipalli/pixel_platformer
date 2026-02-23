@@ -69,7 +69,7 @@ class Menu:
         button_x = self.screen_width // 2 - button_width // 2
 
         for i in range(
-            6
+            7
         ):  # New Game, Continue, Level Map, Achievements, Options, Logout
             y = button_start_y + i * button_spacing
             buttons.append(pygame.Rect(button_x, y - 8 * self.scale_factor, button_width, button_height))
@@ -159,7 +159,7 @@ class Menu:
         title = self.font_large.render("RETRO PLATFORMER", True, UI_HIGHLIGHT)
         surface.blit(title, (self.screen_width // 2 - title.get_width() // 2, 100))
 
-        options = ["New Game", "Continue", "Level Map", "Achievements", "Options", "Logout"]
+        options = ["New Game", "Continue", "Level Map", "Achievements", "Options", "Shop", "Logout"]
 
         # Get layout values with fallbacks
         button_start_y = get_ui_element("main_menu", "button_start_y") or 240
