@@ -69,7 +69,7 @@ class Menu:
         button_x = self.screen_width // 2 - button_width // 2
 
         for i in range(
-            7
+            6
         ):  # New Game, Continue, Level Map, Achievements, Options, Logout
             y = button_start_y + i * button_spacing
             buttons.append(pygame.Rect(button_x, y - 8 * self.scale_factor, button_width, button_height))
@@ -89,7 +89,7 @@ class Menu:
         button_spacing = get_ui_element("pause_menu", "button_spacing") or 55
 
         button_x = self.screen_width // 2 - button_width // 2
-        for i in range(3):  # Resume, Return to Menu, Logout
+        for i in range(4):  # Resume, Return to Menu, Logout
             y = button_start_y + i * button_spacing
             buttons.append(pygame.Rect(button_x, y - 8 * self.scale_factor, button_width, button_height))
         return buttons
@@ -159,7 +159,7 @@ class Menu:
         title = self.font_large.render("RETRO PLATFORMER", True, UI_HIGHLIGHT)
         surface.blit(title, (self.screen_width // 2 - title.get_width() // 2, 100))
 
-        options = ["New Game", "Continue", "Level Map", "Achievements", "Options", "Shop", "Logout"]
+        options = ["New Game", "Continue", "Level Map", "Achievements", "Options", "Logout"]
 
         # Get layout values with fallbacks
         button_start_y = get_ui_element("main_menu", "button_start_y") or 240
@@ -239,7 +239,7 @@ class Menu:
                 surface.blit(name_text, (box_x + 20, y + 8))
 
                 stats_text = self.font_tiny.render(
-                    f"Levels: {profile.levels_completed}  Score: {profile.total_score}  Coins: {profile.coins_collected}",
+                    f"Levels: {profile.levels_completed}  Score: {profile.total_score}  Coins: {profile.total_coins_collected}",
                     True,
                     UI_TEXT_DIM,
                 )
@@ -500,7 +500,7 @@ class Menu:
         # Get layout values with fallbacks
         button_start_y = get_ui_element("pause_menu", "button_start_y") or 240
         button_spacing = get_ui_element("pause_menu", "button_spacing") or 55
-        options = ["Resume", "Save & Return to Menu", "Save & Logout"]
+        options = ["Shop", "Resume", "Save & Return to Menu", "Save & Logout"]
         for i, option in enumerate(options):
             y = button_start_y + i * button_spacing
             is_selected = i == selection
@@ -807,7 +807,7 @@ class Menu:
     def draw_credits_screen(self, surface, mouse_pos=None):
         """Draw credits screen"""
         screen_width, screen_height = get_screen_size()
-        
+
         screen = Screen(
             "CREDITS",
             self.font_large,

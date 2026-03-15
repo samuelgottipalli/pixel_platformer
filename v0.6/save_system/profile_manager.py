@@ -4,7 +4,7 @@ Player profile management
 
 import json
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 from config.settings import PROFILES_FILE
 
@@ -17,18 +17,45 @@ class PlayerProfile:
     character: int
     total_score: int
     levels_completed: int
-    coins_collected: int
+    total_coins_collected: int
+    current_coins: int
+    max_health: int
+    current_health: int
+    max_lives: int
+    current_lives: int
+    keys_collected: int
+    current_weapon: str
+    enemies_defeated: int
+    time_played_seconds: int
+    deaths: int
+    total_damage_taken: int
+    powerups_collected: int
+    secrets_found: int
+    speedrun_time: float
+    weapons: dict[str, dict[str, int | bool]] = field(
+        default_factory=dict[str, dict[str, int | bool]]
+    )
+    upgrades: dict[str, int] = field(default_factory=dict[str, int])
 
 
 @dataclass
 class CompletedGame:
     """Completed game record for leaderboard/stats"""
 
-    player_name: str
+    name: str
     character: int
     final_score: int
     levels_completed: int
     coins_collected: int
+    coins_used: int
+    keys_collected: int
+    enemies_defeated: int
+    time_played_seconds: int
+    deaths: int
+    total_damage_taken: int
+    powerups_collected: int
+    secrets_found: int
+    speedrun_time: float
     completion_date: str
 
 

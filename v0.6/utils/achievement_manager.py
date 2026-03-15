@@ -303,7 +303,7 @@ class AchievementManager:
 
     def _load_achievements(self):
         """Load achievement progress from file"""
-        filepath = f'data/achievements_{self.profile_name}.json'
+        filepath = f'data/achievements/achievements_{self.profile_name}.json'
 
         if os.path.exists(filepath):
             try:
@@ -318,7 +318,7 @@ class AchievementManager:
 
     def _delete_achievements(self):
         """Delete achievement progress file"""
-        filepath = f"data/achievements_{self.profile_name}.json"
+        filepath = f"data/achievements/achievements_{self.profile_name}.json"
 
         if os.path.exists(filepath):
             try:
@@ -328,8 +328,8 @@ class AchievementManager:
 
     def save_achievements(self):
         """Save achievement progress to file"""
-        os.makedirs('data', exist_ok=True)
-        filepath = f'data/achievements_{self.profile_name}.json'
+        os.makedirs('data/achievements', exist_ok=True)
+        filepath = f"data/achievements/achievements_{self.profile_name}.json"
 
         try:
             data = {}

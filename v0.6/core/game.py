@@ -58,7 +58,7 @@ class Game:
     def __init__(self):
         """Initialize game"""
         pygame.init()
-        
+
         # Game settings
         self.settings = GameSettings()
 
@@ -82,12 +82,9 @@ class Game:
         update_screen_size(self.settings.width, self.settings.height)
         self.screen = self.settings.apply_video_settings(self.screen)
 
-
         # Audio manager
         from utils.audio_manager import AudioManager
         self.audio = AudioManager(self.settings)
-
-        
 
         # Track if settings changed (needs restart)
         self.settings_changed = False
@@ -258,19 +255,19 @@ class Game:
                 y_start = 160
                 item_height = 70
                 visible_items = 5
-                
+
                 for i in range(len(self.profiles)):
                     y = y_start + i * item_height - self.profile_scroll_offset
-                    
+
                     # Skip if not visible
                     if y < y_start - item_height or y > y_start + visible_items * item_height:
                         continue
-                    
+
                     box_width = 500
                     box_height = 60
                     box_x = self.screen_width // 2 - box_width // 2
                     box_rect = pygame.Rect(box_x, y, box_width, box_height)
-                    
+
                     if box_rect.collidepoint(self.mouse_pos):
                         self.profile_selection = i
                         self._load_selected_profile_to_menu()
@@ -373,11 +370,11 @@ class Game:
         # DEBUG: Print mouse and first button position
         # if self.state == GameState.MENU and self.menu.main_buttons:
         #     print(f"Mouse: {self.mouse_pos}, First button: {self.menu.main_buttons[0]}")
-        
+
         # Initialize mouse_pos from last known position
         if not hasattr(self, 'mouse_pos'):
             self.mouse_pos = (0, 0)
-            
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -400,6 +397,8 @@ class Game:
             elif self.state == GameState.MENU:
                 self.audio.play_menu_music()
                 self._handle_menu_events(event)
+            elif self.state == GameState.SHOP:
+                self._handle_shop_events(event)
             elif self.state == GameState.DIFFICULTY_SELECT:
                 self._handle_difficulty_select_events(event)
             elif self.state == GameState.CHAR_SELECT:
@@ -465,6 +464,11 @@ class Game:
         self.player.weapon_level = 1
         self.player.keys = 0
         self.player.max_jumps = 2
+
+        self.current_profile.max_lives = lives
+        self.current_profile.current_lives = lives
+        self.profiles.(self.current_profile)
+        ProfileManager.save_profiles(self.profiles)
 
         # Start level music
         self.audio.play_music('level')
@@ -534,15 +538,14 @@ class Game:
         2 = Level Map (select unlocked levels)
         3 = Achievements
         4 = Options
-        5 = Shop
-        6 = Logout (back to Profile Select)
+        5 = Logout (back to Profile Select)
         """
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
-                self.menu_selection = (self.menu_selection - 1) % 7
+                self.menu_selection = (self.menu_selection - 1) % 6
                 self.audio.menu_navigate()
             elif controls.check_key_event(event, controls.MENU_DOWN):
-                self.menu_selection = (self.menu_selection + 1) % 7
+                self.menu_selection = (self.menu_selection + 1) % 6
                 self.audio.menu_navigate()
             elif controls.check_key_event(event, controls.MENU_SELECT):
                 self.audio.menu_select()
@@ -600,10 +603,7 @@ class Game:
             self.state = GameState.OPTIONS
             self.options_selection = 0
 
-        elif self.menu_selection == 5:  # Shop
-            self.state = GameState.SHOP
-
-        elif self.menu_selection == 6:  # Logout (back to Profile Select)
+        elif self.menu_selection == 5:  # Logout (back to Profile Select)
             self.current_profile = None
             self.achievement_manager = None
             self.player = None
@@ -613,10 +613,10 @@ class Game:
     def _enter_shop(self):
         """Enter shop from menu"""
         self.state = GameState.SHOP
-        
         # Prepare player data for shop
+        print(self.current_profile)
         self.shop_player_data = {
-            'coins': self.current_profile.coins if self.current_profile else 0,
+            'coins': self.current_profile.player.coins if self.current_profile else 0,
             'weapons': self.player.get_weapon_state() if self.player else {},
             'max_hp': self.player.max_health if self.player else 100,
             'max_lives': self.player.lives if self.player else 3
@@ -659,7 +659,7 @@ class Game:
 
         # Check if can afford
         if self.shop_player_data['coins'] < purchase['cost']:
-            # TODO: Show "not enough coins" message
+            self._show_popup("Not enough coins!", duration=90)
             return
 
         # Process purchase
@@ -668,21 +668,21 @@ class Game:
             if self.player.unlock_weapon(purchase['weapon_id']):
                 self.shop_player_data['coins'] -= purchase['cost']
                 self.shop_player_data['weapons'] = self.player.get_weapon_state()
-                # TODO: Show "weapon unlocked" message
+                self._show_popup(f"{purchase['name']} unlocked!", duration=90)
 
         elif purchase['type'] == 'weapon_power':
             # Upgrade power
             if self.player.upgrade_weapon_power(purchase['weapon_id']):
                 self.shop_player_data['coins'] -= purchase['cost']
                 self.shop_player_data['weapons'] = self.player.get_weapon_state()
-                # TODO: Show "power upgraded" message
+                self._show_popup(f"{purchase['name']} power upgraded!", duration=90)
 
         elif purchase['type'] == 'weapon_speed':
             # Upgrade speed
             if self.player.upgrade_weapon_speed(purchase['weapon_id']):
                 self.shop_player_data['coins'] -= purchase['cost']
                 self.shop_player_data['weapons'] = self.player.get_weapon_state()
-                # TODO: Show "speed upgraded" message
+                self._show_popup(f"{purchase['name']} speed upgraded!", duration=90)
 
     def _handle_options_events(self, event):
         """
@@ -864,7 +864,23 @@ class Game:
             character=self.char_selection,
             total_score=0,
             levels_completed=0,
-            coins_collected=0,
+            total_coins_collected=0,
+            current_coins=0,
+            max_health=100,
+            current_health=100,
+            max_lives=0,  # Will be set based on difficulty when game starts
+            current_lives=0, # Will be set based on difficulty when game starts
+            keys_collected=0,
+            current_weapon="basic",
+            enemies_defeated=0,
+            time_played_seconds=0,
+            deaths=0,
+            total_damage_taken=0,
+            powerups_collected=0,
+            secrets_found=0,
+            speedrun_time=0.0,
+            weapons={},
+            upgrades={}
         )
         self.profiles.append(self.current_profile)
         ProfileManager.save_profiles(self.profiles)
@@ -885,17 +901,20 @@ class Game:
 
     def _handle_pause_selection(self):
         """Handle pause menu option selection"""
-        if self.pause_selection == 0:  # Resume
+        
+        if self.pause_selection == 0:  # Shop
+            self.state = GameState.SHOP    
+        elif self.pause_selection == 1:  # Resume
             self.state = GameState.PLAYING
             self.audio.unpause_music()  # Resume music
-        elif self.pause_selection == 1:  # Return to Main Menu
+        elif self.pause_selection == 2:  # Return to Main Menu
             self._save_game()  # Auto-save before returning
             self._save_game_session("QUIT")
             self.audio.stop_music()
             self.audio.play_music('menu')
             self.state = GameState.MENU
             self.menu_selection = 0
-        elif self.pause_selection == 2:  # Quit to Profile Select
+        elif self.pause_selection == 3:  # Quit to Profile Select
             self._save_game()
             self._save_game_session("QUIT")
             self.current_profile = None
@@ -904,7 +923,6 @@ class Game:
     def _handle_victory_events(self, event):
         """Handle victory screen input"""
         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-            # Profile was already deleted in _game_complete()
             self.player = None
             self.current_profile = None
             self.state = GameState.PROFILE_SELECT  # Back to profile select
@@ -1150,8 +1168,7 @@ class Game:
 
         # Shoot
         if controls.check_key_pressed(keys, controls.SHOOT):
-            if self.player.shoot():
-                self._create_projectile()
+            self._create_projectile()
 
         # Melee
         if controls.check_key_pressed(keys, controls.MELEE):
@@ -1219,18 +1236,13 @@ class Game:
 
     def _create_projectile(self):
         """Create projectile from player"""
-        damage = self.player.weapon_level
-        speed = get_projectile_speed() + (self.player.weapon_level * get_scale_factor())
-        proj = Projectile(
-            self.player.x + (self.player.width if self.player.direction > 0 else 0),
-            self.player.y + self.player.height // 2,
-            self.player.direction,
-            speed,
-            damage,
-            CYAN,
-        )
-        # self.projectiles.append(proj)
-        self.projectiles.extend(proj)
+        result = self.player.shoot()
+        if result:
+            # Handle both old (single) and new (list) return types
+            if isinstance(result, list):
+                self.projectiles.extend(result)
+            else:
+                self.projectiles.append(result)
 
     def _update_collectibles(self):
         """Update coins, power-ups, keys"""
@@ -1303,16 +1315,16 @@ class Game:
 
                 # Turret shooting logic
                 if enemy.type == EnemyType.TURRET.value and enemy.can_shoot():
-                    
+
                     # Calculate angle to player
                     dx = (self.player.x + self.player.width // 2) - (enemy.x + enemy.width // 2)
                     dy = (self.player.y + self.player.height // 2) - (enemy.y + enemy.height // 2)
                     distance = math.sqrt(dx**2 + dy**2)
-                    
+
                     # Only shoot if player is within range (500 pixels)
                     if distance < 500:
                         angle = math.atan2(dy, dx)
-                        
+
                         spawn_distance = 40
                         spawn_x = enemy.x + enemy.width // 2 + math.cos(angle) * spawn_distance
                         spawn_y = enemy.y + enemy.height // 2 + math.sin(angle) * spawn_distance
@@ -1327,10 +1339,10 @@ class Game:
                             ORANGE,  # Orange color for enemy projectiles
                             angle=angle  # Pass the angle here!
                         )
-                        
+
                         self.projectiles.append(proj)
                         enemy.reset_shoot_timer()
-                        
+
                 # Check collision with player
                 if self.player.get_rect().colliderect(enemy.get_rect()):
                     self._handle_enemy_player_collision(enemy)
@@ -1639,7 +1651,7 @@ class Game:
         elif self.state == GameState.PLAYING:
             # Draw game directly to screen
             self._draw_game()
-            
+
         elif self.state == GameState.PAUSED:
             # Draw game, then pause menu on top
             self._draw_game()
@@ -1660,12 +1672,13 @@ class Game:
                     self.screen, self.achievement_manager, self.mouse_pos
                 )
         elif self.state == GameState.SHOP:
-             self.current_screen = self.shop.draw(self.screen, self.shop_player_data, self.mouse_pos)
+            self._enter_shop()  # Ensure shop is initialized before drawing
+            self.current_screen = self.shop.draw(self.screen, self.shop_player_data, self.mouse_pos)
 
         # Draw achievement notifications (on top of everything)
         for notif in self.achievement_notifications:
             notif.draw(self.screen)
-        
+
         # Draw popup (on top of EVERYTHING)
         if self.show_popup and self.popup:
             self.popup.draw(self.screen, self.font_small)
@@ -2025,7 +2038,7 @@ class Game:
                     # Apply immediately
                     self.screen = self.settings.apply_video_settings(self.screen)
                     self.settings_changed = True
-                    
+
                     # REFRESH MENU BUTTONS FOR NEW RESOLUTION
                     from config.settings import update_screen_size
                     update_screen_size(self.settings.width, self.settings.height)

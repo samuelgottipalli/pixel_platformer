@@ -4,7 +4,6 @@ Run this separately from the main game: python level_editor.py
 """
 
 import json
-import sys
 
 import pygame
 
