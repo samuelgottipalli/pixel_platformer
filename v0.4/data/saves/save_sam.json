@@ -1,0 +1,15 @@
+{
+  "profile_name": "sam",
+  "current_level": 3,
+  "player": {
+    "x": 1638.432345564228,
+    "y": 592.8,
+    "health": 100,
+    "lives": 4,
+    "coins": 21,
+    "score": 2490,
+    "weapon_level": 4,
+    "keys": [],
+    "max_jumps": 2
+  }
+}
