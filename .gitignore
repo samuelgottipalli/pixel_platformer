@@ -8,13 +8,12 @@ env/
 venv/
 ENV/
 *.pyc
-*test*.*
+test*.ipynb
 
-# Game data
-data/saves/
-data/profiles.json
-data/completed_games.json
-data/*.json
+# Game data (player saves, profiles, achievements, history, settings) - any depth
+**/data/saves/
+**/data/achievements/
+**/data/*.json
 Sound effects Pack 2/
 1*.ogg
 0*.ogg
