@@ -368,6 +368,25 @@ class SaveTests(GameTestCase):
         self.assertEqual(g.player.current_weapon_id, "standard")
 
 
+class LevelDesignTests(GameTestCase):
+    """Every level must be completable with the real player physics"""
+
+    def test_every_level_can_reach_its_exit(self):
+        g = self.new_game()  # Loads the 1280x720 layout + level data
+        shutil.copy(os.path.join(PROJECT_DIR, "tests", "level_checker.py"), WORK_DIR)
+        from level_checker import check_level
+        for i, data in enumerate(g.levels):
+            if not data.get("portals"):
+                self.assertEqual(i, 6, "only the boss arena may have no portal")
+                continue
+            with self.subTest(level=i):
+                result = check_level(data)
+                self.assertTrue(result.portal_reached, f"level {i} exit is unreachable")
+                self.assertGreaterEqual(result.coin_coverage(), 0.75,
+                                        f"level {i}: too many unreachable coins "
+                                        f"{result.unreachable_coins()[:10]}")
+
+
 class BossAndEndingTests(GameTestCase):
     def test_boss_updates_once_per_frame(self):
         g = self.playing_game(level=6)

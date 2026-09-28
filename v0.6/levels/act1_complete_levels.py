@@ -49,6 +49,10 @@ def get_complete_act1_levels():
                 {"x": 1632 + (i % 2) * 150, "y": 600 - i * 40, "solid": True}
                 for i in range(15)
             ],
+            # Stepping stones from the tower top to the top platform
+            # (the 390px gap was wider than a double jump)
+            *[{"x": 1900 + i * TILE_SIZE, "y": 110, "solid": True} for i in range(2)],
+            *[{"x": 2050 + i * TILE_SIZE, "y": 130, "solid": True} for i in range(2)],
             # Top platform
             *[{"x": 2200 + i * TILE_SIZE, "y": 150, "solid": True} for i in range(20)],
             # === AREA 3: HIGH PLATFORMS (2800-4200) ===
@@ -183,170 +187,10 @@ def get_complete_act1_levels():
     levels.append(level_2)
 
     # ============================================================
-    # LEVEL 3: "THE ASCENT" (20 minutes, 9000px)
+    # LEVEL 3: "THE ASCENT" (20 minutes, 9000px) - see _build_level_3
     # ============================================================
 
-    level_3 = {
-        "width": 9000,
-        "height": 720,
-        "theme": "SCIFI",
-        "spawn_x": 100,
-        "spawn_y": 500,
-        "time_limit": "medium",
-        "tiles": [
-            # === AREA 1: COURTYARD (0-1800) ===
-            *[{"x": i * TILE_SIZE, "y": 640, "solid": True} for i in range(60)],
-            # Multiple paths intro
-            *[{"x": 300 + i * TILE_SIZE, "y": 550, "solid": True} for i in range(6)],
-            *[{"x": 600 + i * TILE_SIZE, "y": 450, "solid": True} for i in range(6)],
-            *[{"x": 900 + i * TILE_SIZE, "y": 350, "solid": True} for i in range(6)],
-            # Converge
-            *[{"x": 1500 + i * TILE_SIZE, "y": 640, "solid": True} for i in range(10)],
-            # === AREA 2: FIRST TOWER (1800-3200) ===
-            # Narrow tower with alternating platforms
-            *[{"x": 1900, "y": 640 - i * TILE_SIZE, "solid": True} for i in range(20)],
-            *[{"x": 2100, "y": 640 - i * TILE_SIZE, "solid": True} for i in range(20)],
-            # Platforms inside tower (alternating sides)
-            *[
-                {"x": 1932 + (i % 2) * 136, "y": 600 - i * 35, "solid": True}
-                for i in range(18)
-            ],
-            # Top of tower
-            *[{"x": 2400 + i * TILE_SIZE, "y": 100, "solid": True} for i in range(25)],
-            # === AREA 3: BRIDGE SECTION (3200-4500) ===
-            # Narrow suspended bridges
-            *[{"x": 3200 + i * 150, "y": 150, "solid": True} for i in range(10)],
-            *[{"x": 3232 + i * 150, "y": 150, "solid": True} for i in range(10)],
-            # === AREA 4: SECOND TOWER (4500-6000) ===
-            # Wider tower with more complex platforming
-            *[{"x": 4600, "y": 640 - i * TILE_SIZE, "solid": True} for i in range(20)],
-            *[{"x": 4900, "y": 640 - i * TILE_SIZE, "solid": True} for i in range(20)],
-            # Spiral staircase effect
-            *[
-                {"x": 4632 + (i % 4) * 70, "y": 600 - i * 30, "solid": True}
-                for i in range(20)
-            ],
-            *[
-                {"x": 4664 + (i % 4) * 70, "y": 600 - i * 30, "solid": True}
-                for i in range(20)
-            ],
-            # Tower top platform
-            *[{"x": 5200 + i * TILE_SIZE, "y": 100, "solid": True} for i in range(25)],
-            # === AREA 5: SPIRE SECTION (6000-7500) ===
-            # Very narrow, very tall section
-            *[{"x": 6100, "y": 640 - i * TILE_SIZE, "solid": True} for i in range(22)],
-            # Tiny platforms jutting out
-            *[{"x": 6132, "y": 600 - i * 45, "solid": True} for i in range(14)],
-            *[
-                {"x": 6100 - (i % 2) * 64, "y": 575 - i * 45, "solid": True}
-                for i in range(14)
-            ],
-            # Spire top
-            *[{"x": 6500 + i * TILE_SIZE, "y": 50, "solid": True} for i in range(20)],
-            # FIXED: Static floating platform after spire (3rd tower)
-            {"x": 7300, "y": 120, "solid": True},
-            {"x": 7332, "y": 120, "solid": True},
-            {"x": 7364, "y": 120, "solid": True},  # 3 tiles wide for safety
-            # === AREA 6: DESCENT & FINALE (7500-9000) ===
-            # Controlled descent with combat
-            *[
-                {"x": 7500 + i * 100, "y": 100 + i * 50, "solid": True}
-                for i in range(12)
-            ],
-            *[
-                {"x": 7532 + i * 100, "y": 100 + i * 50, "solid": True}
-                for i in range(12)
-            ],
-            # Ground finale
-            *[{"x": 8200 + i * TILE_SIZE, "y": 640, "solid": True} for i in range(26)],
-            # Exit platforms
-            *[{"x": 8700, "y": 640 - i * TILE_SIZE, "solid": True} for i in range(10)],
-            *[{"x": 8700 + i * TILE_SIZE, "y": 320, "solid": True} for i in range(10)],
-        ],
-        "enemies": [
-            # Area 1 - Courtyard
-            {"x": 400, "y": 500, "type": "ground", "patrol": 150},
-            {"x": 700, "y": 400, "type": "ground", "patrol": 150},
-            {"x": 1000, "y": 300, "type": "ground", "patrol": 150},
-            {"x": 800, "y": 500, "type": "flying", "patrol": 200},
-            # Area 2 - First tower
-            {"x": 1950, "y": 550, "type": "flying", "patrol": 100},
-            {"x": 2000, "y": 400, "type": "ground", "patrol": 60},
-            {"x": 2050, "y": 250, "type": "flying", "patrol": 100},
-            {"x": 2000, "y": 150, "type": "turret"},
-            # Area 3 - Bridge
-            {"x": 3300, "y": 100, "type": "flying", "patrol": 250},
-            {"x": 3700, "y": 100, "type": "flying", "patrol": 250},
-            {"x": 4100, "y": 100, "type": "flying", "patrol": 250},
-            # Area 4 - Second tower
-            {"x": 4700, "y": 550, "type": "ground", "patrol": 80},
-            {"x": 4750, "y": 400, "type": "flying", "patrol": 150},
-            {"x": 4700, "y": 250, "type": "ground", "patrol": 80},
-            {"x": 4800, "y": 150, "type": "turret"},
-            # Area 5 - Spire
-            {"x": 6150, "y": 500, "type": "flying", "patrol": 150},
-            {"x": 6150, "y": 350, "type": "flying", "patrol": 150},
-            {"x": 6150, "y": 200, "type": "flying", "patrol": 150},
-            # Area 6 - Descent
-            {"x": 7600, "y": 200, "type": "flying", "patrol": 250},
-            {"x": 7900, "y": 350, "type": "flying", "patrol": 250},
-            {"x": 8300, "y": 590, "type": "ground", "patrol": 200},
-            {"x": 8500, "y": 590, "type": "ground", "patrol": 200},
-            {"x": 8700, "y": 590, "type": "ground", "patrol": 200},
-        ],
-        "hazards": [
-            # Spikes at tower bases
-            *[{"x": 1800 + i * 32, "y": 640, "type": "spike"} for i in range(5)],
-            *[{"x": 4500 + i * 32, "y": 640, "type": "spike"} for i in range(5)],
-            # Falling blocks on bridges
-            {"x": 3300, "y": 100, "type": "falling_block"},
-            {"x": 3600, "y": 100, "type": "falling_block"},
-            {"x": 3900, "y": 100, "type": "falling_block"},
-            {"x": 4200, "y": 100, "type": "falling_block"},
-            # Moving platforms
-            {"x": 2600, "y": 200, "type": "moving_platform", "width": 96},
-            {
-                "x": 5400,
-                "y": 200,
-                "type": "moving_platform",
-                "width": 96,
-            },  # Reverted to original
-            {
-                "x": 7200,
-                "y": 180,
-                "type": "moving_platform",
-                "width": 96,
-            },  # FIXED: Starts at x=7200 (closer to static platform), y=180 (below static platform at y=120)
-        ],
-        "coins": [
-            # Path coins
-            *[{"x": 350 + i * 80, "y": 510, "value": 1} for i in range(50)],
-            # Tower climb rewards
-            *[
-                {"x": 1970 + (i % 2) * 100, "y": 570 - i * 35, "value": 2}
-                for i in range(18)
-            ],
-            # Bridge coins (risky)
-            *[{"x": 3250 + i * 150, "y": 110, "value": 3} for i in range(10)],
-            # Tower 2 coins
-            *[
-                {"x": 4650 + (i % 4) * 70, "y": 570 - i * 30, "value": 2}
-                for i in range(20)
-            ],
-            # High value at top
-            {"x": 7000, "y": 0, "value": 25},
-        ],
-        "powerups": [
-            {"x": 1200, "y": 590, "type": "health"},
-            {"x": 2500, "y": 50, "type": "double_jump"},
-            {"x": 4000, "y": 100, "type": "speed"},
-            {"x": 5500, "y": 50, "type": "invincible"},
-            {"x": 8400, "y": 590, "type": "health"},
-        ],
-        "keys": [],
-        "portals": [{"x": 8850, "y": 230, "dest": 4}],
-    }
-    levels.append(level_3)
+    levels.append(_build_level_3())
 
     # ============================================================
     # LEVEL 4: "DEEP DIVE" (20 minutes, 9500px)
@@ -553,6 +397,13 @@ def get_complete_act1_levels():
             *[
                 {"x": 3332 + i * 180, "y": 150 + (i % 5) * 60, "solid": True}
                 for i in range(20)
+            ],
+            # Midway steps where the sawtooth resets to the top
+            # (a 240px climb is higher than a double jump)
+            *[
+                {"x": 3300 + i * 180 - 90 + dx, "y": 270, "solid": True}
+                for i in (5, 10, 15)
+                for dx in (0, TILE_SIZE)
             ],
             # Ground section
             *[{"x": 4500 + i * TILE_SIZE, "y": 640, "solid": True} for i in range(10)],
@@ -827,3 +678,160 @@ def get_complete_act1_levels():
     levels.append(boss_arena)
 
     return levels
+
+
+# ============================================================
+# LEVEL 3 BUILDER
+# ============================================================
+
+
+def _row(x, y, count):
+    """Horizontal run of solid tiles starting at (x, y)"""
+    return [{"x": x + i * TILE_SIZE, "y": y, "solid": True} for i in range(count)]
+
+
+def _col(x, y_top, y_bottom):
+    """Vertical run of solid tiles from y_top down to y_bottom (inclusive)"""
+    return [{"x": x, "y": y, "solid": True} for y in range(y_top, y_bottom + 1, TILE_SIZE)]
+
+
+def _build_level_3():
+    """
+    LEVEL 3: "THE ASCENT" - vertical emphasis.
+
+    Rebuilt so every section connects (checked with tests/level_checker.py):
+      1. Courtyard (0-1800): stepped platforms over solid ground
+      2. First Tower (1800-3200): enter at the bottom, zigzag ledges up,
+         exit at the top onto a high walkway
+      3. Bridge (3200-4500): suspended planks and a moving platform over a pit
+      4. Second Tower (4500-6000): stairs down, then a narrower zigzag climb
+      5. Spire (6000-7500): wall-jump up a single column, then summit hops
+      6. Descent & Finale (7500-9000): staircase down to the exit dais
+    """
+    ground = 640
+    tiles = []
+    enemies = []
+    hazards = []
+    coins = []
+    powerups = []
+
+    # === AREA 1: COURTYARD (0-1800) ===
+    tiles += _row(0, ground, 57)
+    for x, y in [(300, 544), (560, 448), (820, 352), (1100, 448), (1360, 544)]:
+        tiles += _row(x, y, 4)
+        coins += [{"x": x + 16 + i * 32, "y": y - 30, "value": 1} for i in range(3)]
+    coins += [{"x": 150 + i * 100, "y": 600, "value": 1} for i in range(17)]
+    enemies += [
+        {"x": 500, "y": ground - 32, "type": "ground", "patrol": 150},
+        {"x": 1200, "y": ground - 32, "type": "ground", "patrol": 150},
+        {"x": 850, "y": 320, "type": "ground", "patrol": 40},
+        {"x": 1000, "y": 420, "type": "flying", "patrol": 200},
+    ]
+    powerups.append({"x": 1500, "y": 590, "type": "health"})
+
+    # === AREA 2: FIRST TOWER (1800-3200) ===
+    tiles += _row(1824, ground, 12)           # tower floor
+    tiles += _col(1888, 64, 512)               # left wall, doorway at the bottom
+    tiles += _col(2208, 192, 608)              # right wall, open at the top
+    ledges = [(1920, 560), (2112, 480), (1920, 400), (2112, 320), (1920, 240)]
+    for x, y in ledges:
+        tiles += _row(x, y, 3)
+        coins.append({"x": x + 40, "y": y - 30, "value": 2})
+    tiles += _row(2112, 160, 34)               # exit ledge + high walkway to 3200
+    coins += [{"x": 2350 + i * 100, "y": 120, "value": 1} for i in range(8)]
+    enemies += [
+        {"x": 2060, "y": 420, "type": "flying", "patrol": 60},
+        {"x": 2500, "y": 128, "type": "ground", "patrol": 150},
+        {"x": 2700, "y": 128, "type": "turret"},
+        {"x": 2950, "y": 128, "type": "ground", "patrol": 150},
+    ]
+    hazards += [{"x": 1760 + i * 32, "y": ground, "type": "spike"} for i in range(2)]
+
+    # === AREA 3: BRIDGE (3200-4500) ===
+    for x in (3310, 3520, 4040, 4250):
+        tiles += _row(x, 160, 3)
+        coins.append({"x": x + 40, "y": 120, "value": 3})
+    hazards.append({"x": 3780, "y": 160, "type": "moving_platform", "width": 96})
+    tiles += _row(4450, 160, 4)                # landing
+    hazards += [{"x": x, "y": 40, "type": "falling_block"} for x in (3340, 3550, 4280)]
+    enemies += [
+        {"x": 3450, "y": 90, "type": "flying", "patrol": 150},
+        {"x": 3900, "y": 70, "type": "flying", "patrol": 200},
+        {"x": 4300, "y": 90, "type": "flying", "patrol": 150},
+    ]
+    powerups.append({"x": 4500, "y": 120, "type": "health"})
+
+    # === AREA 4: SECOND TOWER (4500-6000) ===
+    for x, y in [(4620, 260), (4720, 360), (4820, 460), (4920, 560)]:
+        tiles += _row(x, y, 2)
+    tiles += _row(4600, ground, 31)            # ground, also the tower floor
+    tiles += _col(5200, 96, 512)               # left wall, doorway at the bottom
+    tiles += _col(5520, 144, 608)              # right wall, open at the top
+    ledges = [(5232, 552), (5456, 464), (5232, 376), (5456, 288), (5232, 200)]
+    for x, y in ledges:
+        tiles += _row(x, y, 2)
+        coins.append({"x": x + 24, "y": y - 30, "value": 2})
+    tiles += _row(5456, 112, 17)               # exit ledge + walkway to 6000
+    coins += [{"x": 5650 + i * 80, "y": 80, "value": 1} for i in range(4)]
+    enemies += [
+        {"x": 4800, "y": ground - 32, "type": "ground", "patrol": 150},
+        {"x": 5050, "y": ground - 32, "type": "ground", "patrol": 100},
+        {"x": 5380, "y": 380, "type": "flying", "patrol": 60},
+        {"x": 5700, "y": 80, "type": "ground", "patrol": 100},
+        {"x": 5900, "y": 80, "type": "turret"},
+    ]
+    powerups.append({"x": 5600, "y": 70, "type": "double_jump"})
+
+    # === AREA 5: SPIRE (6000-7500) ===
+    tiles += _row(6000, ground, 10)            # base of the spire
+    tiles += _col(6320, 96, 608)               # the spire: wall-jump up its face
+    for y in (480, 352, 224):                  # small rest ledges on the spire
+        tiles.append({"x": 6288, "y": y, "solid": True})
+        coins.append({"x": 6292, "y": y - 30, "value": 2})
+    summit = [(6450, 128, 3), (6650, 96, 3), (6860, 128, 3), (7060, 96, 3), (7260, 128, 4)]
+    for x, y, n in summit:
+        tiles += _row(x, y, n)
+        coins.append({"x": x + 40, "y": y - 30, "value": 2})
+    coins.append({"x": 6700, "y": 40, "value": 25})  # summit treasure
+    enemies += [
+        {"x": 6150, "y": ground - 32, "type": "ground", "patrol": 100},
+        {"x": 6500, "y": 260, "type": "flying", "patrol": 150},
+        {"x": 6900, "y": 220, "type": "flying", "patrol": 150},
+        {"x": 7080, "y": 64, "type": "turret"},
+    ]
+    powerups.append({"x": 6100, "y": 590, "type": "speed"})
+
+    # === AREA 6: DESCENT & FINALE (7500-9000) ===
+    for i in range(7):
+        x, y = 7460 + i * 95, 176 + i * 60
+        tiles += _row(x, y, 2)
+        coins.append({"x": x + 24, "y": y - 30, "value": 1})
+    tiles += _row(8100, ground, 28)            # finale floor
+    tiles += _row(8740, 544, 8)                # exit dais
+    hazards += [{"x": 8330 + i * 32, "y": ground, "type": "spike"} for i in range(2)]
+    coins += [{"x": 8150 + i * 80, "y": 600, "value": 1} for i in range(7)]
+    enemies += [
+        {"x": 7700, "y": 250, "type": "flying", "patrol": 200},
+        {"x": 8000, "y": 380, "type": "flying", "patrol": 200},
+        {"x": 8250, "y": ground - 32, "type": "ground", "patrol": 60},
+        {"x": 8500, "y": ground - 32, "type": "ground", "patrol": 120},
+        {"x": 8650, "y": ground - 32, "type": "turret"},
+        {"x": 8850, "y": 512, "type": "ground", "patrol": 60},
+    ]
+    powerups.append({"x": 8150, "y": 590, "type": "health"})
+
+    return {
+        "width": 9000,
+        "height": 720,
+        "theme": "SCIFI",
+        "spawn_x": 100,
+        "spawn_y": 500,
+        "time_limit": "medium",
+        "tiles": tiles,
+        "enemies": enemies,
+        "hazards": hazards,
+        "coins": coins,
+        "powerups": powerups,
+        "keys": [],
+        "portals": [{"x": 8850, "y": 480, "dest": 4}],
+    }
