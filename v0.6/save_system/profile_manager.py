@@ -4,7 +4,8 @@ Player profile management
 
 import json
 import os
-from dataclasses import asdict, dataclass, field
+import shutil
+from dataclasses import asdict, dataclass, field, fields
 
 from config.settings import PROFILES_FILE
 
@@ -14,28 +15,26 @@ class PlayerProfile:
     """Player profile data"""
 
     name: str
-    character: int
-    total_score: int
-    levels_completed: int
-    total_coins_collected: int
-    current_coins: int
-    max_health: int
-    current_health: int
-    max_lives: int
-    current_lives: int
-    keys_collected: int
-    current_weapon: str
-    enemies_defeated: int
-    time_played_seconds: int
-    deaths: int
-    total_damage_taken: int
-    powerups_collected: int
-    secrets_found: int
-    speedrun_time: float
-    weapons: dict[str, dict[str, int | bool]] = field(
-        default_factory=dict[str, dict[str, int | bool]]
-    )
-    upgrades: dict[str, int] = field(default_factory=dict[str, int])
+    character: int = 0
+    total_score: int = 0
+    levels_completed: int = 0
+    total_coins_collected: int = 0
+    current_coins: int = 0
+    max_health: int = 100
+    current_health: int = 100
+    max_lives: int = 0
+    current_lives: int = 0
+    keys_collected: int = 0
+    current_weapon: str = "standard"
+    enemies_defeated: int = 0
+    time_played_seconds: int = 0
+    deaths: int = 0
+    total_damage_taken: int = 0
+    powerups_collected: int = 0
+    secrets_found: int = 0
+    speedrun_time: float = 0.0
+    weapons: dict = field(default_factory=dict)
+    upgrades: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -43,20 +42,33 @@ class CompletedGame:
     """Completed game record for leaderboard/stats"""
 
     name: str
-    character: int
-    final_score: int
-    levels_completed: int
-    coins_collected: int
-    coins_used: int
-    keys_collected: int
-    enemies_defeated: int
-    time_played_seconds: int
-    deaths: int
-    total_damage_taken: int
-    powerups_collected: int
-    secrets_found: int
-    speedrun_time: float
-    completion_date: str
+    character: int = 0
+    final_score: int = 0
+    levels_completed: int = 0
+    coins_collected: int = 0
+    coins_used: int = 0
+    keys_collected: int = 0
+    enemies_defeated: int = 0
+    time_played_seconds: int = 0
+    deaths: int = 0
+    total_damage_taken: int = 0
+    powerups_collected: int = 0
+    secrets_found: int = 0
+    speedrun_time: float = 0.0
+    completion_date: str = ""
+
+
+# Field renames between save-format versions: old name -> new name
+_PROFILE_RENAMES = {"coins_collected": "total_coins_collected"}
+_COMPLETED_RENAMES = {"player_name": "name"}
+
+
+def _from_dict(cls, data, renames):
+    """Build a dataclass from saved data, migrating old field names and
+    ignoring unknown keys so older/newer files still load"""
+    data = {renames.get(k, k): v for k, v in data.items()}
+    known = {f.name for f in fields(cls)}
+    return cls(**{k: v for k, v in data.items() if k in known})
 
 
 class ProfileManager:
@@ -75,11 +87,14 @@ class ProfileManager:
 
             with open(PROFILES_FILE, "r") as f:
                 data = json.load(f)
-                return [PlayerProfile(**p) for p in data]
+                return [_from_dict(PlayerProfile, p, _PROFILE_RENAMES) for p in data]
         except FileNotFoundError:
             return []
         except Exception as e:
-            print(f"Error loading profiles: {e}")
+            # Keep a copy so the next save can't silently wipe unreadable profiles
+            backup = PROFILES_FILE + ".bak"
+            shutil.copyfile(PROFILES_FILE, backup)
+            print(f"Error loading profiles: {e} (backed up to {backup})")
             return []
 
     @staticmethod
@@ -115,7 +130,7 @@ class ProfileManager:
             )
             with open(completed_file, "r") as f:
                 data = json.load(f)
-                return [CompletedGame(**g) for g in data]
+                return [_from_dict(CompletedGame, g, _COMPLETED_RENAMES) for g in data]
         except FileNotFoundError:
             return []
         except Exception as e:
@@ -140,11 +155,11 @@ class ProfileManager:
 
             # Create new completed game record
             new_record = CompletedGame(
-                player_name=profile.name,
+                name=profile.name,
                 character=profile.character,
                 final_score=final_score,
                 levels_completed=profile.levels_completed,
-                coins_collected=profile.coins_collected,
+                coins_collected=profile.total_coins_collected,
                 completion_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             )
             completed_games.append(new_record)
@@ -209,7 +224,7 @@ class ProfileManager:
             level_completed: Whether a level was completed
         """
         profile.total_score += score_gained
-        profile.coins_collected += coins_gained
+        profile.total_coins_collected += coins_gained
         if level_completed:
             profile.levels_completed += 1
 

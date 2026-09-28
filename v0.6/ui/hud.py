@@ -4,7 +4,7 @@ In-game HUD with clean design and level/area info
 
 import pygame
 
-from config.settings import (CYAN, GRAY, GREEN, RED, SCREEN_HEIGHT,
+from config.settings import (BLACK, CYAN, GRAY, GREEN, RED, SCREEN_HEIGHT,
                              SCREEN_WIDTH, UI_BG, UI_BORDER, UI_TEXT,
                              UI_TEXT_DIM, WHITE, YELLOW)
 

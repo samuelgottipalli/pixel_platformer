@@ -6,7 +6,7 @@ Timed bomb that explodes after a delay
 import pygame
 import math
 
-from config.settings import GRAVITY, RED, ORANGE, YELLOW, WHITE
+from config.settings import RED, ORANGE, YELLOW, WHITE, get_gravity
 
 
 class ExplosiveProjectile:
@@ -46,7 +46,11 @@ class ExplosiveProjectile:
         self.exploded = False
         self.explosion_timer = 0
         self.explosion_duration = 15  # frames
-        
+        self.hostile = False  # Player-thrown
+        self.color = ORANGE
+        self._damaged = set()  # ids of targets already hit by this blast
+
+
     def update(self, tiles):
         """Update explosive physics and timer"""
         if self.exploded:
@@ -63,7 +67,7 @@ class ExplosiveProjectile:
             return
         
         # Apply gravity
-        self.dy += GRAVITY * 0.5  # Half gravity for arc
+        self.dy += get_gravity() * 0.5  # Half gravity for arc
         
         # Update position
         self.x += self.dx
@@ -84,11 +88,24 @@ class ExplosiveProjectile:
                 # Hit ground/wall - explode immediately
                 self._explode()
                 return
-    
+
+    def explode(self):
+        """Detonate now (e.g. on contact with an enemy)"""
+        if not self.exploded:
+            self._explode()
+
     def _explode(self):
         """Trigger explosion"""
         self.exploded = True
         self.explosion_timer = 0
+
+    def can_damage(self, target):
+        """True if the blast is live and hasn't already hit this target"""
+        return self.is_exploding() and id(target) not in self._damaged
+
+    def mark_damaged(self, target):
+        """Record that the blast has hit this target"""
+        self._damaged.add(id(target))
     
     def get_rect(self):
         """Get collision rectangle"""

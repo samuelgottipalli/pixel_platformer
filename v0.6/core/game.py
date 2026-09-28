@@ -5,6 +5,7 @@ Main game class - handles game loop and state management
 import math
 import os
 import random
+import time
 
 import pygame
 
@@ -48,6 +49,8 @@ from ui.hud import HUD
 from ui.menu import Menu
 from ui.components import Popup
 from ui.shop import Shop
+from config.weapon_catalog import get_weapon_info
+from entities.explosive_projectile import ExplosiveProjectile
 from utils.achievement_manager import AchievementManager
 from utils.enums import GameState, EnemyType
 
@@ -188,7 +191,11 @@ class Game:
         self.coins_collected = 0
 
         # Track total coins available in act for achievement
-        self.total_coins_in_act = 0
+        self.total_coins_in_act = sum(
+            coin.get("value", 1)
+            for level_data in self.levels
+            for coin in level_data.get("coins", [])
+        )
 
         # Shop UI
         self.shop = Shop()
@@ -462,12 +469,11 @@ class Game:
         self.player.coins = 0
         self.player.health = 100
         self.player.weapon_level = 1
-        self.player.keys = 0
+        self.player.keys = []
         self.player.max_jumps = 2
 
         self.current_profile.max_lives = lives
         self.current_profile.current_lives = lives
-        self.profiles.(self.current_profile)
         ProfileManager.save_profiles(self.profiles)
 
         # Start level music
@@ -479,34 +485,19 @@ class Game:
         self._load_level(0)
         self.state = GameState.PLAYING
 
-        import time
         self.game_start_time = time.time()
         self.boss_fight_start_time = None
         self.boss_damage_taken = 0
 
         # Initialize game session tracking
         import uuid
+
         self.session_start_time = time.time()
         self.session_id = str(uuid.uuid4())[:8]  # Short ID
         self.enemies_defeated = 0
         self.total_damage_taken = 0
         self.powerups_collected = 0
         self.secrets_found = 0
-
-    def _apply_difficulty_selection(self):
-        """Apply selected difficulty and proceed to character select"""
-        difficulties = ["EASY", "NORMAL", "HARD"]
-        self.difficulty = difficulties[self.difficulty_selection]
-        # Initialize player with current profile's character
-        self.player = Player(100, 100, self.current_profile.character)
-
-        # Set difficulty-based lives
-        self.difficulty_manager = DifficultyManager(self.difficulty, len(self.levels))
-        self.player.lives = self.difficulty_manager.get_lives(0)
-
-        # Start from level 0
-        self._load_level(0)
-        self.state = GameState.PLAYING
 
     def _handle_controls_events(self, event):
         """Handle controls screen input"""
@@ -525,8 +516,8 @@ class Game:
                 # Navigate unlocked levels
                 pass
             elif controls.check_key_event(event, controls.MENU_SELECT):
-                # Start selected level
-                self._start_from_level_select()
+                # Level selection not implemented yet (see level map screen)
+                self._show_popup("Level selection coming soon!")
             elif event.key == pygame.K_ESCAPE:
                 self.state = GameState.MENU
 
@@ -611,12 +602,15 @@ class Game:
             self.profile_selection = 0
 
     def _enter_shop(self):
-        """Enter shop from menu"""
+        """Enter shop (from pause menu) and remember where to return"""
+        self.shop_return_state = self.state
         self.state = GameState.SHOP
-        # Prepare player data for shop
-        print(self.current_profile)
+        self._refresh_shop_data()
+
+    def _refresh_shop_data(self):
+        """Sync shop view with the live player"""
         self.shop_player_data = {
-            'coins': self.current_profile.player.coins if self.current_profile else 0,
+            'coins': self.player.coins if self.player else 0,
             'weapons': self.player.get_weapon_state() if self.player else {},
             'max_hp': self.player.max_health if self.player else 100,
             'max_lives': self.player.lives if self.player else 3
@@ -626,8 +620,8 @@ class Game:
         """Handle shop input"""
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                # Exit shop
-                self.state = GameState.MENU
+                # Exit shop back to where it was opened from
+                self.state = getattr(self, 'shop_return_state', None) or GameState.MENU
                 return
 
             elif event.key == pygame.K_TAB:
@@ -654,35 +648,33 @@ class Game:
         """Attempt to buy selected item"""
         purchase = self.shop.get_selected_purchase(self.shop_player_data)
 
-        if not purchase:
+        if not purchase or not self.player:
             return  # Nothing selected
 
         # Check if can afford
-        if self.shop_player_data['coins'] < purchase['cost']:
+        if self.player.coins < purchase['cost']:
             self._show_popup("Not enough coins!", duration=90)
             return
 
+        name = get_weapon_info(purchase['weapon_id'])['name']
+
         # Process purchase
         if purchase['type'] == 'weapon_unlock':
-            # Unlock weapon
-            if self.player.unlock_weapon(purchase['weapon_id']):
-                self.shop_player_data['coins'] -= purchase['cost']
-                self.shop_player_data['weapons'] = self.player.get_weapon_state()
-                self._show_popup(f"{purchase['name']} unlocked!", duration=90)
-
+            bought = self.player.unlock_weapon(purchase['weapon_id'])
+            message = f"{name} unlocked!"
         elif purchase['type'] == 'weapon_power':
-            # Upgrade power
-            if self.player.upgrade_weapon_power(purchase['weapon_id']):
-                self.shop_player_data['coins'] -= purchase['cost']
-                self.shop_player_data['weapons'] = self.player.get_weapon_state()
-                self._show_popup(f"{purchase['name']} power upgraded!", duration=90)
-
+            bought = self.player.upgrade_weapon_power(purchase['weapon_id'])
+            message = f"{name} power upgraded!"
         elif purchase['type'] == 'weapon_speed':
-            # Upgrade speed
-            if self.player.upgrade_weapon_speed(purchase['weapon_id']):
-                self.shop_player_data['coins'] -= purchase['cost']
-                self.shop_player_data['weapons'] = self.player.get_weapon_state()
-                self._show_popup(f"{purchase['name']} speed upgraded!", duration=90)
+            bought = self.player.upgrade_weapon_speed(purchase['weapon_id'])
+            message = f"{name} speed upgraded!"
+        else:
+            bought = False
+
+        if bought:
+            self.player.coins -= purchase['cost']
+            self._refresh_shop_data()
+            self._show_popup(message, duration=90)
 
     def _handle_options_events(self, event):
         """
@@ -893,17 +885,20 @@ class Game:
         """Handle pause menu input"""
         if event.type == pygame.KEYDOWN:
             if controls.check_key_event(event, controls.MENU_UP):
-                self.pause_selection = (self.pause_selection - 1) % 3
+                self.pause_selection = (self.pause_selection - 1) % 4
             elif controls.check_key_event(event, controls.MENU_DOWN):
-                self.pause_selection = (self.pause_selection + 1) % 3
+                self.pause_selection = (self.pause_selection + 1) % 4
             elif controls.check_key_event(event, controls.MENU_SELECT):
                 self._handle_pause_selection()
+            elif controls.check_key_event(event, controls.PAUSE):
+                # ESC / P resumes
+                self.state = GameState.PLAYING
+                self.audio.unpause_music()
 
     def _handle_pause_selection(self):
         """Handle pause menu option selection"""
-        
         if self.pause_selection == 0:  # Shop
-            self.state = GameState.SHOP    
+            self._enter_shop()
         elif self.pause_selection == 1:  # Resume
             self.state = GameState.PLAYING
             self.audio.unpause_music()  # Resume music
@@ -971,10 +966,7 @@ class Game:
             #     self.show_popup = False  # Hide when timer expires
 
         if self.state == GameState.PLAYING:
-            self._update_game()
-
-            if self.boss and not self.boss.defeated:
-                self._update_boss()
+            self._update_game()  # Also updates the boss
 
         # Update achievement notifications
         self.achievement_notifications = [
@@ -1045,6 +1037,7 @@ class Game:
                 if not self.player.invincible:
                     self.player.take_damage(proj.damage)
                     self.total_damage_taken += proj.damage
+                    self.boss_damage_taken += proj.damage
                 proj.active = False
 
         # Update boss effects
@@ -1061,6 +1054,7 @@ class Game:
                     if not self.player.invincible:
                         self.player.take_damage(effect.damage)
                         self.total_damage_taken += effect.damage
+                        self.boss_damage_taken += effect.damage
 
         # Check player attacks on boss
         if self.player.melee_active:
@@ -1069,8 +1063,18 @@ class Game:
                     self.player.score += 50
 
         # Check player projectiles on boss
+        boss_rect = self.boss.get_rect()
         for proj in self.projectiles[:]:
-            if proj.get_rect().colliderect(self.boss.get_rect()):
+            if proj.hostile or not proj.active:
+                continue
+            if isinstance(proj, ExplosiveProjectile):
+                if not proj.exploded and proj.get_rect().colliderect(boss_rect):
+                    proj.explode()
+                if proj.can_damage(self.boss) and proj.get_explosion_rect().colliderect(boss_rect):
+                    proj.mark_damaged(self.boss)
+                    if self.boss.take_damage(proj.damage):
+                        self.player.score += 25
+            elif proj.get_rect().colliderect(boss_rect):
                 if self.boss.take_damage(proj.damage):
                     self.player.score += 25
                 proj.active = False
@@ -1089,7 +1093,7 @@ class Game:
                 self.achievement_manager.check_boss_no_damage()
 
             # Check boss speed (track boss_fight_start_time)
-            if hasattr(self, 'boss_fight_start_time'):
+            if getattr(self, 'boss_fight_start_time', None):
                 fight_time = time.time() - self.boss_fight_start_time
                 self.achievement_manager.check_boss_speed(fight_time)
 
@@ -1148,7 +1152,7 @@ class Game:
         self._update_particles()
 
         # Check death
-        if self.player.y > self.screen_height + 100:
+        if self.player.y > self.level.height + 100:
             self.player.die()
 
         # Check game over
@@ -1337,7 +1341,8 @@ class Game:
                             get_projectile_speed() * 0.7,  # Speed (slower than player shots)
                             enemy.damage,  # Damage
                             ORANGE,  # Orange color for enemy projectiles
-                            angle=angle  # Pass the angle here!
+                            angle=angle,  # Pass the angle here!
+                            hostile=True,
                         )
 
                         self.projectiles.append(proj)
@@ -1421,29 +1426,48 @@ class Game:
                 self.projectiles.remove(proj)
                 continue
 
-            # Enemy projectiles (orange = turret shots) damage the player
-            if proj.color == ORANGE:  # Enemy projectile
+            # Enemy projectiles (turret shots) damage the player
+            if proj.hostile:
                 if self.player.get_rect().colliderect(proj.get_rect()):
                     if not self.player.invincible:
                         self.player.take_damage(proj.damage)
                         self.total_damage_taken += proj.damage
                     proj.active = False
-                    continue  # Skip enemy collision check for enemy projectiles
+                continue  # Enemy projectiles never hit enemies
+
+            # Explosives: detonate on contact, then damage everything in radius once
+            if isinstance(proj, ExplosiveProjectile):
+                if not proj.exploded:
+                    if any(not e.dead and proj.get_rect().colliderect(e.get_rect())
+                           for e in self.level.enemies):
+                        proj.explode()
+                if proj.is_exploding():
+                    blast = proj.get_explosion_rect()
+                    for enemy in self.level.enemies[:]:
+                        if (not enemy.dead and proj.can_damage(enemy)
+                                and blast.colliderect(enemy.get_rect())):
+                            proj.mark_damaged(enemy)
+                            self._damage_enemy_with_projectile(enemy, proj.damage)
+                continue
 
             # Check enemy collision
             for enemy in self.level.enemies:
                 if not enemy.dead and proj.get_rect().colliderect(enemy.get_rect()):
-                    enemy.take_damage(proj.damage)
                     proj.active = False
-                    self.player.score += SCORE_ENEMY_HIT
-                    if enemy.dead:
-                        self.level.enemies.remove(enemy)
-                        self.enemies_defeated += 1
-                        self._create_enemy_death_particles(enemy)
-                        # When enemy dies from projectile:
-                        if self.achievement_manager:
-                            self.achievement_manager.add_enemy_kill('projectile')
+                    self._damage_enemy_with_projectile(enemy, proj.damage)
                     break
+
+    def _damage_enemy_with_projectile(self, enemy, damage):
+        """Apply player projectile damage to an enemy, handling death"""
+        enemy.take_damage(damage)
+        self.player.score += SCORE_ENEMY_HIT
+        if enemy.dead:
+            self.level.enemies.remove(enemy)
+            self.enemies_defeated += 1
+            self._create_enemy_death_particles(enemy)
+            # When enemy dies from projectile:
+            if self.achievement_manager:
+                self.achievement_manager.add_enemy_kill('projectile')
 
     def _update_particles(self):
         """Update particle effects"""
@@ -1455,13 +1479,11 @@ class Game:
             self.current_level_index = level_index
             self.level = Level(self.levels[level_index])
 
-            # Count total coins in this level
-            level_coin_total = sum(coin.value for coin in self.level.coins)
-            self.total_coins_in_act += level_coin_total
-
             if self.player:
                 self.player.x = self.level.spawn_x
                 self.player.y = self.level.spawn_y
+                self.player.spawn_x = self.level.spawn_x
+                self.player.spawn_y = self.level.spawn_y
 
             self.projectiles = []
             self.particles = []
@@ -1489,6 +1511,8 @@ class Game:
             self.boss_defeated = False
             self.boss_projectiles = []
             self.boss_effects = []
+            self.boss_fight_start_time = time.time()
+            self.boss_damage_taken = 0
             print(f"✓ Boss spawned: {boss_type}")
         else:
             self.boss = None
@@ -1525,26 +1549,8 @@ class Game:
     def _game_over(self):
         """Handle game over"""
         self.state = GameState.GAME_OVER
-        # Check achievements
-        if self.achievement_manager:
-            self.achievement_manager.check_difficulty_complete(self.difficulty)
-
-            # Check speedrun time (you'll need to track this)
-            if hasattr(self, "game_start_time"):
-                import time
-
-                total_time = time.time() - self.game_start_time
-                self.achievement_manager.check_speedrun_time(total_time)
-
-            # Check no death run
-            if self.player.total_deaths == 0:  # Track this in player
-                self.achievement_manager.check_no_death_run()
-
-            # Check coin achievement with accurate total
-            if self.total_coins_in_act > 0:
-                self.achievement_manager.check_coin_percentage(
-                    self.player.coins, self.total_coins_in_act
-                )
+        # Completion achievements (difficulty, speedrun, no-death, coins)
+        # are only awarded in _game_complete
 
         # Play game over music
         self.audio.play_game_over_music()
@@ -1563,16 +1569,16 @@ class Game:
         """Handle game completion (victory)"""
         self.state = GameState.VICTORY
 
+        speedrun_time = 0.0
+        if getattr(self, "game_start_time", None):
+            speedrun_time = time.time() - self.game_start_time
+
         # Check achievements
         if self.achievement_manager:
             self.achievement_manager.check_difficulty_complete(self.difficulty)
 
-            # Check speedrun time (you'll need to track this)
-            if hasattr(self, "game_start_time"):
-                import time
-
-                total_time = time.time() - self.game_start_time
-                self.achievement_manager.check_speedrun_time(total_time)
+            if speedrun_time:
+                self.achievement_manager.check_speedrun_time(speedrun_time)
 
             # Check no death run
             if self.player.total_deaths == 0:  # Track this in player
@@ -1672,7 +1678,6 @@ class Game:
                     self.screen, self.achievement_manager, self.mouse_pos
                 )
         elif self.state == GameState.SHOP:
-            self._enter_shop()  # Ensure shop is initialized before drawing
             self.current_screen = self.shop.draw(self.screen, self.shop_player_data, self.mouse_pos)
 
         # Draw achievement notifications (on top of everything)
@@ -2100,78 +2105,6 @@ class Game:
             if components['sfx_slider'].dragging:
                 components['sfx_slider'].update_drag(self.mouse_pos)
                 self.settings.set_sfx_volume(components['sfx_slider'].get_value())
-
-            """Handle settings screen input"""
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    # Save settings when leaving
-                    self.settings.save_settings()
-                    self.state = GameState.OPTIONS
-
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                # Handle clicks on settings components
-                if hasattr(self, 'settings_components'):
-                    components = self.settings_components
-
-                    # Resolution dropdown
-                    if 'res_dropdown' in components:
-                        old_res = self.settings.settings['video']['resolution_index']
-                        components['res_dropdown'].check_click(self.mouse_pos, pygame.mouse.get_pressed())
-                        new_res = components['res_dropdown'].get_selected_index()
-                        if new_res != old_res:
-                            self.settings.set_resolution(new_res)
-                            self.settings_changed = True
-
-                    # Fullscreen toggle
-                    if 'fullscreen_toggle' in components:
-                        if components['fullscreen_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
-                            self.settings.toggle_fullscreen()
-                            # Apply immediately
-                            self.screen = self.settings.apply_video_settings(self.screen)
-
-                    # Music toggle
-                    if 'music_toggle' in components:
-                        if components['music_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
-                            self.settings.toggle_music()
-                            # Apply to audio manager (when implemented)
-
-                    # SFX toggle
-                    if 'sfx_toggle' in components:
-                        if components['sfx_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
-                            self.settings.toggle_sfx()
-
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                # Start slider drag
-                if hasattr(self, 'settings_components'):
-                    components = self.settings_components
-                    if 'music_slider' in components:
-                        components['music_slider'].start_drag(self.mouse_pos)
-                    if 'sfx_slider' in components:
-                        components['sfx_slider'].start_drag(self.mouse_pos)
-
-            elif event.type == pygame.MOUSEBUTTONUP:
-                # Stop slider drag
-                if hasattr(self, 'settings_components'):
-                    components = self.settings_components
-                    if 'music_slider' in components:
-                        components['music_slider'].stop_drag()
-                        self.settings.set_music_volume(components['music_slider'].get_value())
-                    if 'sfx_slider' in components:
-                        components['sfx_slider'].stop_drag()
-                        self.settings.set_sfx_volume(components['sfx_slider'].get_value())
-
-            elif event.type == pygame.MOUSEMOTION:
-                # Update slider during drag
-                if hasattr(self, 'settings_components'):
-                    components = self.settings_components
-                    if 'music_slider' in components:
-                        components['music_slider'].update_drag(self.mouse_pos)
-                        if components['music_slider'].dragging:
-                            self.settings.set_music_volume(components['music_slider'].get_value())
-                    if 'sfx_slider' in components:
-                        components['sfx_slider'].update_drag(self.mouse_pos)
-                        if components['sfx_slider'].dragging:
-                            self.settings.set_sfx_volume(components['sfx_slider'].get_value())
 
     def _save_game_session(self, result, speedrun_time=0.0):
         """

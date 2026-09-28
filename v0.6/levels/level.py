@@ -2,6 +2,8 @@
 Level class for managing level data
 """
 
+import copy
+
 import pygame
 
 from config.layout_manager import LayoutManager
@@ -21,6 +23,10 @@ class Level:
         Args:
             level_data: Dictionary containing level configuration
         """
+        # Work on a copy: object creation scales positions in place, and the
+        # source data is reused every time the level is (re)loaded
+        level_data = copy.deepcopy(level_data)
+
         # Scale level dimensions
         base_width = level_data.get("width", 3200)
         base_height = level_data.get("height", 720)
@@ -30,8 +36,9 @@ class Level:
         self.width = int(base_width * scale_factor)
         self.height = int(base_height * scale_factor)
         self.theme = Theme[level_data.get("theme", "SCIFI")]
-        self.spawn_x = level_data.get("spawn_x", 100)
-        self.spawn_y = level_data.get("spawn_y", 500)
+        self.spawn_x, self.spawn_y = LayoutManager.scale_position(
+            level_data.get("spawn_x", 100), level_data.get("spawn_y", 500)
+        )
 
         # Create all level objects from data
         self.tiles = self._create_tiles(level_data["tiles"])

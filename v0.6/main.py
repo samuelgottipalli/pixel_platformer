@@ -8,6 +8,12 @@ import sys
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Status prints use symbols like ✓; don't crash when stdout can't encode them
+# (e.g. output redirected to a file on Windows)
+for stream in (sys.stdout, sys.stderr):
+    if stream and hasattr(stream, "reconfigure"):
+        stream.reconfigure(errors="replace")
+
 from core.game import Game
 
 

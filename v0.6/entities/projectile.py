@@ -12,7 +12,7 @@ from config.settings import WHITE
 class Projectile:
     """Projectile fired by player or enemies"""
 
-    def __init__(self, x, y, direction, speed, damage, color, angle=None):
+    def __init__(self, x, y, direction, speed, damage, color, angle=None, hostile=False):
         """
         Args:
             x, y: Starting position
@@ -21,7 +21,9 @@ class Projectile:
             damage: Damage dealt on hit
             color: RGB tuple
             angle: Optional angle in radians for aimed shots (turrets, bosses)
+            hostile: True if fired by an enemy (damages the player)
         """
+        self.hostile = hostile
         self.x = x
         self.y = y
         self.direction = direction

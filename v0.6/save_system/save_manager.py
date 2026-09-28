@@ -100,8 +100,9 @@ class SaveManager:
         player.weapon_level = p["weapon_level"]
         player.keys = p["keys"]
         player.max_jumps = p.get("max_jumps", 2)
-        player.restore_weapon_state(p["weapons"])
-        player.current_weapon_id = p["current_weapon"]
+        # Saves from before the weapon system have no weapon data
+        player.restore_weapon_state(p.get("weapons", {}))
+        player.current_weapon_id = p.get("current_weapon", "standard")
 
     @staticmethod
     def delete_save(profile_name):

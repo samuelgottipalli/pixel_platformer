@@ -2,6 +2,8 @@ import math
 
 import pygame
 
+from config.settings import WHITE
+
 
 class TextureManager:
     """Creates patterns and textures for game objects"""

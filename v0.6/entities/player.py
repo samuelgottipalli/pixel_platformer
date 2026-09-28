@@ -39,6 +39,8 @@ class Player:
         # Position and physics
         self.x = x
         self.y = y
+        self.spawn_x = x  # Respawn point (updated when a level loads)
+        self.spawn_y = y
         # Get scaled dimensions from layout
         player_size = get_object_size("player")
         self.width = player_size["width"]
@@ -371,10 +373,10 @@ class Player:
             self.respawn()
         self.total_deaths += 1
 
-    def respawn(self, spawn_x=100, spawn_y=100):
-        """Respawn player at checkpoint"""
-        self.x = spawn_x
-        self.y = spawn_y
+    def respawn(self):
+        """Respawn player at the current level's spawn point"""
+        self.x = self.spawn_x
+        self.y = self.spawn_y
         self.dx = 0
         self.dy = 0
         self.invincible = True
