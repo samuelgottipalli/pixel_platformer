@@ -96,6 +96,19 @@ v0.4/
 
 ---
 
+## Running Tests
+
+Headless end-to-end tests (no window or sound; your saves are not touched):
+
+```bash
+cd v0.6
+python -m unittest discover -s tests -v
+```
+
+Run them before tagging a release.
+
+---
+
 ## Development Status
 
 - ✅ Phase 1: Foundation Complete
