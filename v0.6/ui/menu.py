@@ -524,8 +524,23 @@ class Menu:
     # LEVEL MAP
     # ========================================================================
 
-    def draw_level_map_screen(self, surface, current_profile, mouse_pos=None):
-        """Draw level map with all levels"""
+    def get_level_map_row_rects(self, count):
+        """Clickable row rectangles on the level map (shared by draw and input)"""
+        screen_width, _ = get_screen_size()
+        row_width, row_height = 560, 42
+        x = screen_width // 2 - row_width // 2
+        return [
+            pygame.Rect(x, y - 8, row_width, row_height)
+            for y in LayoutHelper.create_vertical_layout(180, count, 52)
+        ]
+
+    def draw_level_map_screen(self, surface, current_profile, selection=0, mouse_pos=None):
+        """
+        Draw level map. Levels unlock one at a time: a level is playable once
+        the level before it has been completed (the tutorial is always open).
+        """
+        from levels.level_names import LEVEL_NAMES, level_title
+
         screen_width, screen_height = get_screen_size()
         screen = Screen(
             "LEVEL MAP",
@@ -541,51 +556,39 @@ class Menu:
         screen.update_button_hover(mouse_pos)
         screen.draw_title(surface, 60)
 
-        level_names = [
-            "Tutorial: Training Facility",
-            "Level 1: The Awakening",
-            "Level 2: Rising Conflict",
-            "Level 3: The Ascent",
-            "Level 4: Deep Dive",
-            "Level 5: Convergence",
-            "Level 6: Guardian's Lair (BOSS)",
-        ]
-
-        unlocked_count = 0
-        if current_profile and hasattr(current_profile, "levels_completed"):
-            unlocked_count = current_profile.levels_completed
+        completed = current_profile.levels_completed if current_profile else 0
+        playable = min(len(LEVEL_NAMES), completed + 1)
 
         subtitle = self.font_small.render(
-            f"Unlocked: {unlocked_count} / {len(level_names)}", True, UI_TEXT
+            f"Completed: {min(completed, len(LEVEL_NAMES))} / {len(LEVEL_NAMES)}", True, UI_TEXT
         )
         surface.blit(subtitle, (screen_width // 2 - subtitle.get_width() // 2, 130))
 
-        y_positions = LayoutHelper.create_vertical_layout(200, len(level_names), 50)
-
-        for i, (level_name, y) in enumerate(zip(level_names, y_positions)):
-            is_unlocked = i < unlocked_count
-
-            if is_unlocked:
-                icon_type = Icon.CHECKMARK
-                icon_color = (100, 255, 100)
-                name_color = UI_HIGHLIGHT
+        rows = self.get_level_map_row_rects(len(LEVEL_NAMES))
+        for i, rect in enumerate(rows):
+            if i < completed:
+                icon_type, icon_color, name_color = Icon.CHECKMARK, (100, 255, 100), UI_TEXT
+            elif i < playable:
+                icon_type, icon_color, name_color = Icon.PLAY, YELLOW, UI_TEXT
             else:
-                icon_type = Icon.LOCK
-                icon_color = (150, 150, 150)
-                name_color = UI_TEXT_DIM
+                icon_type, icon_color, name_color = Icon.LOCK, (150, 150, 150), UI_TEXT_DIM
 
-            Icon.draw(surface, icon_type, 200, y, 20, icon_color)
-            name_surf = self.font_small.render(level_name, True, name_color)
-            surface.blit(name_surf, (250, y))
+            hovered = mouse_pos and i < playable and rect.collidepoint(mouse_pos)
+            if i == selection or hovered:
+                pygame.draw.rect(surface, UI_BG, rect, border_radius=6)
+                pygame.draw.rect(surface, UI_HIGHLIGHT, rect, 2, border_radius=6)
+                if i < playable:
+                    name_color = UI_HIGHLIGHT
 
-        if unlocked_count > 0:
-            inst = self.font_tiny.render(
-                "Level selection coming in Phase 3", True, UI_TEXT_DIM
-            )
-        else:
-            inst = self.font_tiny.render(
-                "Complete levels to unlock them here", True, UI_TEXT_DIM
-            )
+            Icon.draw(surface, icon_type, rect.x + 16, rect.y + 11, 20, icon_color)
+            name_surf = self.font_small.render(level_title(i, mark_boss=True), True, name_color)
+            surface.blit(name_surf, (rect.x + 56, rect.y + rect.height // 2 - name_surf.get_height() // 2))
+
+        inst = self.font_tiny.render(
+            "UP/DOWN: Select  |  ENTER or Click: Play  |  Complete a level to unlock the next",
+            True,
+            UI_TEXT_DIM,
+        )
         surface.blit(
             inst, (screen_width // 2 - inst.get_width() // 2, screen_height - 100)
         )
@@ -652,6 +655,8 @@ class Menu:
             ("Z", "Shoot"),
             ("X", "Melee Attack"),
             ("Stomp", "Jump on Enemy"),
+            ("1 - 5", "Switch Weapon"),
+            ("Pause > Shop", "Buy Weapons"),
         ]
 
         for i, (key, action) in enumerate(controls_right):

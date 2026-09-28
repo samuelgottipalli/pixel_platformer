@@ -12,7 +12,6 @@ from config.settings import (
     PLAYER_MAX_JUMPS,
     PLAYER_SPEED_BOOST_MULTIPLIER,
     PLAYER_START_LIVES,
-    WEAPON_UPGRADE_COSTS,
     WHITE,
     YELLOW,
     get_gravity,
@@ -72,7 +71,6 @@ class Player:
         self.speed_boost_timer = 0
 
         # Combat
-        self.weapon_level = 1
         self.can_shoot = True
         self.shoot_cooldown = 0
         self.melee_active = False
@@ -272,6 +270,13 @@ class Player:
 
         return projectiles
 
+    def get_weapon_name(self):
+        """Display name of the equipped weapon, with its power level"""
+        weapon = self.weapons.get(self.current_weapon_id)
+        if not weapon:
+            return "None"
+        return f"{weapon.name} P{weapon.power_level}"
+
     def switch_weapon(self, weapon_id):
         """Switch to different weapon"""
         if self.weapons.get(weapon_id):
@@ -398,16 +403,6 @@ class Player:
         elif ptype == PowerUpType.INVINCIBLE.value:
             self.invincible = True
             self.invincible_timer = PLAYER_INVINCIBILITY_DURATION
-
-    def upgrade_weapon(self):
-        """Upgrade weapon if player has enough coins. Returns True if successful"""
-        if self.weapon_level < 4:
-            cost = WEAPON_UPGRADE_COSTS.get(self.weapon_level, 999)
-            if self.coins >= cost:
-                self.coins -= cost
-                self.weapon_level += 1
-                return True
-        return False
 
     def get_rect(self):
         """Get collision rectangle"""

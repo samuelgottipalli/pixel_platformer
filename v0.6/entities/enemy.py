@@ -8,6 +8,7 @@ import pygame
 
 from config.layout_manager import get_object_size
 from config.settings import (CYAN, ENEMY_BASE_DAMAGE, ENEMY_BASE_HEALTH,
+                             ENEMY_MIN_SHOOT_COOLDOWN, ENEMY_PROJECTILE_BASE_DAMAGE,
                              get_enemy_flying_speed, get_enemy_ground_speed,
                              ENEMY_SHOOT_COOLDOWN, get_gravity, get_max_fall_speed, get_projectile_speed,
                              ORANGE, RED, WHITE)
@@ -31,7 +32,8 @@ class Enemy:
         self.type = enemy_type
         self.width = get_object_size("enemy")["width"]
         self.height = get_object_size("enemy")["height"]
-        self.health = ENEMY_BASE_HEALTH
+        self.max_health = ENEMY_BASE_HEALTH
+        self.health = self.max_health
         self.damage = ENEMY_BASE_DAMAGE
         self.direction = 1
         self.patrol_distance = patrol_distance
@@ -39,6 +41,8 @@ class Enemy:
         self.dead = False
         self.shoot_timer = 0
         self.shoot_cooldown = ENEMY_SHOOT_COOLDOWN
+        self.projectile_damage = ENEMY_PROJECTILE_BASE_DAMAGE
+        self.projectile_speed = get_projectile_speed() * 0.7  # slower than player shots
 
         # Set speed based on type
         if self.type == EnemyType.GROUND.value:
@@ -50,6 +54,22 @@ class Enemy:
 
         # SFX manager
         self.audio = audio
+
+    def apply_scaling(self, health=1.0, damage=1.0, speed=1.0,
+                      projectile_damage=1.0, projectile_speed=1.0, fire_rate=0.0):
+        """
+        Scale stats for the current level/difficulty (see DifficultyManager).
+        Multipliers apply to base stats; fire_rate shortens the turret cooldown.
+        """
+        self.max_health = max(1, round(ENEMY_BASE_HEALTH * health))
+        self.health = self.max_health
+        self.damage = ENEMY_BASE_DAMAGE * damage
+        self.speed *= speed
+        self.projectile_damage = max(1, round(ENEMY_PROJECTILE_BASE_DAMAGE * projectile_damage))
+        self.projectile_speed *= projectile_speed
+        self.shoot_cooldown = max(
+            ENEMY_MIN_SHOOT_COOLDOWN, round(ENEMY_SHOOT_COOLDOWN * (1 - fire_rate))
+        )
 
     def update(self, tiles):
         """Update enemy AI and movement"""

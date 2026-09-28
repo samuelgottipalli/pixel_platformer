@@ -14,7 +14,6 @@ MOVE_DOWN = [pygame.K_DOWN, pygame.K_s]
 JUMP = [pygame.K_SPACE, pygame.K_w, pygame.K_UP]
 SHOOT = [pygame.K_z, pygame.K_j]
 MELEE = [pygame.K_x, pygame.K_k]
-UPGRADE_WEAPON = [pygame.K_u]
 
 # Menu Controls
 MENU_UP = [pygame.K_UP, pygame.K_w]

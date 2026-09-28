@@ -4,10 +4,9 @@ Difficulty management system
 
 import math
 
-from config.settings import (DIFFICULTY_MODIFIERS,
+from config.settings import (DIFFICULTY_MODIFIERS, ENEMY_LEVEL_SCALING,
                              PROGRESSIVE_DIFFICULTY_CURVE,
-                             PROGRESSIVE_DIFFICULTY_ENABLED,
-                             WEAPON_UPGRADE_COSTS)
+                             PROGRESSIVE_DIFFICULTY_ENABLED)
 
 
 class DifficultyManager:
@@ -91,6 +90,35 @@ class DifficultyManager:
 
         return enemies
 
+    def get_enemy_scaling(self, current_level):
+        """
+        Enemy stat multipliers for a level: difficulty sets the baseline and
+        every level adds ENEMY_LEVEL_SCALING on top, so enemies (and their
+        turret weapons) get tougher as the player progresses.
+        Returns kwargs for Enemy.apply_scaling.
+        """
+        level = max(0, current_level)
+        rate = ENEMY_LEVEL_SCALING
+        mods = self.modifiers
+
+        def grow(key):
+            return 1 + rate[key] * level
+
+        return {
+            "health": mods["enemy_health_multiplier"] * grow("health"),
+            "damage": mods["enemy_damage_multiplier"] * grow("damage"),
+            "speed": mods["enemy_speed_multiplier"] * grow("speed"),
+            "projectile_damage": mods["enemy_damage_multiplier"] * grow("projectile_damage"),
+            "projectile_speed": mods["enemy_speed_multiplier"] * grow("projectile_speed"),
+            "fire_rate": rate["fire_rate"] * level,
+        }
+
+    def scale_enemies(self, enemies, current_level):
+        """Apply level/difficulty scaling to Enemy objects in place"""
+        scaling = self.get_enemy_scaling(current_level)
+        for enemy in enemies:
+            enemy.apply_scaling(**scaling)
+
     def get_enemy_damage_multiplier(self, current_level):
         """Get enemy damage multiplier with progressive scaling"""
         progress = self.get_progressive_multiplier(current_level)
@@ -131,24 +159,6 @@ class DifficultyManager:
             collectibles = random.sample(collectibles, target_count)
 
         return collectibles
-
-    def get_weapon_upgrade_cost(self, weapon_level, current_level):
-        """
-        Get weapon upgrade cost with difficulty scaling
-        Args:
-            weapon_level: Current weapon level
-            current_level: Current game level
-        Returns:
-            Cost in coins
-        """
-        base_cost = WEAPON_UPGRADE_COSTS.get(weapon_level, 100)
-        mult = self.modifiers["weapon_upgrade_cost_multiplier"]
-
-        # Progressive: costs increase as you progress
-        progress = self.get_progressive_multiplier(current_level)
-        mult += progress * 0.3
-
-        return int(base_cost * mult)
 
     def get_time_limit(self, base_time, current_level):
         """

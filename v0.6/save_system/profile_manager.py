@@ -213,7 +213,7 @@ class ProfileManager:
 
     @staticmethod
     def update_profile_stats(
-        profile, score_gained, coins_gained, level_completed=False
+        profile, score_gained, coins_gained, completed_level=None
     ):
         """
         Update profile statistics
@@ -221,12 +221,14 @@ class ProfileManager:
             profile: PlayerProfile object
             score_gained: Score to add
             coins_gained: Coins to add
-            level_completed: Whether a level was completed
+            completed_level: Index of the level just completed, if any.
+                levels_completed tracks how far the player has progressed
+                (replaying an earlier level doesn't unlock anything new).
         """
         profile.total_score += score_gained
         profile.total_coins_collected += coins_gained
-        if level_completed:
-            profile.levels_completed += 1
+        if completed_level is not None:
+            profile.levels_completed = max(profile.levels_completed, completed_level + 1)
 
     @staticmethod
     def get_top_profiles(profiles, limit=10):

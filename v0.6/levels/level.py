@@ -151,8 +151,6 @@ class Level:
 
     def reset(self):
         """Reset level state (respawn collectibles, etc.)"""
-        from config.settings import ENEMY_BASE_HEALTH
-
         for coin in self.coins:
             coin.collected = False
         for powerup in self.powerups:
@@ -161,6 +159,6 @@ class Level:
             key.collected = False
         for enemy in self.enemies:
             enemy.dead = False
-            enemy.health = ENEMY_BASE_HEALTH
+            enemy.health = enemy.max_health
             enemy.x = enemy.start_x
             enemy.y = enemy.start_y

@@ -67,7 +67,7 @@ class HUD:
 
         # Health text
         health_text = self.font.render(
-            f"HP {player.health}/{player.max_health}", True, WHITE
+            f"HP {max(0, int(player.health))}/{player.max_health}", True, WHITE
         )
         surface.blit(health_text, (x + health_width + 8, y))
 
@@ -77,7 +77,7 @@ class HUD:
             (f"Lives: {player.lives}", 15, 40, WHITE),
             (f"Coins: {player.coins}", 15, 60, YELLOW),
             (f"Score: {player.score}", 15, 80, WHITE),
-            (f"Weapon Lv{player.weapon_level}", 15, 100, CYAN),
+            (f"Weapon: {player.get_weapon_name()}", 15, 100, CYAN),
         ]
 
         for text_str, x, y, color in stats:
@@ -143,7 +143,7 @@ class HUD:
             "Space — Jump",
             "Z — Shoot",
             "X — Melee",
-            "U — Upgrade",
+            "1-5 — Switch Weapon",
             "",
             "P/ESC — Pause",
             "F1 — Hide Controls",

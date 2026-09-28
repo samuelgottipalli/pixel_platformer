@@ -106,13 +106,9 @@ def get_melee_range():
 def get_projectile_speed():
     return LayoutManager.get_physics("projectile_speed") or 8
 
-# Weapon Upgrade Costs
-WEAPON_UPGRADE_COSTS = {
-    1: 20,  # Level 1 -> 2: 20 coins
-    2: 50,  # Level 2 -> 3: 50 coins
-    3: 100,  # Level 3 -> 4: 100 coins
-    4: 999,  # Level 4 is max
-}
+# Melee / stomp damage (guns are upgraded in the shop, see weapon_catalog.py)
+MELEE_DAMAGE = 15
+STOMP_DAMAGE = 20
 
 # Difficulty Settings
 DIFFICULTY_MODIFIERS = {
@@ -120,6 +116,8 @@ DIFFICULTY_MODIFIERS = {
         "lives": 5,
         "enemy_count_multiplier": 0.7,  # 70% of normal enemy count
         "enemy_damage_multiplier": 0.7,
+        "enemy_health_multiplier": 0.75,
+        "enemy_speed_multiplier": 0.9,
         "coin_multiplier": 1.5,
         "powerup_multiplier": 1.5,
         "weapon_upgrade_cost_multiplier": 0.7,
@@ -130,6 +128,8 @@ DIFFICULTY_MODIFIERS = {
         "lives": 3,
         "enemy_count_multiplier": 1.0,
         "enemy_damage_multiplier": 1.0,
+        "enemy_health_multiplier": 1.0,
+        "enemy_speed_multiplier": 1.0,
         "coin_multiplier": 1.0,
         "powerup_multiplier": 1.0,
         "weapon_upgrade_cost_multiplier": 1.0,
@@ -140,6 +140,8 @@ DIFFICULTY_MODIFIERS = {
         "lives": 1,
         "enemy_count_multiplier": 1.5,
         "enemy_damage_multiplier": 1.5,
+        "enemy_health_multiplier": 1.4,
+        "enemy_speed_multiplier": 1.15,
         "coin_multiplier": 0.7,
         "powerup_multiplier": 0.6,
         "weapon_upgrade_cost_multiplier": 1.5,
@@ -209,9 +211,26 @@ def get_enemy_ground_speed():
 def get_enemy_flying_speed():
     return LayoutManager.get_physics("enemy_flying_speed") or 2
 
-ENEMY_BASE_HEALTH = 3
-ENEMY_BASE_DAMAGE = 1
-ENEMY_SHOOT_COOLDOWN = 120  # frames (~2 seconds)
+# Base enemy stats on the tutorial level (Normal difficulty).
+# Health is in weapon-damage units: the Standard Shot does 10 per hit.
+ENEMY_BASE_HEALTH = 20
+ENEMY_BASE_DAMAGE = 1  # contact damage per frame of touching
+ENEMY_SHOOT_COOLDOWN = 120  # frames (~2 seconds) between turret shots
+ENEMY_PROJECTILE_BASE_DAMAGE = 8  # turret shot damage
+ENEMY_MIN_SHOOT_COOLDOWN = 50  # fastest turret fire rate
+
+# Enemies and their weapons get tougher every level.
+# Each value is the increase per level index (0.25 = +25% per level),
+# applied on top of the difficulty multipliers in DIFFICULTY_MODIFIERS.
+# Example, Normal: enemy health 20 on the tutorial -> 45 on Level 5.
+ENEMY_LEVEL_SCALING = {
+    "health": 0.25,
+    "damage": 0.15,             # contact damage
+    "speed": 0.08,              # patrol speed
+    "projectile_damage": 0.15,  # turret shots
+    "projectile_speed": 0.06,
+    "fire_rate": 0.08,          # turret cooldown shrinks by this much per level
+}
 
 # Character Colors
 CHARACTER_COLORS = [

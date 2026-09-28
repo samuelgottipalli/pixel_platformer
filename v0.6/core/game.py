@@ -23,12 +23,14 @@ from config.layout_manager import (
 from config.settings import (
     CYAN,
     FPS,
+    MELEE_DAMAGE,
     SCORE_COIN,
     SCORE_ENEMY_HIT,
     SCORE_ENEMY_KILL,
     SCORE_KEY,
     SCORE_MELEE_HIT,
     SCORE_POWERUP,
+    STOMP_DAMAGE,
     WHITE,
     YELLOW,
     ORANGE,
@@ -42,6 +44,7 @@ from entities.player import Player
 from entities.projectile import Projectile
 from levels.level import Level
 from levels.level_loader import LevelLoader
+from levels.level_names import level_title
 from save_system.difficulty_completion_tracker import DifficultyCompletionTracker
 from save_system.profile_manager import PlayerProfile, ProfileManager
 from save_system.save_manager import SaveManager
@@ -300,6 +303,15 @@ class Game:
                 self.menu_selection = idx
                 self._handle_menu_selection()
 
+        elif self.state == GameState.LEVEL_MAP:
+            rows = self.menu.get_level_map_row_rects(len(self.levels))
+            for i, rect in enumerate(rows):
+                if rect.collidepoint(self.mouse_pos):
+                    if i < self._playable_level_count():
+                        self.level_selection = i
+                    self._select_level_from_map(i)
+                    break
+
         elif self.state == GameState.OPTIONS:
             idx = self.menu.check_button_click(
                 self.menu.options_buttons, self.mouse_pos, mouse_pressed
@@ -459,8 +471,14 @@ class Game:
         SaveManager.delete_save(self.current_profile.name)
         AchievementManager(self.current_profile.name)._delete_achievements()
 
+        # Starting level: 0 for New Game, or the level picked on the level map.
+        # Level unlocks (profile.levels_completed) are kept across runs.
+        start_level = getattr(self, "start_level_index", 0)
+        start_level = min(start_level, self._playable_level_count() - 1)
+        self.start_level_index = 0
+
         # Create player with current profile's character
-        lives = self.difficulty_manager.get_lives(0)
+        lives = self.difficulty_manager.get_lives(start_level)
         self.player = Player(100, 100, self.current_profile.character, self.audio)
         self.player.lives = lives
 
@@ -468,7 +486,6 @@ class Game:
         self.player.score = 0
         self.player.coins = 0
         self.player.health = 100
-        self.player.weapon_level = 1
         self.player.keys = []
         self.player.max_jumps = 2
 
@@ -479,10 +496,8 @@ class Game:
         # Start level music
         self.audio.play_music('level')
 
-        # Reset profile level progress (new game starts from level 0)
-        self.current_profile.levels_completed = 0
-        self.current_level_index = 0
-        self._load_level(0)
+        self.current_level_index = start_level
+        self._load_level(start_level)
         self.state = GameState.PLAYING
 
         self.game_start_time = time.time()
@@ -512,14 +527,33 @@ class Game:
         Track completions per difficulty
         """
         if event.type == pygame.KEYDOWN:
+            playable = self._playable_level_count()
             if controls.check_key_event(event, controls.MENU_UP):
-                # Navigate unlocked levels
-                pass
+                self.level_selection = (self.level_selection - 1) % playable
+                self.audio.menu_navigate()
+            elif controls.check_key_event(event, controls.MENU_DOWN):
+                self.level_selection = (self.level_selection + 1) % playable
+                self.audio.menu_navigate()
             elif controls.check_key_event(event, controls.MENU_SELECT):
-                # Level selection not implemented yet (see level map screen)
-                self._show_popup("Level selection coming soon!")
+                self._select_level_from_map(self.level_selection)
             elif event.key == pygame.K_ESCAPE:
                 self.state = GameState.MENU
+
+    def _playable_level_count(self):
+        """Levels 0..levels_completed are playable (each unlocks the next)"""
+        completed = self.current_profile.levels_completed if self.current_profile else 0
+        return max(1, min(len(self.levels), completed + 1))
+
+    def _select_level_from_map(self, level_index):
+        """Pick an unlocked level, then choose difficulty to start there"""
+        if level_index >= self._playable_level_count():
+            self._show_popup("Complete the previous level to unlock this one!")
+            return
+        self.audio.menu_select()
+        self.start_level_index = level_index
+        self.audio.stop_music()
+        self.state = GameState.DIFFICULTY_SELECT
+        self.difficulty_selection = 1  # Default to Normal
 
     def _handle_menu_events(self, event):
         """Handle main menu input
@@ -551,6 +585,7 @@ class Game:
         if self.menu_selection == 0:  # New Game
             # Stop menu music, will start level music when game begins
             self.audio.stop_music()
+            self.start_level_index = 0
             self.state = GameState.DIFFICULTY_SELECT
             self.difficulty_selection = 1  # Default to Normal
 
@@ -585,7 +620,8 @@ class Game:
 
         elif self.menu_selection == 2:  # Level Map
             self.state = GameState.LEVEL_MAP
-            self.level_selection = 0
+            # Start on the furthest unlocked level
+            self.level_selection = self._playable_level_count() - 1
 
         elif self.menu_selection == 3:  # Achievements
             self.state = GameState.ACHIEVEMENTS
@@ -1059,7 +1095,7 @@ class Game:
         # Check player attacks on boss
         if self.player.melee_active:
             if self.player.get_melee_rect().colliderect(self.boss.get_rect()):
-                if self.boss.take_damage(self.player.weapon_level + 2):
+                if self.boss.take_damage(MELEE_DAMAGE):
                     self.player.score += 50
 
         # Check player projectiles on boss
@@ -1177,10 +1213,6 @@ class Game:
         # Melee
         if controls.check_key_pressed(keys, controls.MELEE):
             self.player.melee_attack()
-
-        # Upgrade weapon
-        if controls.check_key_pressed(keys, controls.UPGRADE_WEAPON):
-            self.player.upgrade_weapon()
 
         # Save game
         if controls.check_key_pressed(keys, controls.SAVE_GAME):
@@ -1338,8 +1370,8 @@ class Game:
                             spawn_x - 6,  # Center horizontally
                             spawn_y - 3,  # Center vertically
                             1,  # Direction (doesn't matter for angled shots)
-                            get_projectile_speed() * 0.7,  # Speed (slower than player shots)
-                            enemy.damage,  # Damage
+                            enemy.projectile_speed,  # Scales with level
+                            enemy.projectile_damage,  # Scales with level
                             ORANGE,  # Orange color for enemy projectiles
                             angle=angle,  # Pass the angle here!
                             hostile=True,
@@ -1355,7 +1387,7 @@ class Game:
                 # Check melee attack
                 if self.player.melee_active:
                     if self.player.get_melee_rect().colliderect(enemy.get_rect()):
-                        enemy.take_damage(self.player.weapon_level + 1)
+                        enemy.take_damage(MELEE_DAMAGE)
                         self.player.score += SCORE_MELEE_HIT
                         if enemy.dead:
                             self.level.enemies.remove(enemy)
@@ -1372,7 +1404,7 @@ class Game:
             self.player.dy > 0
             and self.player.y + self.player.height - 10 < enemy.y + enemy.height // 2
         ):
-            enemy.take_damage(2)
+            enemy.take_damage(STOMP_DAMAGE)
             self.player.dy = -10
             self.player.score += SCORE_ENEMY_KILL
             if enemy.dead:
@@ -1479,6 +1511,10 @@ class Game:
             self.current_level_index = level_index
             self.level = Level(self.levels[level_index])
 
+            # Enemies and their weapons get tougher each level
+            if self.difficulty_manager:
+                self.difficulty_manager.scale_enemies(self.level.enemies, level_index)
+
             if self.player:
                 self.player.x = self.level.spawn_x
                 self.player.y = self.level.spawn_y
@@ -1526,7 +1562,7 @@ class Game:
                 self.current_profile,
                 self.player.score,
                 self.player.coins,
-                level_completed=True,
+                completed_level=self.current_level_index,
             )
             ProfileManager.save_profiles(self.profiles)
 
@@ -1652,7 +1688,7 @@ class Game:
             )
         elif self.state == GameState.LEVEL_MAP:
             self.current_screen = self.menu.draw_level_map_screen(
-                self.screen, self.current_profile, self.mouse_pos
+                self.screen, self.current_profile, self.level_selection, self.mouse_pos
             )
         elif self.state == GameState.PLAYING:
             # Draw game directly to screen
@@ -1777,23 +1813,13 @@ class Game:
         self.screen.blit(overlay, (10, 200))
 
         # Get level info
-        level_names = [
-            "Tutorial: Training Facility",
-            "Level 1: The Awakening",
-            "Level 2: Rising Conflict",
-            "Level 3: The Ascent",
-            "Level 4: Deep Dive",
-            "Level 5: Convergence",
-            "Level 6: Guardian's Lair (BOSS)",
-        ]
-
         # Get area name based on position
         area_name = self._get_area_name(self.current_level_index, self.player.x)
 
         # Debug info
         debug_info = [
             f"DEBUG MODE (F3 to toggle)",
-            f"Level: {self.current_level_index} - {level_names[self.current_level_index] if self.current_level_index < len(level_names) else 'Unknown'}",
+            f"Level: {level_title(self.current_level_index, mark_boss=True)}",
             f"Area: {area_name}",
             f"Position: ({int(self.player.x)}, {int(self.player.y)})",
             f"Camera: ({int(self.camera.x)}, {int(self.camera.y)})",
@@ -1995,21 +2021,7 @@ class Game:
 
     def _get_level_and_area_names(self):
         """Get current level and area names for HUD"""
-        level_names = [
-            "Tutorial: Training Facility",
-            "Level 1: The Awakening",
-            "Level 2: Rising Conflict",
-            "Level 3: The Ascent",
-            "Level 4: Deep Dive",
-            "Level 5: Convergence",
-            "Level 6: Guardian's Lair",
-        ]
-
-        level_name = (
-            level_names[self.current_level_index]
-            if 0 <= self.current_level_index < len(level_names)
-            else f"Level {self.current_level_index}"
-        )
+        level_name = level_title(self.current_level_index)
 
         # Simplified area detection
         areas = {6: [(0, 1280, "BOSS ARENA")]}

@@ -164,13 +164,6 @@ class MenuTests(GameTestCase):
             g.state = state
             frames(g, 2)
 
-    def test_level_map_select_does_not_crash(self):
-        g = self.playing_game()
-        g.state = GameState.LEVEL_MAP
-        key(pygame.K_RETURN)
-        frames(g, 2)
-        self.assertEqual(g.state, GameState.LEVEL_MAP)
-
     def test_new_game_from_menu_with_keyboard(self):
         g = self.new_game()
         g.player_name = "kb"
@@ -230,7 +223,7 @@ class GameplayTests(GameTestCase):
         self.assertTrue(g.projectiles)
         g._update_projectiles()
         self.assertEqual(g.player.health, health)
-        self.assertTrue(enemy.dead or enemy.health < 3)
+        self.assertTrue(enemy.dead or enemy.health < enemy.max_health)
 
     def test_explosion_damages_enemies_in_radius(self):
         g = self.playing_game(level=1)
@@ -366,6 +359,142 @@ class SaveTests(GameTestCase):
         g._handle_menu_selection()
         self.assertEqual(g.state, GameState.PLAYING)
         self.assertEqual(g.player.current_weapon_id, "standard")
+
+
+class LevelMapTests(GameTestCase):
+    def profile_game(self, levels_completed=0):
+        g = self.new_game()
+        g.player_name = "mapper"
+        g._create_new_profile()
+        g.current_profile.levels_completed = levels_completed
+        g._load_selected_profile_to_menu()
+        g.menu_selection = 2
+        g._handle_menu_selection()
+        self.assertEqual(g.state, GameState.LEVEL_MAP)
+        return g
+
+    def test_level_names_match_design(self):
+        from levels.level_names import LEVEL_NAMES, level_title
+        self.assertEqual(len(LEVEL_NAMES), 7)
+        self.assertEqual(level_title(0), "Tutorial: Training Facility")
+        self.assertEqual(level_title(3), "Level 3: The Ascent")
+        self.assertEqual(level_title(6, mark_boss=True), "Level 6: Guardian's Lair (BOSS)")
+
+    def test_new_profile_can_only_play_tutorial(self):
+        g = self.profile_game(levels_completed=0)
+        frames(g)
+        key(pygame.K_DOWN)
+        frames(g)
+        self.assertEqual(g.level_selection, 0)
+        g._select_level_from_map(1)  # locked
+        self.assertEqual(g.state, GameState.LEVEL_MAP)
+
+    def test_start_unlocked_level_from_map(self):
+        g = self.profile_game(levels_completed=3)
+        self.assertEqual(g.level_selection, 3)  # opens on furthest unlocked level
+        frames(g, 2)
+        key(pygame.K_RETURN)
+        frames(g)
+        self.assertEqual(g.state, GameState.DIFFICULTY_SELECT)
+        key(pygame.K_RETURN)
+        frames(g, 2)
+        self.assertEqual(g.state, GameState.PLAYING)
+        self.assertEqual(g.current_level_index, 3)
+        self.assertEqual(g.current_profile.levels_completed, 3, "starting a run keeps unlocks")
+
+    def test_locked_level_cannot_be_started(self):
+        g = self.profile_game(levels_completed=2)
+        g._select_level_from_map(4)
+        self.assertEqual(g.state, GameState.LEVEL_MAP)
+
+    def test_click_level_row(self):
+        g = self.profile_game(levels_completed=2)
+        frames(g)
+        row = g.menu.get_level_map_row_rects(len(g.levels))[1]
+        g.mouse_pos = row.center
+        pygame.mouse.get_pressed = lambda num_buttons=3: (True, False, False)
+        try:
+            g._handle_mouse_click()
+        finally:
+            del pygame.mouse.get_pressed
+        self.assertEqual(g.state, GameState.DIFFICULTY_SELECT)
+        self.assertEqual(g.start_level_index, 1)
+
+    def test_completing_a_level_unlocks_the_next_once(self):
+        g = self.playing_game(level=2)
+        g._transition_to_level(3)
+        self.assertEqual(g.current_profile.levels_completed, 3)
+        g._load_level(0)
+        g._transition_to_level(1)  # replaying the tutorial doesn't reset progress
+        self.assertEqual(g.current_profile.levels_completed, 3)
+        self.assertEqual(ProfileManager.load_profiles()[0].levels_completed, 3)
+
+
+class WeaponAndSoundTests(GameTestCase):
+    def test_u_key_upgrade_removed(self):
+        g = self.playing_game()
+        g.player.coins = 500
+        frames(g, 3, hold={pygame.K_u})
+        self.assertEqual(g.player.coins, 500)
+        self.assertFalse(hasattr(g.player, "upgrade_weapon"))
+        self.assertFalse(hasattr(g.player, "weapon_level"))
+
+    def test_hud_shows_equipped_weapon(self):
+        g = self.playing_game()
+        self.assertEqual(g.player.get_weapon_name(), "Standard Shot P1")
+
+    def test_melee_sound_file_exists(self):
+        path = os.path.join(PROJECT_DIR, "assets", "audio", "sfx", "melee.wav")
+        self.assertTrue(os.path.exists(path), "audio manager loads sfx/melee.wav")
+
+
+class DifficultyScalingTests(GameTestCase):
+    def enemies_on(self, level, difficulty=1):
+        g = self.new_game()
+        g.player_name = "scale"
+        g._create_new_profile()
+        g.difficulty_selection = difficulty
+        g._start_new_game()
+        g._load_level(level)
+        return g, g.level.enemies
+
+    def test_enemies_get_tougher_each_level(self):
+        _, first = self.enemies_on(0)
+        _, later = self.enemies_on(5)
+        self.assertGreater(later[0].max_health, first[0].max_health)
+        self.assertGreater(later[0].damage, first[0].damage)
+        turrets0 = [e for e in first if e.type == "turret"]
+        turrets5 = [e for e in later if e.type == "turret"]
+        self.assertTrue(turrets5)
+        if turrets0:
+            self.assertLess(turrets5[0].shoot_cooldown, turrets0[0].shoot_cooldown)
+        self.assertGreater(turrets5[0].projectile_damage, 8)
+
+    def test_difficulty_changes_enemy_stats(self):
+        _, easy = self.enemies_on(2, difficulty=0)
+        _, normal = self.enemies_on(2, difficulty=1)
+        _, hard = self.enemies_on(2, difficulty=2)
+        self.assertLess(easy[0].max_health, normal[0].max_health)
+        self.assertLess(normal[0].max_health, hard[0].max_health)
+
+    def test_turret_fires_scaled_shot(self):
+        g, enemies = self.enemies_on(5)
+        turret = next(e for e in enemies if e.type == "turret")
+        g.player.x, g.player.y = turret.x + 100, turret.y
+        turret.shoot_timer = turret.shoot_cooldown
+        g.projectiles = []
+        g._update_enemies()
+        shots = [p for p in g.projectiles if p.hostile]
+        self.assertEqual(len(shots), 1)
+        self.assertEqual(shots[0].damage, turret.projectile_damage)
+
+    def test_standard_shot_kills_tutorial_enemy_in_two_hits(self):
+        _, enemies = self.enemies_on(0)
+        enemy = next(e for e in enemies if e.type == "ground")
+        enemy.take_damage(10)
+        self.assertFalse(enemy.dead)
+        enemy.take_damage(10)
+        self.assertTrue(enemy.dead)
 
 
 class LevelDesignTests(GameTestCase):

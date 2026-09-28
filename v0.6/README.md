@@ -39,6 +39,7 @@ python main.py
 **Jump:** Spacebar  
 **Shoot:** Z  
 **Melee:** X  
+**Switch Weapon:** 1-5 (buy weapons and upgrades in the Shop, from the Pause menu)  
 **Pause:** P or ESC  
 **Save:** F5  
 
@@ -105,7 +106,14 @@ cd v0.6
 python -m unittest discover -s tests -v
 ```
 
-Run them before tagging a release.
+Run them before tagging a release. They include a check that every level's
+exit is reachable. When editing levels, the checker also works on its own and
+lists any unreachable coins:
+
+```bash
+python tests/level_checker.py        # all levels
+python tests/level_checker.py 3      # just Level 3
+```
 
 ---
 

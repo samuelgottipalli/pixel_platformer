@@ -35,7 +35,6 @@ class SaveManager:
                     "lives": player.lives,
                     "coins": player.coins,
                     "score": player.score,
-                    "weapon_level": player.weapon_level,
                     "keys": player.keys,
                     "max_jumps": player.max_jumps,
                     "weapons": player.get_weapon_state(),
@@ -97,7 +96,6 @@ class SaveManager:
         player.lives = p["lives"]
         player.coins = p["coins"]
         player.score = p["score"]
-        player.weapon_level = p["weapon_level"]
         player.keys = p["keys"]
         player.max_jumps = p.get("max_jumps", 2)
         # Saves from before the weapon system have no weapon data

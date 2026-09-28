@@ -474,7 +474,9 @@ class AchievementManager:
             if reward['type'] == 'life':
                 player.lives += reward['value']
             elif reward['type'] == 'weapon':
-                player.weapon_level = min(3, player.weapon_level + reward['value'])
+                # Free power upgrade(s) for the weapon currently equipped
+                for _ in range(reward['value']):
+                    player.upgrade_weapon_power(player.current_weapon_id)
             elif reward['type'] == 'score':
                 player.score += reward['value']
 
