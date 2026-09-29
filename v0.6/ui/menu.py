@@ -5,7 +5,7 @@ Cleaner, more maintainable menu code with reusable components
 
 import pygame
 from config.layout_manager import get_screen_size, get_ui_element, get_font_size, get_scale_factor
-from config.settings import (
+from config.settings import (GREEN, RED, UI_SELECTED_BG, 
     BLACK,
     CHARACTER_COLORS,
     CYAN,
@@ -55,91 +55,88 @@ class Menu:
     # BUTTON GROUP INITIALIZATION
     # ========================================================================
 
+    # Every clickable element on a screen comes from one of these functions,
+    # used both to draw it and to hit-test mouse clicks, so they always match.
+
+    def _button_column(self, screen_name, count, width=280, height=40, start_y=240, spacing=55):
+        """Centered column of button rects using layout values for screen_name"""
+        start_y = get_ui_element(screen_name, "button_start_y") or start_y
+        spacing = get_ui_element(screen_name, "button_spacing") or spacing
+        width = get_ui_element(screen_name, "button_width") or width
+        height = get_ui_element(screen_name, "button_height") or height
+        x = self.screen_width // 2 - width // 2
+        return [pygame.Rect(x, start_y + i * spacing - 8, width, height) for i in range(count)]
+
     def _create_main_buttons(self):
-        """Create button rectangles for main menu"""
-
-        buttons = []
-
-        # Get layout values
-        button_width = get_ui_element("main_menu", "button_width") or 280
-        button_height = get_ui_element("main_menu", "button_height") or 40
-        button_start_y = get_ui_element("main_menu", "button_start_y") or 240
-        button_spacing = get_ui_element("main_menu", "button_spacing") or 55
-
-        button_x = self.screen_width // 2 - button_width // 2
-
-        for i in range(
-            6
-        ):  # New Game, Continue, Level Map, Achievements, Options, Logout
-            y = button_start_y + i * button_spacing
-            buttons.append(pygame.Rect(button_x, y - 8 * self.scale_factor, button_width, button_height))
-        return buttons
+        """New Game, Continue, Level Map, Achievements, Options, Logout"""
+        return self._button_column("main_menu", 6)
 
     def _create_pause_buttons(self):
-        """Create button rectangles for pause menu"""
-
-        buttons = []
-
-        # Get layout values
-        button_width = get_ui_element("pause_menu", "button_width") or 300
-        button_height = get_ui_element("pause_menu", "button_height") or 40
-        button_start_y = get_ui_element("pause_menu", "button_start_y") or (
-            self.screen_height // 2 - 50 * self.scale_factor
-        )
-        button_spacing = get_ui_element("pause_menu", "button_spacing") or 55
-
-        button_x = self.screen_width // 2 - button_width // 2
-        for i in range(4):  # Resume, Return to Menu, Logout
-            y = button_start_y + i * button_spacing
-            buttons.append(pygame.Rect(button_x, y - 8 * self.scale_factor, button_width, button_height))
-        return buttons
+        """Shop, Resume, Save & Return to Menu, Save & Logout"""
+        return self._button_column("pause_menu", 4, width=300)
 
     def _create_char_buttons(self):
-        """Create button rectangles for character selection"""
-
-        buttons = []
-
-        # Get layout values
+        """Character swatches on the character select screen"""
         char_y = get_ui_element("char_select", "char_start_y") or 280
         char_spacing = get_ui_element("char_select", "char_spacing") or 120
         char_width = get_ui_element("char_select", "char_width") or 56
         char_height = get_ui_element("char_select", "char_height") or 96
-
-        for i in range(4):
-            x = self.screen_width // 2 - 250 + i * char_spacing
-            buttons.append(pygame.Rect(x, char_y, char_width, char_height))
-        return buttons
+        return [
+            pygame.Rect(self.screen_width // 2 - 250 + i * char_spacing, char_y, char_width, char_height)
+            for i in range(4)
+        ]
 
     def _create_options_buttons(self):
-        """Create button rectangles for options menu"""
+        """Controls, Settings, Credits, Back"""
+        return self._button_column("options_menu", 4)
 
-        buttons = []
+    def get_difficulty_rects(self):
+        """Easy / Normal / Hard boxes"""
+        start_y = get_ui_element("difficulty_select", "button_start_y") or 200
+        spacing = get_ui_element("difficulty_select", "button_spacing") or 120
+        box_width, box_height = 500, 100
+        x = self.screen_width // 2 - box_width // 2
+        return [pygame.Rect(x, start_y + i * spacing, box_width, box_height) for i in range(3)]
 
-        # Get layout values
-        button_width = get_ui_element('options_menu', 'button_width') or 280
-        button_height = get_ui_element('options_menu', 'button_height') or 40
-        button_start_y = get_ui_element('options_menu', 'button_start_y') or 220
-        button_spacing = get_ui_element('options_menu', 'button_spacing') or 55
+    PROFILE_LIST_Y = 140
+    PROFILE_ITEM_HEIGHT = 70  # 60px box + 10px gap
+    PROFILE_VISIBLE = 5
 
-        button_x = self.screen_width // 2 - button_width // 2
+    def get_profile_box_rects(self, profiles, scroll_offset):
+        """(index, rect) for each profile box currently visible in the list"""
+        box_width, box_height = 500, 60
+        x = self.screen_width // 2 - box_width // 2
+        top = self.PROFILE_LIST_Y
+        bottom = top + self.PROFILE_VISIBLE * self.PROFILE_ITEM_HEIGHT
+        rects = []
+        for i in range(len(profiles)):
+            y = top + i * self.PROFILE_ITEM_HEIGHT - scroll_offset
+            if top <= y and y + box_height <= bottom:
+                rects.append((i, pygame.Rect(x, y, box_width, box_height)))
+        return rects
 
-        for i in range(4):  # Controls, Settings, Credits, Back
-            y = button_start_y + i * button_spacing
-            buttons.append(pygame.Rect(button_x, y - 8 * self.scale_factor, button_width, button_height))
-        return buttons
+    def get_profile_action_rects(self, profiles):
+        """(New Profile rect, Quit rect): side by side under the list"""
+        width, height, gap = 280, 40, 20
+        y = 560 if profiles else 350
+        center = self.screen_width // 2
+        return (
+            pygame.Rect(center - gap // 2 - width, y, width, height),
+            pygame.Rect(center + gap // 2, y, width, height),
+        )
 
     def _init_settings_components(self):
         """Initialize settings screen components"""
         from ui.settings_components import Slider, Toggle, Dropdown
 
         self.settings_components = {
-            'res_dropdown': Dropdown(400, 195, 300, 30, [], 0, "Resolution"),
-            'fullscreen_toggle': Toggle(400, 245, 60, 30, False, "Fullscreen"),
-            'music_toggle': Toggle(400, 365, 60, 30, True, "Music"),
-            'music_slider': Slider(400, 420, 200, 0, 100, 70, "Music Volume"),
-            'sfx_toggle': Toggle(400, 465, 60, 30, True, "SFX"),
-            'sfx_slider': Slider(400, 520, 200, 0, 100, 80, "SFX Volume"),
-            'colorblind_toggle': Toggle(400, 585, 60, 30, True, "Colorblind"),
+            'res_dropdown': Dropdown(400, 175, 300, 30, [], 0, "Resolution"),
+            'fullscreen_toggle': Toggle(400, 217, 60, 30, False, "Fullscreen"),
+            'music_toggle': Toggle(400, 307, 60, 30, True, "Music"),
+            'music_slider': Slider(400, 354, 200, 0, 100, 70, "Music Volume"),
+            'sfx_toggle': Toggle(400, 391, 60, 30, True, "SFX"),
+            'sfx_slider': Slider(400, 438, 200, 0, 100, 80, "SFX Volume"),
+            'colorblind_toggle': Toggle(400, 531, 60, 30, True, "Colorblind"),
         }
 
     # ========================================================================
@@ -160,19 +157,9 @@ class Menu:
         surface.blit(title, (self.screen_width // 2 - title.get_width() // 2, 100))
 
         options = ["New Game", "Continue", "Level Map", "Achievements", "Options", "Logout"]
-
-        # Get layout values with fallbacks
-        button_start_y = get_ui_element("main_menu", "button_start_y") or 240
-        button_spacing = get_ui_element("main_menu", "button_spacing") or 55
-
-        for i, option in enumerate(options):
-            y = button_start_y + i * button_spacing
-            is_selected = i == selection
-            if mouse_pos:
-                button = self.main_buttons[i]
-                if button.collidepoint(mouse_pos):
-                    is_selected = True
-            self._draw_button(surface, option, y, is_selected)
+        for i, (option, rect) in enumerate(zip(options, self.main_buttons)):
+            hovered = mouse_pos is not None and rect.collidepoint(mouse_pos)
+            self._draw_button(surface, option, rect, i == selection or hovered)
 
         hint = self.font_tiny.render(
             "UP/DOWN Navigate   ENTER Select   ESC Logout", True, UI_TEXT_DIM
@@ -202,34 +189,22 @@ class Menu:
             )
             surface.blit(inst1, (self.screen_width // 2 - inst1.get_width() // 2, 280 * self.scale_factor))
         else:
-            y_start = 160
-            box_height = 60
-            box_spacing = 10
-            item_height = box_height + box_spacing
-            visible_items = 5  # Show 5 profiles at a time
+            y_start = self.PROFILE_LIST_Y
+            item_height = self.PROFILE_ITEM_HEIGHT
+            visible_items = self.PROFILE_VISIBLE
 
-            for i, profile in enumerate(profiles):
-                # Calculate y position with scroll offset
-                y = y_start + i * item_height - scroll_offset
-
-                # Skip if not visible
-                if y < y_start - item_height or y > y_start + visible_items * item_height:
-                    continue
-
-                is_selected = i == selection
-                box_width = 500
-                box_x = self.screen_width // 2 - box_width // 2
-                box_rect = pygame.Rect(box_x, y, box_width, box_height)
-
-                # Check mouse hover
-                if mouse_pos and box_rect.collidepoint(mouse_pos):
-                    is_selected = True
+            for i, box_rect in self.get_profile_box_rects(profiles, scroll_offset):
+                profile = profiles[i]
+                box_x, y = box_rect.x, box_rect.y
+                box_width, box_height = box_rect.width, box_rect.height
+                is_selected = i == selection or (
+                    mouse_pos is not None and box_rect.collidepoint(mouse_pos)
+                )
 
                 box_color = UI_HIGHLIGHT if is_selected else UI_BORDER
                 pygame.draw.rect(surface, box_color, box_rect, 2)
 
                 if is_selected:
-                    fill_rect = pygame.Rect(box_x + 2, y + 2, box_width - 4, box_height - 4)
                     fill_surface = pygame.Surface((box_width - 4, box_height - 4))
                     fill_surface.set_alpha(30)
                     fill_surface.fill(UI_HIGHLIGHT)
@@ -262,33 +237,23 @@ class Menu:
                 )
                 if scroll_offset < max_scroll:
                     arrow_down = self.font_medium.render("▼", True, UI_HIGHLIGHT)
-                    arrow_y = y_start + visible_items * item_height + 10
+                    arrow_y = y_start + visible_items * item_height - 2
                     surface.blit(
                         arrow_down, (indicator_x - arrow_down.get_width() // 2, arrow_y)
                     )
 
-            inst1 = self.font_tiny.render(
-                "UP/DOWN Navigate   ENTER/L Load   D Delete   N New", True, UI_TEXT_DIM
-            )
-            surface.blit(
-                inst1, (self.screen_width // 2 - inst1.get_width() // 2, self.screen_height - 100 * self.scale_factor)
-            )
+        # New Profile and Quit buttons side by side
+        new_rect, quit_rect = self.get_profile_action_rects(profiles)
+        for label, rect in (("New Profile (N)", new_rect), ("Quit Game (Q)", quit_rect)):
+            hovered = mouse_pos is not None and rect.collidepoint(mouse_pos)
+            self._draw_button(surface, label, rect, hovered)
 
-        # Two buttons at bottom: New Profile and Quit
-        button_y = self.screen_height - 160  if profiles else 350 
-        # New Profile button
-        self._draw_button(surface, "New Profile (N)", button_y, False)
-
-        # Quit button
-        quit_button_y = button_y + 60
-        self._draw_button(surface, "Quit Game (Q)", quit_button_y, False)
-
-        # Updated hint at very bottom
-        hint = self.font_tiny.render(
-            "ESC/Q Quit Game", True, UI_TEXT_DIM
-        )
+        hint_text = "ESC/Q Quit Game"
+        if profiles:
+            hint_text = "UP/DOWN Navigate   ENTER/L Load   D Delete   N New   ESC/Q Quit"
+        hint = self.font_tiny.render(hint_text, True, UI_TEXT_DIM)
         surface.blit(
-            hint, (self.screen_width // 2 - hint.get_width() // 2, self.screen_height - 60 * self.scale_factor)
+            hint, (self.screen_width // 2 - hint.get_width() // 2, new_rect.bottom + 40)
         )
 
         return None
@@ -320,31 +285,23 @@ class Menu:
         surface.blit(subtitle, (screen_width // 2 - subtitle.get_width() // 2, 140))
 
         difficulties = [
-            ("EASY", "5 Lives - More Resources - 2x Time", (100, 200, 100)),
+            ("EASY", "5 Lives - More Resources - 2x Time", GREEN),
             ("NORMAL", "3 Lives - Balanced Challenge - Standard", WHITE),
-            ("HARD", "1 Life - Extreme Challenge - 2x Score", (220, 80, 80)),
+            ("HARD", "1 Life - Extreme Challenge - 2x Score", RED),
         ]
 
-        # Get layout values with fallbacks
-        button_start_y = get_ui_element("difficulty_select", "button_start_y") or 220
-        button_spacing = get_ui_element("difficulty_select", "button_spacing") or 120
-
-        for i, (name, desc, color) in enumerate(difficulties):
-            y = button_start_y + i * button_spacing
+        for i, ((name, desc, color), box_rect) in enumerate(zip(difficulties, self.get_difficulty_rects())):
+            y, box_x, box_width = box_rect.y, box_rect.x, box_rect.width
             is_selected = i == selection
-            box_width = 500
-            box_height = 100
-            box_x = screen_width // 2 - box_width // 2
-            box_rect = pygame.Rect(box_x, y, box_width, box_height)
 
             if mouse_pos and box_rect.collidepoint(mouse_pos):
                 is_selected = True
 
             if is_selected:
-                pygame.draw.rect(surface, UI_HIGHLIGHT, box_rect, border_radius=8)
-                pygame.draw.rect(surface, color, box_rect, 3, border_radius=8)
-                name_color = BLACK
-                desc_color = (40, 40, 40)
+                pygame.draw.rect(surface, UI_SELECTED_BG, box_rect, border_radius=8)
+                pygame.draw.rect(surface, color, box_rect, 4, border_radius=8)
+                name_color = color
+                desc_color = UI_TEXT
             else:
                 pygame.draw.rect(surface, UI_BG, box_rect, border_radius=8)
                 pygame.draw.rect(surface, color, box_rect, 2, border_radius=8)
@@ -396,16 +353,11 @@ class Menu:
         name_text = self.font_medium.render(f"{player_name}_", True, WHITE)
         surface.blit(name_text, (screen_width // 2 - name_text.get_width() // 2, 190))
 
-        char_y = 280
-        for i in range(4):
-            x = screen_width // 2 - 250 + i * 120
-            rect = pygame.Rect(x, char_y, 56, 96)
-            is_selected = i == char_selection
-
-            if mouse_pos:
-                button = self.char_buttons[i]
-                if button.collidepoint(mouse_pos):
-                    is_selected = True
+        for i, rect in enumerate(self.char_buttons):
+            x, char_y = rect.x, rect.y
+            is_selected = i == char_selection or (
+                mouse_pos is not None and rect.collidepoint(mouse_pos)
+            )
 
             pygame.draw.rect(surface, CHARACTER_COLORS[i], rect, border_radius=5)
 
@@ -448,19 +400,10 @@ class Menu:
         screen.update_button_hover(mouse_pos)
         screen.draw_title(surface, 100)
 
-        # Get layout values with fallbacks
-        button_start_y = get_ui_element("main_menu", "button_start_y") or 240
-        button_spacing = get_ui_element("main_menu", "button_spacing") or 55
-
         options = ["Controls", "Settings", "Credits", "Back to Menu"]
-        for i, option in enumerate(options):
-            y = button_start_y + i * button_spacing
-            is_selected = i == selection
-            if mouse_pos:
-                button = self.options_buttons[i]
-                if button.collidepoint(mouse_pos):
-                    is_selected = True
-            self._draw_button(surface, option, y, is_selected)
+        for i, (option, rect) in enumerate(zip(options, self.options_buttons)):
+            hovered = mouse_pos is not None and rect.collidepoint(mouse_pos)
+            self._draw_button(surface, option, rect, i == selection or hovered)
 
         hint = self.font_tiny.render(
             "UP/DOWN Navigate   ENTER Select   ESC/Back Button", True, UI_TEXT_DIM
@@ -493,28 +436,19 @@ class Menu:
         options_btn.draw(surface)
 
         text = self.font_large.render("PAUSED", True, YELLOW)
-        surface.blit(
-            text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - 140)
-        )
+        title_y = get_ui_element("pause_menu", "title_y") or 150
+        surface.blit(text, (screen_width // 2 - text.get_width() // 2, title_y))
 
-        # Get layout values with fallbacks
-        button_start_y = get_ui_element("pause_menu", "button_start_y") or 240
-        button_spacing = get_ui_element("pause_menu", "button_spacing") or 55
         options = ["Shop", "Resume", "Save & Return to Menu", "Save & Logout"]
-        for i, option in enumerate(options):
-            y = button_start_y + i * button_spacing
-            is_selected = i == selection
-            if mouse_pos:
-                button = self.pause_buttons[i]
-                if button.collidepoint(mouse_pos):
-                    is_selected = True
-            self._draw_button(surface, option, y, is_selected)
+        for i, (option, rect) in enumerate(zip(options, self.pause_buttons)):
+            hovered = mouse_pos is not None and rect.collidepoint(mouse_pos)
+            self._draw_button(surface, option, rect, i == selection or hovered)
 
         hint = self.font_tiny.render(
-            "UP/DOWN Navigate   ENTER Select", True, UI_TEXT_DIM
+            "UP/DOWN Navigate   ENTER Select   ESC/P Resume", True, UI_TEXT_DIM
         )
         surface.blit(
-            hint, (screen_width // 2 - hint.get_width() // 2, screen_height // 2 + 140)
+            hint, (screen_width // 2 - hint.get_width() // 2, self.pause_buttons[-1].bottom + 30)
         )
 
         # Return options button for click detection
@@ -567,7 +501,7 @@ class Menu:
         rows = self.get_level_map_row_rects(len(LEVEL_NAMES))
         for i, rect in enumerate(rows):
             if i < completed:
-                icon_type, icon_color, name_color = Icon.CHECKMARK, (100, 255, 100), UI_TEXT
+                icon_type, icon_color, name_color = Icon.CHECKMARK, GREEN, UI_TEXT
             elif i < playable:
                 icon_type, icon_color, name_color = Icon.PLAY, YELLOW, UI_TEXT
             else:
@@ -725,53 +659,53 @@ class Menu:
 
         # VIDEO SETTINGS Section
         video_title = self.font_medium.render("VIDEO", True, UI_HIGHLIGHT)
-        surface.blit(video_title, (150, 150))
+        surface.blit(video_title, (150, 130))
 
         # Resolution
         res_label = self.font_small.render("Resolution:", True, UI_TEXT)
-        surface.blit(res_label, (150, 200))
+        surface.blit(res_label, (150, 180))
 
         # Fullscreen
         fs_label = self.font_small.render("Fullscreen:", True, UI_TEXT)
-        surface.blit(fs_label, (150, 250))
+        surface.blit(fs_label, (150, 222))
         components['fullscreen_toggle'].check_hover(mouse_pos)
         components['fullscreen_toggle'].draw(surface, self.font_tiny)
 
         # AUDIO SETTINGS Section
         audio_title = self.font_medium.render("AUDIO", True, UI_HIGHLIGHT)
-        surface.blit(audio_title, (150, 320))
+        surface.blit(audio_title, (150, 268))
 
         # Music toggle
         music_label = self.font_small.render("Music:", True, UI_TEXT)
-        surface.blit(music_label, (150, 370))
+        surface.blit(music_label, (150, 312))
         components['music_toggle'].check_hover(mouse_pos)
         components['music_toggle'].draw(surface, self.font_tiny)
 
         # Music volume
         music_vol_label = self.font_small.render("Music Volume:", True, UI_TEXT)
-        surface.blit(music_vol_label, (150, 420))
+        surface.blit(music_vol_label, (150, 354))
         components['music_slider'].check_hover(mouse_pos)
         components['music_slider'].draw(surface, self.font_tiny)
 
         # SFX toggle
         sfx_label = self.font_small.render("Sound Effects:", True, UI_TEXT)
-        surface.blit(sfx_label, (150, 470))
+        surface.blit(sfx_label, (150, 396))
         components['sfx_toggle'].check_hover(mouse_pos)
         components['sfx_toggle'].draw(surface, self.font_tiny)
 
         # SFX volume
         sfx_vol_label = self.font_small.render("SFX Volume:", True, UI_TEXT)
-        surface.blit(sfx_vol_label, (150, 520))
+        surface.blit(sfx_vol_label, (150, 438))
         components['sfx_slider'].check_hover(mouse_pos)
         components['sfx_slider'].draw(surface, self.font_tiny)
 
         # ACCESSIBILITY SETTINGS Section
         access_title = self.font_medium.render("ACCESSIBILITY", True, UI_HIGHLIGHT)
-        surface.blit(access_title, (150, 560))
+        surface.blit(access_title, (150, 490))
 
         # Colorblind mode toggle
         cb_label = self.font_small.render("Colorblind Mode:", True, UI_TEXT)
-        surface.blit(cb_label, (150, 590))
+        surface.blit(cb_label, (150, 536))
 
         components['colorblind_toggle'].enabled = game_settings.get_colorblind_mode()
         components['colorblind_toggle'].check_hover(mouse_pos)
@@ -781,7 +715,7 @@ class Menu:
         cb_desc = self.font_tiny.render(
             "Adds visual patterns to help distinguish objects", True, UI_TEXT_DIM
         )
-        surface.blit(cb_desc, (150, 615))
+        surface.blit(cb_desc, (150, 572))
 
         # Instructions
         hint = self.font_tiny.render(
@@ -789,13 +723,6 @@ class Menu:
             True, UI_TEXT_DIM
         )
         surface.blit(hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 60))
-
-        # Draw restart warning if resolution changed
-        if hasattr(game_settings, "_resolution_changed"):
-            warning = self.font_small.render(
-                "⚠ Resolution change requires restart to take effect", True, (255, 200, 0)
-            )
-            surface.blit(warning, (150, 580))
 
         screen.draw_buttons(surface)
 
@@ -883,7 +810,7 @@ class Menu:
         """Draw game over screen"""
         screen_width, screen_height = get_screen_size()
         surface.fill(BLACK)
-        text = self.font_large.render("GAME OVER", True, (220, 80, 80))
+        text = self.font_large.render("GAME OVER", True, RED)
         surface.blit(
             text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - 100)
         )
@@ -905,7 +832,7 @@ class Menu:
         """Draw victory screen"""
         screen_width, screen_height = get_screen_size()
         surface.fill(BLACK)
-        text = self.font_large.render("VICTORY!", True, (100, 255, 100))
+        text = self.font_large.render("VICTORY!", True, GREEN)
         surface.blit(
             text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - 100)
         )
@@ -936,25 +863,15 @@ class Menu:
                 return i
         return -1
 
-    def _draw_button(self, surface, text, y, is_selected):
-        """Helper to draw a consistent button"""
-
-        screen_width, _ = get_screen_size()
-
-        # Get dimensions from layout to match created buttons
-        button_width = get_ui_element("main_menu", "button_width") or 280
-        button_height = get_ui_element("main_menu", "button_height") or 40
-
-        x = screen_width // 2 - button_width // 2
-
-        # Create rect at y-8 to match button creation
-        button_rect = pygame.Rect(x, y - 8, button_width, button_height)
+    def _draw_button(self, surface, text, button_rect, is_selected):
+        """Draw a button in exactly the rect used for its click detection"""
+        button_width, button_height = button_rect.width, button_rect.height
 
         # Draw button background and border
         if is_selected:
-            pygame.draw.rect(surface, UI_HIGHLIGHT, button_rect, border_radius=5)
-            pygame.draw.rect(surface, WHITE, button_rect, 2, border_radius=5)
-            text_color = BLACK
+            pygame.draw.rect(surface, UI_SELECTED_BG, button_rect, border_radius=5)
+            pygame.draw.rect(surface, UI_HIGHLIGHT, button_rect, 2, border_radius=5)
+            text_color = UI_HIGHLIGHT
         else:
             pygame.draw.rect(surface, UI_BG, button_rect, border_radius=5)
             pygame.draw.rect(surface, UI_BORDER, button_rect, 1, border_radius=5)
@@ -965,23 +882,6 @@ class Menu:
         text_x = button_rect.x + button_width // 2 - text_surf.get_width() // 2
         text_y = button_rect.y + button_height // 2 - text_surf.get_height() // 2  # ← FIX: Center in rect!
         surface.blit(text_surf, (text_x, text_y))
-
-    def refresh_buttons(self):
-        """Recreate all button rectangles - call this after resolution change"""
-        self.main_buttons = self._create_main_buttons()
-        self.pause_buttons = self._create_pause_buttons()
-        self.char_buttons = self._create_char_buttons()
-        self.options_buttons = self._create_options_buttons()
-
-        large_size = get_font_size('large') or 52
-        medium_size = get_font_size('medium') or 32
-        small_size = get_font_size('small') or 22
-        tiny_size = get_font_size('tiny') or 18
-
-        self.font_large = pygame.font.Font(None, large_size)
-        self.font_medium = pygame.font.Font(None, medium_size)
-        self.font_small = pygame.font.Font(None, small_size)
-        self.font_tiny = pygame.font.Font(None, tiny_size)
 
     # ========================================================================
     # ACHIEVEMENTS SCREEN
@@ -1022,10 +922,4 @@ class Menu:
 
     def get_profile_quit_button_rect(self, profiles):
         """Get quit button rectangle for profile select screen"""
-        screen_width, screen_height = get_screen_size()
-        button_width = 280
-        button_height = 40
-        button_x = screen_width // 2 - button_width // 2
-        button_y = screen_height - 160 if profiles else 350
-        quit_button_y = button_y + 60
-        return pygame.Rect(button_x, quit_button_y - 8, button_width, button_height)
+        return self.get_profile_action_rects(profiles)[1]

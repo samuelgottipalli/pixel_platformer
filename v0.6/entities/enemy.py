@@ -7,7 +7,7 @@ import math
 import pygame
 
 from config.layout_manager import get_object_size
-from config.settings import (CYAN, ENEMY_BASE_DAMAGE, ENEMY_BASE_HEALTH,
+from config.settings import (OUTLINE, PATTERN_CYAN, PATTERN_ORANGE, PATTERN_RED, CYAN, ENEMY_BASE_DAMAGE, ENEMY_BASE_HEALTH,
                              ENEMY_MIN_SHOOT_COOLDOWN, ENEMY_PROJECTILE_BASE_DAMAGE,
                              get_enemy_flying_speed, get_enemy_ground_speed,
                              ENEMY_SHOOT_COOLDOWN, get_gravity, get_max_fall_speed, get_projectile_speed,
@@ -152,21 +152,21 @@ class Enemy:
         if self.type == EnemyType.GROUND.value:
             # GROUND: Horizontal stripes
             TextureManager.draw_striped_rect(
-                surface, rect, RED, (255, 100, 100), stripe_width=4, vertical=False, colorblind_mode=colorblind_mode
+                surface, rect, RED, PATTERN_RED, stripe_width=4, vertical=False, colorblind_mode=colorblind_mode
             )
         elif self.type == EnemyType.FLYING.value:
             # FLYING: Diagonal lines
             TextureManager.draw_diagonal_lines(
-                surface, rect, CYAN, (150, 255, 255), spacing=8, line_width=2, colorblind_mode=colorblind_mode
+                surface, rect, CYAN, PATTERN_CYAN, spacing=8, line_width=2, colorblind_mode=colorblind_mode
             )
         elif self.type == EnemyType.TURRET.value:
             # TURRET: Checkered
             TextureManager.draw_checkered_rect(
-                surface, rect, ORANGE, (255, 200, 100), check_size=8, colorblind_mode=colorblind_mode
+                surface, rect, ORANGE, PATTERN_ORANGE, check_size=8, colorblind_mode=colorblind_mode
             )
 
         # Thick border
-        pygame.draw.rect(surface, WHITE, rect, 2)
+        pygame.draw.rect(surface, OUTLINE, rect, 2)
 
         # Eyes with X pattern for enemies
         pygame.draw.line(

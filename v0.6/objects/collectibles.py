@@ -7,7 +7,7 @@ import math
 import pygame
 
 from config.layout_manager import get_object_size
-from config.settings import CYAN, ORANGE, PURPLE, RED, WHITE, YELLOW
+from config.settings import OUTLINE, PATTERN_CYAN, PATTERN_MAGENTA, PATTERN_RED, PATTERN_YELLOW, CYAN, ORANGE, PURPLE, RED, WHITE, YELLOW
 from utils.enums import PowerUpType
 
 
@@ -149,25 +149,25 @@ class PowerUp:
         if self.type == PowerUpType.HEALTH.value:
             # HEALTH: Plus sign with cross pattern
             TextureManager.draw_checkered_rect(
-                surface, rect, color, (255, 100, 100), check_size=6
+                surface, rect, color, PATTERN_RED, check_size=6
             )
         elif self.type == PowerUpType.SPEED.value:
             # SPEED: Lightning stripes
             TextureManager.draw_diagonal_lines(
-                surface, rect, color, (255, 255, 150), spacing=6
+                surface, rect, color, PATTERN_YELLOW, spacing=6
             )
         elif self.type == PowerUpType.DOUBLE_JUMP.value:
             # DOUBLE JUMP: Dotted
             TextureManager.draw_dotted_rect(
-                surface, rect, color, (150, 255, 255), dot_size=3, spacing=8
+                surface, rect, color, PATTERN_CYAN, dot_size=3, spacing=8
             )
         elif self.type == PowerUpType.INVINCIBLE.value:
             # INVINCIBLE: Grid
             TextureManager.draw_grid_rect(
-                surface, rect, color, (255, 150, 255), grid_size=8
+                surface, rect, color, PATTERN_MAGENTA, grid_size=8
             )
 
-        pygame.draw.rect(surface, WHITE, rect, 3)
+        pygame.draw.rect(surface, OUTLINE, rect, 3)
 
         # Large icon in center
         cx, cy = rect.centerx, rect.centery

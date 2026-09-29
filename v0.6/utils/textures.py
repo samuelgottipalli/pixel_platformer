@@ -2,7 +2,7 @@ import math
 
 import pygame
 
-from config.settings import WHITE
+from config.settings import SCIFI_BG, SCIFI_GRID, SCIFI_NODE, WHITE
 
 
 class TextureManager:
@@ -148,38 +148,42 @@ class BackgroundManager:
 
     @staticmethod
     def draw_scifi_background(surface, camera_x, camera_y, screen_width, screen_height):
-        """Sci-fi tech background with grid and circuit lines"""
-        # Base color
-        surface.fill((20, 20, 40))
+        """Sci-fi tech background with grid and circuit nodes (two parallax layers)"""
+        grid, nodes = BackgroundManager._scifi_layers(screen_width, screen_height)
+        surface.fill(SCIFI_BG)
+        # Layer 1: large grid (far background, slow parallax)
+        surface.blit(grid, (-((camera_x // 4) % 64), -((camera_y // 4) % 64)))
+        # Layer 2: circuit board nodes (medium parallax)
+        surface.blit(nodes, (-((camera_x // 2) % 128), -((camera_y // 2) % 128)))
 
-        # Layer 1: Large grid (far background, slow parallax)
-        grid_offset_x = (camera_x // 4) % 64
-        grid_offset_y = (camera_y // 4) % 64
+    _layer_cache = {}
 
-        for x in range(-64, screen_width + 64, 64):
-            for y in range(-64, screen_height + 64, 64):
-                adj_x = x - grid_offset_x
-                adj_y = y - grid_offset_y
-                # Vertical line
-                pygame.draw.line(
-                    surface, (40, 40, 80), (adj_x, 0), (adj_x, screen_height), 1
-                )
-                # Horizontal line
-                pygame.draw.line(
-                    surface, (40, 40, 80), (0, adj_y), (screen_width, adj_y), 1
-                )
+    @staticmethod
+    def _scifi_layers(screen_width, screen_height):
+        """
+        Pre-render the tileable sci-fi layers once (one tile larger than the
+        screen so they can be offset for parallax). Drawing the grid line by
+        line every frame was the most expensive part of rendering.
+        """
+        key = ("scifi", screen_width, screen_height)
+        cache = BackgroundManager._layer_cache
+        if key not in cache:
+            grid = pygame.Surface((screen_width + 64, screen_height + 64))
+            grid.fill(SCIFI_BG)
+            for x in range(0, grid.get_width(), 64):
+                pygame.draw.line(grid, SCIFI_GRID, (x, 0), (x, grid.get_height()), 1)
+            for y in range(0, grid.get_height(), 64):
+                pygame.draw.line(grid, SCIFI_GRID, (0, y), (grid.get_width(), y), 1)
 
-        # Layer 2: Circuit board nodes (medium parallax)
-        node_offset_x = (camera_x // 2) % 128
-        node_offset_y = (camera_y // 2) % 128
-
-        for x in range(-128, screen_width + 128, 128):
-            for y in range(-128, screen_height + 128, 128):
-                adj_x = x - node_offset_x
-                adj_y = y - node_offset_y
-                # Small tech circles
-                pygame.draw.circle(surface, (60, 60, 120), (adj_x, adj_y), 4, 1)
-                pygame.draw.circle(surface, (40, 40, 80), (adj_x, adj_y), 8, 1)
+            nodes = pygame.Surface((screen_width + 128, screen_height + 128))
+            nodes.fill((0, 0, 0))
+            nodes.set_colorkey((0, 0, 0))
+            for x in range(0, nodes.get_width() + 1, 128):
+                for y in range(0, nodes.get_height() + 1, 128):
+                    pygame.draw.circle(nodes, SCIFI_NODE, (x, y), 4, 1)
+                    pygame.draw.circle(nodes, SCIFI_GRID, (x, y), 8, 1)
+            cache[key] = (grid.convert() if pygame.display.get_surface() else grid, nodes)
+        return cache[key]
 
     @staticmethod
     def draw_nature_background(

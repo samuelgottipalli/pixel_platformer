@@ -6,38 +6,9 @@ Loads layout configurations for different resolutions
 import json
 import os
 
-BASE_WIDTH, BASE_HEIGHT = 1280, 720
+# The game renders at a fixed 1280x720 (see config/game_settings.py), so this
+# is the only layout; the window scales the rendered image.
 BASE_LAYOUT_FILE = "config/layouts/layout_1280x720.json"
-
-# Layout values that are not lengths/speeds and must not be scaled
-_UNSCALED = {("camera", "smoothing"), ("ui", "profile_select", "visible_items")}
-
-
-def scale_layout(base, width, height):
-    """
-    Build a layout for any screen size from the 1280x720 base layout.
-
-    Everything (fonts, UI, object sizes, physics) scales with screen height:
-    levels scroll horizontally, so height is what must fit on screen, and
-    scaling physics by the same factor keeps jumps identical relative to the
-    level geometry at every resolution.
-    """
-    scale = height / BASE_HEIGHT
-
-    def walk(node, path):
-        if isinstance(node, dict):
-            return {k: walk(v, path + (k,)) for k, v in node.items()}
-        if isinstance(node, bool) or not isinstance(node, (int, float)) or path in _UNSCALED:
-            return node
-        value = node * scale
-        if isinstance(node, int) and path[0] != "physics":
-            return round(value)  # pixel sizes/positions
-        return round(value, 3)
-
-    layout = walk(base, ())
-    layout["resolution"] = {"width": width, "height": height, "scale_factor": scale}
-    layout["screen"] = {"width": width, "height": height}
-    return layout
 
 
 class LayoutManager:
@@ -69,21 +40,9 @@ class LayoutManager:
         if cls._current_resolution == (width, height):
             return True
         
-        # Try to load exact match first
-        layout_file = f"config/layouts/layout_{width}x{height}.json"
-
         try:
-            if os.path.exists(layout_file):
-                with open(layout_file, 'r') as f:
-                    cls._current_layout = json.load(f)
-                print(f"✓ Loaded layout: {width}x{height}")
-            else:
-                # No hand-tuned file (e.g. 1366x768, 1024x768, ultrawide):
-                # scale the base layout to this screen instead
-                with open(BASE_LAYOUT_FILE, 'r') as f:
-                    cls._current_layout = scale_layout(json.load(f), width, height)
-                print(f"✓ Generated layout: {width}x{height} "
-                      f"(scale {cls._current_layout['resolution']['scale_factor']:.3f})")
+            with open(BASE_LAYOUT_FILE, 'r') as f:
+                cls._current_layout = json.load(f)
             cls._current_resolution = (width, height)
             return True
         except Exception as e:

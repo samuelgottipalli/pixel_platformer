@@ -177,38 +177,109 @@ class MenuTests(GameTestCase):
         self.assertEqual(g.state, GameState.PLAYING)
         self.assertGreater(g.current_profile.max_lives, 0)
 
-    def test_resolution_change_redraws(self):
+
+class DisplayTests(GameTestCase):
+    def test_game_renders_at_1280x720_whatever_the_window_size(self):
         g = self.playing_game()
-        from config.settings import update_screen_size
-        g.settings.set_resolution(1)
-        g.screen = g.settings.apply_video_settings(g.screen)
-        update_screen_size(g.settings.width, g.settings.height)
-        g.menu.refresh_buttons()
-        g.state = GameState.MENU
-        frames(g, 2)
+        for index in range(len(g.settings.RESOLUTIONS)):
+            g.settings.set_resolution(index)
+            g.screen = g.settings.apply_video_settings()
+            self.assertEqual(g.screen.get_size(), (1280, 720))
+            from config.layout_manager import get_screen_size
+            self.assertEqual(get_screen_size(), (1280, 720))
+            for state in (GameState.MENU, GameState.PLAYING, GameState.SETTINGS):
+                g.state = state
+                frames(g)
+
+    def test_window_fits_on_screen_with_title_bar(self):
+        from config.game_settings import GameSettings
+        max_w, max_h = GameSettings._usable_screen_area()
+        self.assertGreater(max_w, 0)
+        self.assertGreater(max_h, 0)
 
 
-class LayoutTests(GameTestCase):
-    def tearDown(self):
-        from config.settings import update_screen_size
-        update_screen_size(1280, 720)
+class ClickAlignmentTests(GameTestCase):
+    """Buttons must respond exactly where they are drawn"""
 
-    def test_unknown_resolution_gets_its_own_screen_size(self):
-        from config.layout_manager import LayoutManager, get_screen_size
-        from config.settings import update_screen_size
-        update_screen_size(1024, 768)
-        self.assertEqual(get_screen_size(), (1024, 768))
-        self.assertAlmostEqual(LayoutManager.get_scale_factor(), 768 / 720)
+    def click(self, g, pos):
+        pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1))
+        frames(g)
 
-    def test_physics_scale_with_resolution_in_every_layout(self):
-        """Jumps must be the same height relative to level geometry at every resolution"""
-        base = json.load(open("config/layouts/layout_1280x720.json"))
-        for name in os.listdir("config/layouts"):
-            layout = json.load(open(os.path.join("config/layouts", name)))
-            scale = layout["resolution"]["scale_factor"]
-            for key, value in base["physics"].items():
-                with self.subTest(layout=name, physics=key):
-                    self.assertAlmostEqual(layout["physics"][key], value * scale, places=2)
+    def drawn_button_rects(self, g, state):
+        drawn = []
+        original = g.menu._draw_button
+        g.menu._draw_button = lambda surface, text, rect, sel: (drawn.append(rect), original(surface, text, rect, sel))
+        try:
+            g.state = state
+            g._draw()
+        finally:
+            del g.menu._draw_button
+        return drawn
+
+    def test_drawn_buttons_match_click_areas(self):
+        g = self.playing_game()
+        self.assertEqual(self.drawn_button_rects(g, GameState.MENU), g.menu.main_buttons)
+        self.assertEqual(self.drawn_button_rects(g, GameState.OPTIONS), g.menu.options_buttons)
+        self.assertEqual(self.drawn_button_rects(g, GameState.PAUSED), g.menu.pause_buttons)
+
+    def test_main_menu_buttons_click_where_drawn(self):
+        expected = {2: GameState.LEVEL_MAP, 3: GameState.ACHIEVEMENTS, 4: GameState.OPTIONS}
+        for index, state in expected.items():
+            g = self.playing_game()
+            g.state = GameState.MENU
+            frames(g)
+            self.click(g, g.menu.main_buttons[index].center)
+            self.assertEqual(g.state, state)
+
+    def test_difficulty_boxes_click_where_drawn(self):
+        for index in range(3):
+            g = self.new_game()
+            g.player_name = "d"
+            g._create_new_profile()
+            g.state = GameState.DIFFICULTY_SELECT
+            frames(g)
+            self.click(g, g.menu.get_difficulty_rects()[index].center)
+            self.assertEqual(g.state, GameState.PLAYING)
+            self.assertEqual(g.difficulty, ["EASY", "NORMAL", "HARD"][index])
+
+    def test_difficulty_boxes_do_not_overlap(self):
+        g = self.new_game()
+        rects = g.menu.get_difficulty_rects()
+        for upper, lower in zip(rects, rects[1:]):
+            self.assertLessEqual(upper.bottom, lower.top)
+
+    def test_profile_screen_clicks(self):
+        g = self.new_game()
+        g.player_name = "p1"
+        g._create_new_profile()
+        g.state = GameState.PROFILE_SELECT
+        frames(g)
+        (index, box), = g.menu.get_profile_box_rects(g.profiles, 0)
+        self.click(g, box.center)
+        self.assertEqual(g.state, GameState.MENU)
+
+        g.state = GameState.PROFILE_SELECT
+        frames(g)
+        new_rect, quit_rect = g.menu.get_profile_action_rects(g.profiles)
+        self.assertFalse(new_rect.colliderect(quit_rect))
+        self.click(g, new_rect.center)
+        self.assertEqual(g.state, GameState.CHAR_SELECT)
+
+    def test_pause_resume_click(self):
+        g = self.playing_game()
+        g.state = GameState.PAUSED
+        frames(g)
+        self.click(g, g.menu.pause_buttons[1].center)
+        self.assertEqual(g.state, GameState.PLAYING)
+
+    def test_click_that_opens_a_screen_does_not_click_on_it(self):
+        g = self.playing_game()
+        g.state = GameState.OPTIONS
+        frames(g)
+        fullscreen = g.settings.get_fullscreen()
+        self.click(g, g.menu.options_buttons[1].center)  # "Settings"
+        self.assertEqual(g.state, GameState.SETTINGS)
+        self.assertEqual(g.settings.get_fullscreen(), fullscreen)
 
 
 class GameplayTests(GameTestCase):

@@ -158,37 +158,65 @@ DIFFICULTY_MODIFIERS = {
 PROGRESSIVE_DIFFICULTY_ENABLED = True
 PROGRESSIVE_DIFFICULTY_CURVE = 0.5  # How much harder each level gets (0-1)
 
-# Modern Color Palette - Muted and Professional
-BLACK = (15, 15, 20)  # Soft black
-WHITE = (240, 240, 245)  # Soft white
-GRAY = (120, 120, 130)  # Medium gray
-LIGHT_GRAY = (180, 180, 190)  # Light gray
-DARK_GRAY = (60, 60, 70)  # Dark gray
+# Soft color palette - low glare on dark backgrounds.
+# Hues stay clearly distinct (and every entity also has its own pattern for
+# colorblind players); only brightness/saturation are toned down.
+BLACK = (15, 15, 20)
+WHITE = (214, 214, 222)  # soft white for text and highlights
+GRAY = (115, 115, 125)
+LIGHT_GRAY = (160, 160, 172)
+DARK_GRAY = (58, 58, 68)
 
-# Accent Colors - Softer, less saturated
-RED = (220, 80, 80)  # Soft red
-GREEN = (80, 200, 120)  # Soft green
-BLUE = (90, 150, 230)  # Soft blue
-YELLOW = (240, 200, 80)  # Soft yellow
-PURPLE = (180, 100, 220)  # Soft purple
-CYAN = (80, 200, 230)  # Soft cyan
-ORANGE = (240, 140, 80)  # Soft orange
+# Accent colors
+RED = (196, 92, 92)
+GREEN = (92, 176, 120)
+BLUE = (96, 140, 200)
+YELLOW = (212, 182, 92)
+PURPLE = (160, 112, 196)
+CYAN = (92, 172, 198)
+ORANGE = (208, 138, 92)
+
+# Lighter tints used for texture patterns on top of the accent colors
+PATTERN_RED = (222, 132, 132)
+PATTERN_YELLOW = (224, 208, 140)
+PATTERN_CYAN = (150, 202, 218)
+PATTERN_ORANGE = (224, 174, 126)
+PATTERN_MAGENTA = (206, 150, 206)
+PATTERN_LIGHT_BLUE = (140, 170, 212)
+WARNING_YELLOW = (220, 194, 90)  # hazard stripes / spike outlines
+
+# Outlines drawn around entities and tiles (instead of bright white)
+OUTLINE = (150, 150, 165)
+TILE_OUTLINE = (104, 108, 140)
 
 # UI Colors
-UI_BG = (25, 25, 35)  # Dark background
-UI_BORDER = (100, 100, 120)  # Border color
-UI_HIGHLIGHT = (140, 180, 240)  # Highlight color
-UI_TEXT = WHITE  # Main text
-UI_TEXT_DIM = LIGHT_GRAY  # Dimmed text
+UI_BG = (28, 28, 38)
+UI_BORDER = (78, 80, 98)
+UI_HIGHLIGHT = (118, 152, 204)
+UI_SELECTED_BG = (40, 46, 66)  # fill for the selected button (text stays readable)
+UI_TEXT = WHITE
+UI_TEXT_DIM = LIGHT_GRAY
 
-# Theme Tile Colors (muted)
+# Theme Tile Colors (muted) and their pattern accents
 THEME_TILE_COLORS = {
-    "SCIFI": (85, 90, 130),
-    "NATURE": (80, 120, 85),
+    "SCIFI": (78, 82, 118),
+    "NATURE": (76, 110, 80),
     "SPACE": (45, 45, 75),
-    "UNDERGROUND": (100, 70, 55),
-    "UNDERWATER": (45, 85, 120),
+    "UNDERGROUND": (96, 70, 56),
+    "UNDERWATER": (45, 80, 112),
 }
+THEME_TILE_PATTERNS = {
+    "SCIFI": (112, 116, 152),
+    "NATURE": (110, 140, 112),
+    "SPACE": (100, 100, 140),
+    "UNDERGROUND": (80, 60, 40),
+    "UNDERWATER": (86, 120, 156),
+}
+
+# Sci-fi background layers
+SCIFI_BG = (18, 18, 32)
+SCIFI_GRID = (32, 34, 58)
+SCIFI_NODE = (50, 54, 90)
 
 # Enemy Colors
 ENEMY_GROUND_COLOR = RED
@@ -237,10 +265,10 @@ ENEMY_LEVEL_SCALING = {
 
 # Character Colors
 CHARACTER_COLORS = [
-    (100, 150, 250),  # Blue
-    (250, 100, 100),  # Red
-    (100, 250, 150),  # Green
-    (250, 200, 100),  # Yellow
+    (96, 136, 212),  # Blue
+    (212, 104, 104),  # Red
+    (100, 196, 138),  # Green
+    (212, 178, 100),  # Yellow
 ]
 
 # Paths

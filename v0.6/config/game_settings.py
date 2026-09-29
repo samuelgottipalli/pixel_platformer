@@ -4,15 +4,21 @@ Handles video settings, audio settings, and controls configuration
 Saves/loads settings to JSON file
 """
 
+import copy
 import json
 import os
 import pygame
+
+# The game always renders at this size; the window (or fullscreen) is a
+# scaled view of it. Mouse positions are mapped back automatically.
+LOGICAL_WIDTH, LOGICAL_HEIGHT = 1280, 720
 
 
 class GameSettings:
     """Manages all game settings"""
 
-    # Supported resolutions (width, height, scale_factor, name)
+    # Window sizes offered in Settings (width, height, scale_factor, name).
+    # The game itself always renders at 1280x720 and is scaled to the window.
     RESOLUTIONS = [
         (1280, 720, 1.0, "1280x720"),
         (1600, 900, 1.25, "1600x900"),
@@ -80,7 +86,7 @@ class GameSettings:
 
         for width, height, scale, name in self.RESOLUTIONS:
             if width == self.native_width and height == self.native_height:
-                name = f"{name} (Native) ✓"
+                name = f"{name} (Native)"
                 native_found = True
 
             resolutions.append((width, height, scale, name))
@@ -88,7 +94,7 @@ class GameSettings:
         # If native not in list, add it
         if not native_found:
             scale = self.native_height / 720.0
-            name = f"{self.native_width}x{self.native_height} (Native) ✓"
+            name = f"{self.native_width}x{self.native_height} (Native)"
 
             inserted = False
             for i, (w, h, s, n) in enumerate(resolutions):
@@ -118,18 +124,18 @@ class GameSettings:
                 with open(self.settings_file, "r") as f:
                     loaded = json.load(f)
                     # Merge with defaults (in case new settings added)
-                    settings = self.DEFAULTS.copy()
+                    settings = copy.deepcopy(self.DEFAULTS)
                     for category in loaded:
                         if category in settings:
                             settings[category].update(loaded[category])
                     return settings
             except Exception as e:
                 print(f"Error loading settings: {e}")
-                return self.DEFAULTS.copy()
+                return copy.deepcopy(self.DEFAULTS)
         else:
             # Create data directory if needed
             os.makedirs('data', exist_ok=True)
-            return self.DEFAULTS.copy()
+            return copy.deepcopy(self.DEFAULTS)
 
     def save_settings(self):
         """Save current settings to file"""
@@ -265,24 +271,76 @@ class GameSettings:
     # PYGAME INTEGRATION
     # ========================================================================
 
-    def apply_video_settings(self, screen):
+    def create_display(self):
         """
-        Apply video settings to pygame display
-        NOW RENDERS NATIVELY - NO SCALING!
+        Create the game display once: a 1280x720 surface that SDL scales to
+        the window (or the whole screen in fullscreen). Call once at startup;
+        later changes go through apply_video_settings().
         """
-        flags = pygame.DOUBLEBUF
-
+        # Smooth (linear) scaling so text stays readable at non-2x sizes
+        os.environ.setdefault("SDL_RENDER_SCALE_QUALITY", "1")
+        flags = pygame.SCALED | pygame.RESIZABLE
         if self.get_fullscreen():
             flags |= pygame.FULLSCREEN
+        try:
+            screen = pygame.display.set_mode((LOGICAL_WIDTH, LOGICAL_HEIGHT), flags)
+            self._scaled = True
+        except pygame.error:
+            # No GPU renderer available (e.g. headless tests): plain 1280x720
+            # window. Resizing it would resize the drawing surface, so don't.
+            screen = pygame.display.set_mode((LOGICAL_WIDTH, LOGICAL_HEIGHT))
+            self._scaled = False
+        self._apply_window_size()
+        return screen
 
-        # Create display at selected resolution (native rendering)
-        new_screen = pygame.display.set_mode((self.width, self.height), flags)
+    def apply_video_settings(self, screen=None):
+        """Apply fullscreen and window-size settings to the existing display"""
+        if getattr(self, "_scaled", False) and pygame.display.is_fullscreen() != self.get_fullscreen():
+            pygame.display.toggle_fullscreen()
+        self._apply_window_size()
+        return pygame.display.get_surface()
 
-        return new_screen
+    def _apply_window_size(self):
+        """
+        Size and center the window for the selected resolution. The window is
+        shrunk (keeping 16:9) if it would not fit on screen with its title bar
+        and the taskbar visible.
+        """
+        if self.get_fullscreen() or not getattr(self, "_scaled", False):
+            return
+        try:
+            from pygame._sdl2 import video
+            window = video.Window.from_display_module()
+        except Exception:
+            return  # Older pygame / headless: keep the default window
+        max_w, max_h = self._usable_screen_area()
+        fit = min(1.0, max_w / self.width, max_h / self.height)
+        window.size = (int(self.width * fit), int(self.height * fit))
+        window.position = video.WINDOWPOS_CENTERED
+
+    @staticmethod
+    def _usable_screen_area():
+        """Largest window client area that fits with the title bar and taskbar showing"""
+        title_bar, border = 40, 16
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            rect = wintypes.RECT()
+            SPI_GETWORKAREA = 0x0030
+            if ctypes.windll.user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(rect), 0):
+                return rect.right - rect.left - border, rect.bottom - rect.top - title_bar - border
+        except (AttributeError, OSError):
+            pass  # Not Windows
+        try:
+            width, height = pygame.display.get_desktop_sizes()[0]
+        except (pygame.error, IndexError):
+            width, height = 1920, 1080
+        return width - border, height - 80 - title_bar
 
     def get_display_flags(self):
         """Get pygame display flags based on settings"""
-        flags = pygame.DOUBLEBUF
+        flags = pygame.SCALED | pygame.RESIZABLE
         if self.get_fullscreen():
             flags |= pygame.FULLSCREEN
         return flags
@@ -293,7 +351,7 @@ class GameSettings:
 
     def reset_to_defaults(self):
         """Reset all settings to defaults"""
-        self.settings = self.DEFAULTS.copy()
+        self.settings = copy.deepcopy(self.DEFAULTS)
         self._update_display_info()
         self.save_settings()
 

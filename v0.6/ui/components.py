@@ -4,7 +4,7 @@ UPDATED: Popup and Screen use LayoutManager for responsive positioning
 """
 
 import pygame
-from config.settings import UI_BG, UI_BORDER, UI_HIGHLIGHT, UI_TEXT, UI_TEXT_DIM, WHITE, BLACK, SCREEN_WIDTH, SCREEN_HEIGHT
+from config.settings import RED, UI_BG, UI_BORDER, UI_HIGHLIGHT, UI_TEXT, UI_TEXT_DIM, WHITE, BLACK, SCREEN_WIDTH, SCREEN_HEIGHT
 from config.layout_manager import get_screen_size, get_ui_element
 
 
@@ -402,7 +402,7 @@ class Popup:
         
         # Border
         border_rect = pygame.Rect(overlay_x - 2, overlay_y - 2, self.width + 4, self.height + 4)
-        pygame.draw.rect(surface, (200, 100, 100), border_rect, 3)
+        pygame.draw.rect(surface, RED, border_rect, 3)
         
         surface.blit(overlay, (overlay_x, overlay_y))
         

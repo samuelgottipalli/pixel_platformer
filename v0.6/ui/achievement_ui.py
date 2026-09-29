@@ -5,7 +5,7 @@ UPDATED: Uses LayoutManager for responsive positioning
 """
 
 import pygame
-from config.settings import (
+from config.settings import (UI_SELECTED_BG, 
     SCREEN_WIDTH,
     SCREEN_HEIGHT,
     UI_BG,
@@ -183,8 +183,9 @@ class AchievementScreen:
 
             # Draw tab
             if is_selected:
-                pygame.draw.rect(surface, UI_HIGHLIGHT, tab_rect, border_radius=5)
-                text_color = BLACK
+                pygame.draw.rect(surface, UI_SELECTED_BG, tab_rect, border_radius=5)
+                pygame.draw.rect(surface, UI_HIGHLIGHT, tab_rect, 2, border_radius=5)
+                text_color = UI_HIGHLIGHT
             else:
                 pygame.draw.rect(surface, UI_BG, tab_rect, border_radius=5)
                 pygame.draw.rect(surface, UI_BORDER, tab_rect, 1, border_radius=5)

@@ -5,7 +5,7 @@ Hazard objects (spikes, falling blocks, moving platforms)
 import pygame
 
 from config.layout_manager import get_object_size
-from config.settings import BLUE, get_gravity, GRAY, RED, WHITE
+from config.settings import OUTLINE, PATTERN_LIGHT_BLUE, WARNING_YELLOW, BLUE, get_gravity, GRAY, RED, WHITE
 from utils.enums import HazardType
 
 
@@ -97,7 +97,7 @@ class Hazard:
             # Draw spikes with WARNING pattern (diagonal stripes)
             base = pygame.Rect(rect.x, rect.bottom - 8, rect.width, 8)
             TextureManager.draw_diagonal_lines(
-                surface, base, (100, 0, 0), (255, 255, 0), spacing=6, line_width=2, colorblind_mode=colorblind_mode
+                surface, base, (100, 0, 0), WARNING_YELLOW, spacing=6, line_width=2, colorblind_mode=colorblind_mode
             )
 
             # Triangle spike
@@ -107,7 +107,7 @@ class Hazard:
                 (rect.right, rect.bottom),
             ]
             pygame.draw.polygon(surface, RED, points)
-            pygame.draw.polygon(surface, (255, 255, 0), points, 3)  # Yellow outline
+            pygame.draw.polygon(surface, WARNING_YELLOW, points, 3)  # Yellow outline
 
             # Add exclamation mark
             pygame.draw.line(
@@ -125,20 +125,20 @@ class Hazard:
             TextureManager.draw_checkered_rect(
                 surface, rect, color, (150, 150, 150), check_size=8, colorblind_mode=colorblind_mode
             )
-            pygame.draw.rect(surface, WHITE, rect, 3)
+            pygame.draw.rect(surface, OUTLINE, rect, 3)
 
             # Draw cracks if about to fall
             if not self.falling:
                 pygame.draw.line(
                     surface,
-                    (255, 255, 0),
+                    WARNING_YELLOW,
                     (rect.left + 8, rect.top),
                     (rect.left + 12, rect.bottom),
                     2,
                 )
                 pygame.draw.line(
                     surface,
-                    (255, 255, 0),
+                    WARNING_YELLOW,
                     (rect.right - 12, rect.top),
                     (rect.right - 8, rect.bottom),
                     2,
@@ -147,9 +147,9 @@ class Hazard:
         elif self.type == HazardType.MOVING_PLATFORM.value:
             # Dotted pattern for moving platforms
             TextureManager.draw_dotted_rect(
-                surface, rect, BLUE, (150, 200, 255), dot_size=3, spacing=10, colorblind_mode=colorblind_mode
+                surface, rect, BLUE, PATTERN_LIGHT_BLUE, dot_size=3, spacing=10, colorblind_mode=colorblind_mode
             )
-            pygame.draw.rect(surface, WHITE, rect, 3)
+            pygame.draw.rect(surface, OUTLINE, rect, 3)
 
             # Arrow showing direction
             arrow_x = rect.centerx + (self.direction * 8)

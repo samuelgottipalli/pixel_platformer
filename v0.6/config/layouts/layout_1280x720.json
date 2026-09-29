@@ -67,7 +67,6 @@
       "height": 120
     }
   },
-
   "ui": {
     "main_menu": {
       "title_y": 100,
@@ -93,10 +92,10 @@
     },
     "difficulty_select": {
       "title_y": 100,
-      "button_start_y": 220,
-      "button_spacing": 70,
-      "button_width": 300,
-      "button_height": 50
+      "button_start_y": 200,
+      "button_spacing": 120,
+      "button_width": 500,
+      "button_height": 100
     },
     "char_select": {
       "title_y": 80,
@@ -109,7 +108,7 @@
     },
     "pause_menu": {
       "title_y": 150,
-      "button_start_y": 310,
+      "button_start_y": 260,
       "button_spacing": 55,
       "button_width": 300,
       "button_height": 40
@@ -143,7 +142,6 @@
       "size": 20
     }
   },
-
   "camera": {
     "smoothing": 0.1
   }

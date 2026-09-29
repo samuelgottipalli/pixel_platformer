@@ -9,8 +9,8 @@ some explored trajectory touches the exit portal.
 Hazard damage and enemies are ignored (the player can tank a few hits);
 moving platforms are approximated as static platforms along their path.
 
-CLI:  python tests/level_checker.py                  (every level, 1280x720)
-      python tests/level_checker.py 1920x1080 3 5    (resolution, levels)
+CLI:  python tests/level_checker.py          (every level)
+      python tests/level_checker.py 3 5      (just levels 3 and 5)
 """
 
 import os
@@ -206,13 +206,10 @@ def main():
     sys.path.insert(0, here)
     sys.stdout.reconfigure(errors="replace")
     args = sys.argv[1:]
-    width, height = 1280, 720
-    if args and "x" in args[0]:  # optional resolution, e.g. 1920x1080
-        width, height = map(int, args.pop(0).split("x"))
     pygame.init()
-    pygame.display.set_mode((width, height))
+    pygame.display.set_mode((1280, 720))
     from config.settings import update_screen_size
-    update_screen_size(width, height)
+    update_screen_size(1280, 720)  # the game always renders at 1280x720
     from levels.level_loader import LevelLoader
     import time
     levels = LevelLoader.create_default_levels()

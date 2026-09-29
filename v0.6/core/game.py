@@ -20,7 +20,7 @@ from config.layout_manager import (
     get_object_size,
     get_ui_element,
 )
-from config.settings import (
+from config.settings import (THEME_TILE_PATTERNS, TILE_OUTLINE, 
     CYAN,
     FPS,
     MELEE_DAMAGE,
@@ -58,6 +58,10 @@ from utils.achievement_manager import AchievementManager
 from utils.enums import GameState, EnemyType
 
 
+# Button state passed to click handlers when a left-click event arrives
+LEFT_CLICK = (True, False, False)
+
+
 class Game:
     """Main game class"""
 
@@ -73,27 +77,24 @@ class Game:
             native_idx = self.settings.get_native_resolution_index()
             self.settings.set_resolution(native_idx)
             self.settings.save_settings()
-        else:
-            self.settings._load_settings()
 
-        self.screen_width = self.settings.width
-        self.screen_height = self.settings.height
-        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        # The game always renders at 1280x720 (one layout, identical physics
+        # and speed everywhere); the display scales it to the window size
+        # chosen in Settings, and maps mouse positions back automatically.
+        from config.game_settings import LOGICAL_HEIGHT, LOGICAL_WIDTH
+        from config.settings import update_screen_size
+
+        self.screen_width, self.screen_height = LOGICAL_WIDTH, LOGICAL_HEIGHT
+        update_screen_size(LOGICAL_WIDTH, LOGICAL_HEIGHT)
         pygame.display.set_caption("Retro Pixel Platformer")
+        self.screen = self.settings.create_display()
         self.clock = pygame.time.Clock()
         self.running = True
-
-        # Apply video settings at startup
-        from config.settings import update_screen_size
-        update_screen_size(self.settings.width, self.settings.height)
-        self.screen = self.settings.apply_video_settings(self.screen)
 
         # Audio manager
         from utils.audio_manager import AudioManager
         self.audio = AudioManager(self.settings)
 
-        # Track if settings changed (needs restart)
-        self.settings_changed = False
 
         # Fonts
         font_large_size = get_font_size('large') or 72
@@ -226,9 +227,9 @@ class Game:
 
     def _handle_mouse_click(self):
         """Handle mouse clicks on buttons"""
-        mouse_pressed = pygame.mouse.get_pressed()
-        if not mouse_pressed[0]:  # Left click
-            return
+        # Called for a left-button MOUSEBUTTONDOWN event. Don't re-read the live
+        # button state: a quick click may already be released by now.
+        mouse_pressed = LEFT_CLICK
 
         # Check back/options buttons on current screen FIRST
         if self.current_screen:
@@ -260,39 +261,19 @@ class Game:
                 ):
                     return  # Tab was clicked, handled
         elif self.state == GameState.PROFILE_SELECT:
-            # Check profile boxes
-            if self.profiles:
-                y_start = 160
-                item_height = 70
-                visible_items = 5
-
-                for i in range(len(self.profiles)):
-                    y = y_start + i * item_height - self.profile_scroll_offset
-
-                    # Skip if not visible
-                    if y < y_start - item_height or y > y_start + visible_items * item_height:
-                        continue
-
-                    box_width = 500
-                    box_height = 60
-                    box_x = self.screen_width // 2 - box_width // 2
-                    box_rect = pygame.Rect(box_x, y, box_width, box_height)
-
-                    if box_rect.collidepoint(self.mouse_pos):
-                        self.profile_selection = i
-                        self._load_selected_profile_to_menu()
-                        return
-            # Check New Profile button
-            button_y = self.screen_height - 120 if self.profiles else 350
-            button_rect = pygame.Rect(self.screen_width // 2 - 140, button_y - 8, 280, 40)
-            if button_rect.collidepoint(self.mouse_pos):
+            # Profile boxes (same rects the menu draws)
+            for i, box_rect in self.menu.get_profile_box_rects(self.profiles, self.profile_scroll_offset):
+                if box_rect.collidepoint(self.mouse_pos):
+                    self.profile_selection = i
+                    self._load_selected_profile_to_menu()
+                    return
+            new_rect, quit_rect = self.menu.get_profile_action_rects(self.profiles)
+            if new_rect.collidepoint(self.mouse_pos):
                 self.profile_action = "new"
                 self.player_name = ""
                 self.char_selection = 0
                 self.state = GameState.CHAR_SELECT
-            # Check Quit button
-            quit_button_rect = self.menu.get_profile_quit_button_rect(self.profiles)
-            if quit_button_rect.collidepoint(self.mouse_pos):
+            elif quit_rect.collidepoint(self.mouse_pos):
                 self.running = False  # Exit game
                 return
         elif self.state == GameState.MENU:
@@ -321,16 +302,8 @@ class Game:
                 self._handle_options_selection()
 
         elif self.state == GameState.DIFFICULTY_SELECT:
-            # Check difficulty selection boxes
-            mouse_x, mouse_y = self.mouse_pos
-            y_start = 220
-            box_width = 500
-            box_height = 100
-            box_x = self.screen_width // 2 - box_width // 2
-            for i in range(3):
-                y = y_start + i * 120
-                box_rect = pygame.Rect(box_x, y, box_width, box_height)
-                if box_rect.collidepoint(mouse_x, mouse_y):
+            for i, box_rect in enumerate(self.menu.get_difficulty_rects()):
+                if box_rect.collidepoint(self.mouse_pos):
                     self.difficulty_selection = i
                     self._start_new_game()
                     break
@@ -408,7 +381,10 @@ class Game:
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.mouse_pos = event.pos  # Update on click too
                 if event.button == 1:
+                    state_before = self.state
                     self._handle_mouse_click()
+                    if self.state != state_before:
+                        continue  # The click opened a new screen; don't also click on it
 
             # Route to appropriate handler based on state
             if self.state == GameState.PROFILE_SELECT:
@@ -1160,7 +1136,7 @@ class Game:
             self.boss.x + self.boss.width // 2 - 24,
             self.boss.y + self.boss.height,
             self.current_level_index + 1,
-            (255, 215, 0),  # Gold portal
+            YELLOW,  # Gold portal
         )
         self.level.portals.append(portal)
 
@@ -1185,7 +1161,12 @@ class Game:
         self._handle_player_input(keys)
 
         # Update player
-        self.player.update(keys, self.level.tiles, self.level.hazards)
+        margin = 128  # more than anything moves in one frame
+        self.player.update(
+            keys,
+            self.level.tiles_near(self.player.x - margin, self.player.x + self.player.width + margin),
+            self.level.hazards,
+        )
 
         # Update camera
         self.camera.update(
@@ -1368,7 +1349,7 @@ class Game:
 
         for enemy in self.level.enemies:
             if not enemy.dead:
-                enemy.update(self.level.tiles)
+                enemy.update(self.level.tiles_near(enemy.x - 64, enemy.x + enemy.width + 64))
 
                 # Turret shooting logic
                 if enemy.type == EnemyType.TURRET.value and enemy.can_shoot():
@@ -1472,7 +1453,7 @@ class Game:
     def _update_projectiles(self):
         """Update projectiles and check collisions"""
         for proj in self.projectiles[:]:
-            proj.update(self.level.tiles)
+            proj.update(self.level.tiles_near(proj.x - 64, proj.x + 64))
 
             if not proj.active:
                 self.projectiles.remove(proj)
@@ -1939,7 +1920,8 @@ class Game:
 
         colorblind_mode = self.settings.get_colorblind_mode()
 
-        for tile in self.level.tiles:
+        visible = self.level.tiles_near(self.camera.x - 64, self.camera.x + self.screen_width + 64)
+        for tile in visible:
             if is_rect_on_screen(
                 tile["rect"], self.camera.x, self.camera.y, self.screen_width, self.screen_height
             ):
@@ -1951,17 +1933,17 @@ class Game:
                 if theme == "SCIFI":
                     # Grid pattern for sci-fi
                     TextureManager.draw_grid_rect(
-                        self.screen, rect, color, (200, 200, 200), grid_size=8, colorblind_mode=colorblind_mode
+                        self.screen, rect, color, THEME_TILE_PATTERNS['SCIFI'], grid_size=8, colorblind_mode=colorblind_mode
                     )
                 elif theme == "NATURE":
                     # Diagonal lines for nature
                     TextureManager.draw_diagonal_lines(
-                        self.screen, rect, color, (150, 200, 150), spacing=6, colorblind_mode=colorblind_mode
+                        self.screen, rect, color, THEME_TILE_PATTERNS['NATURE'], spacing=6, colorblind_mode=colorblind_mode
                     )
                 elif theme == "SPACE":
                     # Dots for space
                     TextureManager.draw_dotted_rect(
-                        self.screen, rect, color, (150, 150, 200), dot_size=2, spacing=8, colorblind_mode=colorblind_mode
+                        self.screen, rect, color, THEME_TILE_PATTERNS['SPACE'], dot_size=2, spacing=8, colorblind_mode=colorblind_mode
                     )
                 elif theme == "UNDERGROUND":
                     # Brick pattern for underground
@@ -1974,7 +1956,7 @@ class Game:
                         self.screen,
                         rect,
                         color,
-                        (100, 150, 200),
+                        THEME_TILE_PATTERNS['UNDERWATER'],
                         stripe_width=4,
                         vertical=False,
                         colorblind_mode=colorblind_mode,
@@ -1986,7 +1968,7 @@ class Game:
                     )
 
                 # Border
-                pygame.draw.rect(self.screen, WHITE, rect, 1)
+                pygame.draw.rect(self.screen, TILE_OUTLINE, rect, 1)
 
     def _draw_hazards(self):
         """Draw hazards"""
@@ -2075,46 +2057,34 @@ class Game:
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # Resolution dropdown
             old_res = self.settings.settings['video']['resolution_index']
-            if components['res_dropdown'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
+            if components['res_dropdown'].check_click(self.mouse_pos, LEFT_CLICK):
                 new_res = components['res_dropdown'].get_selected_index()
                 if new_res != old_res:
                     self.settings.set_resolution(new_res)
-                    # Apply immediately
-                    self.screen = self.settings.apply_video_settings(self.screen)
-                    self.settings_changed = True
-
-                    # REFRESH MENU BUTTONS FOR NEW RESOLUTION
-                    from config.settings import update_screen_size
-                    update_screen_size(self.settings.width, self.settings.height)
-                    self.menu.refresh_buttons()
-                    self.hud = HUD(self.font_small)  # Recreate HUD too
+                    # Resize the window; the game keeps rendering at 1280x720
+                    self.screen = self.settings.apply_video_settings()
+                    self.settings.save_settings()
 
             # Fullscreen toggle
-            if components['fullscreen_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
+            if components['fullscreen_toggle'].check_click(self.mouse_pos, LEFT_CLICK):
                 self.settings.toggle_fullscreen()
-                # Apply immediately
-                self.screen = self.settings.apply_video_settings(self.screen)
-                # REFRESH MENU BUTTONS
-                from config.settings import update_screen_size
-                update_screen_size(self.settings.width, self.settings.height)
-                self.menu.refresh_buttons()
-                self.hud = HUD(self.font_small)
+                self.screen = self.settings.apply_video_settings()
                 self.settings.save_settings()
 
             # Music toggle
-            if components['music_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
+            if components['music_toggle'].check_click(self.mouse_pos, LEFT_CLICK):
                 self.settings.toggle_music()
                 self.settings.set_music_volume(components["music_slider"].get_value())
                 self.audio.update_volumes()
                 self.settings.save_settings()
 
             # SFX toggle
-            if components['sfx_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
+            if components['sfx_toggle'].check_click(self.mouse_pos, LEFT_CLICK):
                 self.settings.toggle_sfx()
                 self.settings.save_settings()
 
             # Colorblind mode toggle
-            if components['colorblind_toggle'].check_click(self.mouse_pos, pygame.mouse.get_pressed()):
+            if components['colorblind_toggle'].check_click(self.mouse_pos, LEFT_CLICK):
                 self.settings.toggle_colorblind_mode()
                 self.settings.save_settings()
 

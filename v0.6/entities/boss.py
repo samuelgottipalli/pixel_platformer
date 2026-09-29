@@ -7,7 +7,7 @@ import math
 import pygame
 
 from config.layout_manager import get_object_size
-from config.settings import (CYAN, get_gravity, get_max_fall_speed, ORANGE, PURPLE,
+from config.settings import (GREEN, CYAN, get_gravity, get_max_fall_speed, ORANGE, PURPLE,
                              RED, WHITE, YELLOW)
 
 
@@ -457,7 +457,7 @@ class Boss:
 
         # Color based on health
         if health_percent > 0.66:
-            bar_color = (0, 255, 0)
+            bar_color = GREEN
         elif health_percent > 0.33:
             bar_color = YELLOW
         else:

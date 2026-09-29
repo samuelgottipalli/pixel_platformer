@@ -42,6 +42,7 @@ class Level:
 
         # Create all level objects from data
         self.tiles = self._create_tiles(level_data["tiles"])
+        self._index_tiles()
         self.enemies = self._create_enemies(level_data.get("enemies", []))
         self.hazards = self._create_hazards(level_data.get("hazards", []))
         self.coins = self._create_coins(level_data.get("coins", []))
@@ -75,6 +76,29 @@ class Level:
             tiles.append(tile_dict)
 
         return tiles
+
+    TILE_BUCKET = 256  # px width of each spatial-index column
+
+    def _index_tiles(self):
+        """Bucket tiles by x so collision checks only look at nearby tiles"""
+        self._tile_buckets = {}
+        for tile in self.tiles:
+            rect = tile["rect"]
+            for b in range(rect.left // self.TILE_BUCKET, rect.right // self.TILE_BUCKET + 1):
+                self._tile_buckets.setdefault(b, []).append(tile)
+
+    def tiles_near(self, left, right):
+        """Tiles overlapping the x-range [left, right] (no duplicates)"""
+        first, last = int(left) // self.TILE_BUCKET, int(right) // self.TILE_BUCKET
+        if first == last:
+            return self._tile_buckets.get(first, [])
+        seen, result = set(), []
+        for b in range(first, last + 1):
+            for tile in self._tile_buckets.get(b, ()):
+                if id(tile) not in seen:
+                    seen.add(id(tile))
+                    result.append(tile)
+        return result
 
     def _create_enemies(self, enemy_data):
         """Create enemy list from data"""
