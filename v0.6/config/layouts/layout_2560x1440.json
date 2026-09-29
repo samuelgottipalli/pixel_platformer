@@ -16,15 +16,15 @@
   },
   "physics": {
     "gravity": 1.6,
-    "max_fall_speed": 30,
-    "player_speed": 10,
-    "jump_power": -24,
-    "wall_jump_power": -20,
-    "wall_jump_push": 12,
-    "enemy_ground_speed": 4,
-    "enemy_flying_speed": 6,
-    "projectile_speed": 16,
-    "melee_range": 80
+    "max_fall_speed": 30.0,
+    "player_speed": 10.0,
+    "jump_power": -30.0,
+    "wall_jump_power": -28.0,
+    "wall_jump_push": 16.0,
+    "enemy_ground_speed": 4.0,
+    "enemy_flying_speed": 4.0,
+    "projectile_speed": 16.0,
+    "melee_range": 64.0
   },
   "game_objects": {
     "player": {

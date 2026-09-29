@@ -18,13 +18,13 @@
     "gravity": 1.2,
     "max_fall_speed": 22.5,
     "player_speed": 7.5,
-    "jump_power": -18,
-    "wall_jump_power": -15,
-    "wall_jump_push": 9,
-    "enemy_ground_speed": 3,
-    "enemy_flying_speed": 4.5,
-    "projectile_speed": 12,
-    "melee_range": 60
+    "jump_power": -22.5,
+    "wall_jump_power": -21.0,
+    "wall_jump_push": 12.0,
+    "enemy_ground_speed": 3.0,
+    "enemy_flying_speed": 3.0,
+    "projectile_speed": 12.0,
+    "melee_range": 48.0
   },
   "game_objects": {
     "player": {

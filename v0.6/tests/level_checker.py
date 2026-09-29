@@ -9,7 +9,8 @@ some explored trajectory touches the exit portal.
 Hazard damage and enemies are ignored (the player can tank a few hits);
 moving platforms are approximated as static platforms along their path.
 
-CLI:  python tests/level_checker.py            (report for every level)
+CLI:  python tests/level_checker.py                  (every level, 1280x720)
+      python tests/level_checker.py 1920x1080 3 5    (resolution, levels)
 """
 
 import os
@@ -53,28 +54,33 @@ SCRIPTS = _scripts()
 
 class LevelChecker:
     def __init__(self, level_data):
-        from config.layout_manager import get_object_size
+        from config.layout_manager import LayoutManager, get_object_size
         from objects.portal import Portal
 
+        scale = LayoutManager.scale_position  # level data is in 1280x720 units
+
         self.data = level_data
-        self.height = level_data.get("height", 720)
+        self.height = LayoutManager.scale_dimension(level_data.get("height", 720))
         tile = get_object_size("tile")["size"]
         self.tiles = [
-            {"rect": pygame.Rect(t["x"], t["y"], tile, tile), "solid": t.get("solid", True)}
+            {"rect": pygame.Rect(*scale(t["x"], t["y"]), tile, tile), "solid": t.get("solid", True)}
             for t in level_data["tiles"]
         ]
         plat = get_object_size("moving_platform")
         for h in level_data.get("hazards", []):
             if h["type"] == "moving_platform":
-                for off in range(-150, 151, 50):
-                    self.tiles.append({"rect": pygame.Rect(h["x"] + off, h["y"], plat["width"], plat["height"]),
+                hx, hy = scale(h["x"], h["y"])
+                for off in range(-150, 151, 50):  # moving platforms travel +-150px
+                    self.tiles.append({"rect": pygame.Rect(hx + off, hy, plat["width"], plat["height"]),
                                        "solid": True})
         self.tiles = [t for t in self.tiles if t["solid"]]
         self.tiles.sort(key=lambda t: t["rect"].x)
         self.tile_xs = [t["rect"].x for t in self.tiles]
-        self.portals = [Portal(p["x"], p["y"], p["dest"]).get_rect() for p in level_data.get("portals", [])]
+        self.near_x = int(NEAR_X * LayoutManager.get_scale_factor())
+        self.portals = [Portal(*scale(p["x"], p["y"]), p["dest"]).get_rect()
+                        for p in level_data.get("portals", [])]
         coin = get_object_size("coin")
-        self.coins = [pygame.Rect(c["x"], c["y"], coin["width"], coin["height"])
+        self.coins = [pygame.Rect(*scale(c["x"], c["y"]), coin["width"], coin["height"])
                       for c in level_data.get("coins", [])]
         self.coins_seen = set()
         self.portal_reached = False
@@ -83,8 +89,8 @@ class LevelChecker:
     # -- simulation -------------------------------------------------------
     def _near_tiles(self, x):
         import bisect
-        lo = bisect.bisect_left(self.tile_xs, x - NEAR_X)
-        hi = bisect.bisect_right(self.tile_xs, x + NEAR_X)
+        lo = bisect.bisect_left(self.tile_xs, x - self.near_x)
+        hi = bisect.bisect_right(self.tile_xs, x + self.near_x)
         return self.tiles[lo:hi]
 
     def _new_player(self, x, y):
@@ -166,7 +172,8 @@ class LevelChecker:
 
     def check(self, max_spots=4000):
         """Explore from spawn. Returns self for chaining."""
-        sx, sy = self.data.get("spawn_x", 100), self.data.get("spawn_y", 500)
+        from config.layout_manager import LayoutManager
+        sx, sy = LayoutManager.scale_position(self.data.get("spawn_x", 100), self.data.get("spawn_y", 500))
         frontier = []
         for x, y in self._run(sx, sy, (0, [], "walk")):
             frontier.append((x, y))
@@ -198,14 +205,18 @@ def main():
     os.chdir(here)
     sys.path.insert(0, here)
     sys.stdout.reconfigure(errors="replace")
+    args = sys.argv[1:]
+    width, height = 1280, 720
+    if args and "x" in args[0]:  # optional resolution, e.g. 1920x1080
+        width, height = map(int, args.pop(0).split("x"))
     pygame.init()
-    pygame.display.set_mode((1280, 720))
+    pygame.display.set_mode((width, height))
     from config.settings import update_screen_size
-    update_screen_size(1280, 720)  # Load base layout (level data is in 1280x720 units)
+    update_screen_size(width, height)
     from levels.level_loader import LevelLoader
     import time
     levels = LevelLoader.create_default_levels()
-    only = [int(a) for a in sys.argv[1:]]
+    only = [int(a) for a in args]
     for i, data in enumerate(levels):
         if only and i not in only:
             continue

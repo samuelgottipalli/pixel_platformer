@@ -188,6 +188,29 @@ class MenuTests(GameTestCase):
         frames(g, 2)
 
 
+class LayoutTests(GameTestCase):
+    def tearDown(self):
+        from config.settings import update_screen_size
+        update_screen_size(1280, 720)
+
+    def test_unknown_resolution_gets_its_own_screen_size(self):
+        from config.layout_manager import LayoutManager, get_screen_size
+        from config.settings import update_screen_size
+        update_screen_size(1024, 768)
+        self.assertEqual(get_screen_size(), (1024, 768))
+        self.assertAlmostEqual(LayoutManager.get_scale_factor(), 768 / 720)
+
+    def test_physics_scale_with_resolution_in_every_layout(self):
+        """Jumps must be the same height relative to level geometry at every resolution"""
+        base = json.load(open("config/layouts/layout_1280x720.json"))
+        for name in os.listdir("config/layouts"):
+            layout = json.load(open(os.path.join("config/layouts", name)))
+            scale = layout["resolution"]["scale_factor"]
+            for key, value in base["physics"].items():
+                with self.subTest(layout=name, physics=key):
+                    self.assertAlmostEqual(layout["physics"][key], value * scale, places=2)
+
+
 class GameplayTests(GameTestCase):
     def test_move_jump_shoot_melee(self):
         g = self.playing_game()
