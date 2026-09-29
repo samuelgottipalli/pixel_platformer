@@ -347,6 +347,71 @@ class PauseAndShopTests(GameTestCase):
         self.assertEqual(g.player.coins, 10)
         self.assertIsNone(g.player.weapons["explosive"])
 
+    def stats_shop(self, coins=1000):
+        g = self.playing_game()
+        g.state = GameState.PAUSED
+        g._enter_shop()
+        g.player.coins = coins
+        g._refresh_shop_data()
+        key(pygame.K_TAB)
+        frames(g)
+        self.assertEqual(g.shop.current_tab, 1)
+        return g
+
+    def buy(self, g, category):
+        g.shop.selected_stat_category = category
+        key(pygame.K_RETURN)
+        frames(g)
+
+    def test_buy_health_tiers_in_order(self):
+        g = self.stats_shop()
+        self.buy(g, 0)
+        self.assertEqual((g.player.max_health, g.player.coins), (125, 950))
+        self.buy(g, 0)  # second tier costs 100
+        self.assertEqual((g.player.max_health, g.player.coins), (150, 850))
+        self.assertEqual(g.player.upgrades["health"], 2)
+        self.assertEqual(g.shop_player_data["max_hp"], 150)
+
+    def test_health_upgrades_max_out(self):
+        g = self.stats_shop(coins=5000)
+        for _ in range(6):
+            self.buy(g, 0)
+        self.assertEqual(g.player.max_health, 100 + 25 + 25 + 25 + 50)
+        self.assertIsNone(g.shop.get_selected_purchase(g.shop_player_data))
+
+    def test_buy_extra_life(self):
+        g = self.stats_shop()
+        lives = g.player.lives
+        self.buy(g, 1)
+        self.assertEqual((g.player.lives, g.player.coins), (lives + 1, 925))
+
+    def test_health_potion(self):
+        g = self.stats_shop()
+        self.buy(g, 2)  # full health: refused, no charge
+        self.assertEqual(g.player.coins, 1000)
+        g.player.health = 30
+        g._refresh_shop_data()
+        self.buy(g, 2)
+        self.assertEqual((g.player.health, g.player.coins), (80, 990))
+
+    def test_stat_upgrades_survive_save_and_continue(self):
+        g = self.stats_shop()
+        self.buy(g, 0)
+        g._save_game()
+        g.player = None
+        g.menu_selection = 1
+        g._handle_menu_selection()
+        self.assertEqual(g.player.max_health, 125)
+        self.assertEqual(g.player.upgrades["health"], 1)
+
+    def test_all_five_weapons_can_be_shown(self):
+        g = self.stats_shop()
+        key(pygame.K_TAB)
+        for _ in range(4):
+            key(pygame.K_DOWN)
+        frames(g)
+        self.assertEqual(g.shop.weapon_ids[g.shop.selected_weapon], "explosive")
+
     def test_esc_from_shop_returns_to_pause(self):
         g = self.playing_game()
         g.state = GameState.PAUSED

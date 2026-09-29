@@ -32,6 +32,8 @@ class SaveManager:
                     "x": player.x,
                     "y": player.y,
                     "health": player.health,
+                    "max_health": player.max_health,
+                    "upgrades": player.upgrades,
                     "lives": player.lives,
                     "coins": player.coins,
                     "score": player.score,
@@ -92,7 +94,9 @@ class SaveManager:
         p = save_data["player"]
         player.x = p["x"]
         player.y = p["y"]
+        player.max_health = p.get("max_health", player.max_health)
         player.health = p["health"]
+        player.upgrades = {'health': 0, 'lives': 0, **p.get("upgrades", {})}
         player.lives = p["lives"]
         player.coins = p["coins"]
         player.score = p["score"]

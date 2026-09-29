@@ -79,7 +79,10 @@ class Shop:
             self._draw_stats_tab(surface, player_data, mouse_pos)
         
         # Controls hint
-        hint_text = "TAB: Switch Tab  |  UP/DOWN: Navigate  |  LEFT/RIGHT: Select Upgrade  |  ENTER: Buy  |  ESC: Exit"
+        if self.current_tab == 0:
+            hint_text = "TAB: Switch Tab  |  UP/DOWN: Weapon  |  LEFT/RIGHT: Unlock/Power/Speed  |  ENTER: Buy  |  ESC: Exit"
+        else:
+            hint_text = "TAB: Switch Tab  |  UP/DOWN: Section  |  ENTER: Buy next upgrade  |  ESC: Exit"
         hint = self.font_tiny.render(hint_text, True, UI_TEXT_DIM)
         surface.blit(hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 40))
     
@@ -125,12 +128,13 @@ class Shop:
         # Get player weapons data
         weapons_data = player_data.get('weapons', {})
         
-        # Draw visible weapons
+        # Draw a window of weapons that scrolls to keep the selection visible
+        first = max(0, min(self.selected_weapon - max_visible + 1, len(self.weapon_ids) - max_visible))
         for i, weapon_id in enumerate(self.weapon_ids):
-            if i >= max_visible:
-                break
-            
-            y = start_y + i * item_height
+            if not first <= i < first + max_visible:
+                continue
+
+            y = start_y + (i - first) * item_height
             is_selected = i == self.selected_weapon
             
             # Get weapon state
@@ -163,12 +167,13 @@ class Shop:
         speed_level = weapon_state.get('speed_level', 0)
         
         # Background
-        bg_color = UI_HIGHLIGHT if is_selected else UI_BG
-        border_color = WHITE if is_selected else UI_BORDER
-        
+        # Selected card: thick highlight border on the dark card (keeps text readable)
+        border_color = UI_HIGHLIGHT if is_selected else UI_BORDER
+        border_width = 4 if is_selected else 2
+
         item_rect = pygame.Rect(x, y, width, height)
-        pygame.draw.rect(surface, bg_color, item_rect, border_radius=8)
-        pygame.draw.rect(surface, border_color, item_rect, 2, border_radius=8)
+        pygame.draw.rect(surface, UI_BG, item_rect, border_radius=8)
+        pygame.draw.rect(surface, border_color, item_rect, border_width, border_radius=8)
         
         # Weapon name
         name_text = self.font_medium.render(weapon_info['name'], True, UI_TEXT)
@@ -262,91 +267,80 @@ class Shop:
         return None  # Already maxed
     
     def _draw_stats_tab(self, surface, player_data, mouse_pos):
-        """Draw stats upgrades tab"""
-        screen_width, screen_height = get_screen_size()
-        
+        """Draw stats upgrades tab: health tiers, extra lives, consumables"""
         start_y = 200
-        section_spacing = 200
-        
-        # Current stats
-        current_max_hp = player_data.get('max_hp', 100)
-        current_max_lives = player_data.get('max_lives', 3)
+        section_spacing = 190
         player_coins = player_data.get('coins', 0)
-        
-        # HEALTH SECTION
+        upgrades = player_data.get('upgrades', {})
+
         self._draw_stat_section(
             surface,
             "HEALTH UPGRADES",
-            f"Current Max HP: {current_max_hp}",
+            f"Max HP: {player_data.get('max_hp', 100)}",
             STATS_CATALOG['health'],
+            upgrades.get('health', 0),
             start_y,
             player_coins,
-            self.selected_stat_category == 0
+            self.selected_stat_category == 0,
         )
-        
-        # LIVES SECTION
         self._draw_stat_section(
             surface,
             "EXTRA LIVES",
-            f"Current Max Lives: {current_max_lives}",
+            f"Lives: {player_data.get('max_lives', 3)}",
             STATS_CATALOG['lives'],
+            upgrades.get('lives', 0),
             start_y + section_spacing,
             player_coins,
-            self.selected_stat_category == 1
+            self.selected_stat_category == 1,
         )
-        
+
         # CONSUMABLES SECTION
         cons_y = start_y + section_spacing * 2
         cons_title = self.font_medium.render("CONSUMABLES", True, UI_HIGHLIGHT)
         surface.blit(cons_title, (150, cons_y))
-        
-        # Health potion
+        hp_text = self.font_small.render(
+            f"HP: {player_data.get('health', 100)}/{player_data.get('max_hp', 100)}", True, UI_TEXT
+        )
+        surface.blit(hp_text, (150, cons_y + 36))
         for i, item in enumerate(STATS_CATALOG['consumables']):
-            item_y = cons_y + 50 + i * 40
-            can_afford = player_coins >= item['cost']
-            color = GREEN if can_afford else UI_TEXT_DIM
-            
+            item_y = cons_y + 66 + i * 34
+            color = GREEN if player_coins >= item['cost'] else RED
             text = f"{item['name']} (+{item['hp_restore']} HP) - {item['cost']} coins"
             render = self.font_small.render(text, True, color)
             surface.blit(render, (170, item_y))
-            
             if self.selected_stat_category == 2 and i == self.selected_stat_item:
-                pygame.draw.rect(
-                    surface,
-                    YELLOW,
-                    (165, item_y - 2, render.get_width() + 10, 25),
-                    2
-                )
-    
-    def _draw_stat_section(self, surface, title, current_text, items, y, player_coins, is_selected):
-        """Draw a stat section (health or lives)"""
-        # Title
+                pygame.draw.rect(surface, YELLOW, (165, item_y - 2, render.get_width() + 10, 25), 2)
+
+    def _draw_stat_section(self, surface, title, current_text, items, owned, y, player_coins,
+                           is_selected):
+        """
+        Draw a tiered stat section. Tiers are bought in order: the first
+        `owned` tiers are OWNED, the next one is for sale, the rest are locked.
+        """
         title_render = self.font_medium.render(title, True, UI_HIGHLIGHT)
         surface.blit(title_render, (150, y))
-        
-        # Current value
         current_render = self.font_small.render(current_text, True, UI_TEXT)
-        surface.blit(current_render, (150, y + 40))
-        
-        # Items
+        surface.blit(current_render, (150 + title_render.get_width() + 30, y + 6))
+
         for i, item in enumerate(items):
-            item_y = y + 80 + i * 40
-            can_afford = player_coins >= item['cost']
-            color = GREEN if can_afford else UI_TEXT_DIM
-            
-            text = f"{item['name']} - {item['cost']} coins"
+            item_y = y + 40 + i * 34
+            if i < owned:
+                text, color = f"{item['name']} - OWNED", CYAN
+            elif i == owned:
+                text = f"{item['name']} - {item['cost']} coins"
+                color = GREEN if player_coins >= item['cost'] else RED
+            else:
+                text, color = f"{item['name']} - {item['cost']} coins (buy previous first)", UI_TEXT_DIM
             render = self.font_small.render(text, True, color)
             surface.blit(render, (170, item_y))
-            
-            # Highlight if selected
-            if is_selected and i == self.selected_stat_item:
-                pygame.draw.rect(
-                    surface,
-                    YELLOW,
-                    (165, item_y - 2, render.get_width() + 10, 25),
-                    2
-                )
-    
+
+            if is_selected and i == owned:
+                pygame.draw.rect(surface, YELLOW, (165, item_y - 2, render.get_width() + 10, 25), 2)
+
+        if owned >= len(items):
+            maxed = self.font_small.render("MAXED", True, CYAN)
+            surface.blit(maxed, (170 + 330, y + 40))
+
     # Navigation methods
     def switch_tab(self):
         """Switch between WEAPONS and STATS tabs"""
@@ -419,5 +413,18 @@ class Shop:
                             'weapon_id': weapon_id,
                             'cost': cost
                         }
-        
-        return None
+            return None
+
+        # STATS tab: health/lives sell their next tier; consumables sell the potion
+        upgrades = player_data.get('upgrades', {})
+        if self.selected_stat_category in (0, 1):
+            stat = 'health' if self.selected_stat_category == 0 else 'lives'
+            tier = upgrades.get(stat, 0)
+            tiers = STATS_CATALOG[stat]
+            if tier >= len(tiers):
+                return None  # Maxed
+            return {'type': f'stat_{stat}', 'tier': tier, 'item': tiers[tier],
+                    'cost': tiers[tier]['cost'], 'name': tiers[tier]['name']}
+
+        item = STATS_CATALOG['consumables'][self.selected_stat_item]
+        return {'type': 'consumable', 'item': item, 'cost': item['cost'], 'name': item['name']}

@@ -94,6 +94,9 @@ class Player:
             'explosive': None
         }
         self.current_weapon_id = 'standard'
+
+        # Stat upgrades bought in the shop this run (tiers owned)
+        self.upgrades = {'health': 0, 'lives': 0}
         self.weapon_cooldown = 0  # Shooting cooldown timer
 
     def update(self, keys, tiles, hazards):

@@ -649,7 +649,9 @@ class Game:
             'coins': self.player.coins if self.player else 0,
             'weapons': self.player.get_weapon_state() if self.player else {},
             'max_hp': self.player.max_health if self.player else 100,
-            'max_lives': self.player.lives if self.player else 3
+            'health': max(0, int(self.player.health)) if self.player else 100,
+            'max_lives': self.player.lives if self.player else 3,
+            'upgrades': dict(self.player.upgrades) if self.player else {},
         }
 
     def _handle_shop_events(self, event):
@@ -692,10 +694,28 @@ class Game:
             self._show_popup("Not enough coins!", duration=90)
             return
 
-        name = get_weapon_info(purchase['weapon_id'])['name']
+        if 'weapon_id' in purchase:
+            name = get_weapon_info(purchase['weapon_id'])['name']
 
         # Process purchase
-        if purchase['type'] == 'weapon_unlock':
+        if purchase['type'] == 'stat_health':
+            increase = purchase['item']['hp_increase']
+            self.player.max_health += increase
+            self.player.health += increase
+            self.player.upgrades['health'] += 1
+            bought, message = True, f"Max HP +{increase}!"
+        elif purchase['type'] == 'stat_lives':
+            self.player.lives += 1
+            self.player.upgrades['lives'] += 1
+            bought, message = True, "Extra life!"
+        elif purchase['type'] == 'consumable':
+            if self.player.health >= self.player.max_health:
+                self._show_popup("Health is already full!", duration=90)
+                return
+            restore = purchase['item']['hp_restore']
+            self.player.health = min(self.player.max_health, self.player.health + restore)
+            bought, message = True, f"+{restore} HP"
+        elif purchase['type'] == 'weapon_unlock':
             bought = self.player.unlock_weapon(purchase['weapon_id'])
             message = f"{name} unlocked!"
         elif purchase['type'] == 'weapon_power':
