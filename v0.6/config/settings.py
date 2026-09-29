@@ -93,6 +93,7 @@ PLAYER_MAX_HEALTH = 100
 PLAYER_START_LIVES = 3
 PLAYER_MAX_JUMPS = 2
 PLAYER_INVINCIBILITY_DURATION = 120  # frames
+PLAYER_HURT_INVULNERABILITY = 60  # frames of invulnerability after taking a hit
 PLAYER_SPEED_BOOST_DURATION = 600  # frames
 PLAYER_SPEED_BOOST_MULTIPLIER = 1.5
 
@@ -214,7 +215,9 @@ def get_enemy_flying_speed():
 # Base enemy stats on the tutorial level (Normal difficulty).
 # Health is in weapon-damage units: the Standard Shot does 10 per hit.
 ENEMY_BASE_HEALTH = 20
-ENEMY_BASE_DAMAGE = 1  # contact damage per frame of touching
+ENEMY_BASE_DAMAGE = 10  # contact damage per hit
+SPIKE_DAMAGE = 15
+FALLING_BLOCK_DAMAGE = 20
 ENEMY_SHOOT_COOLDOWN = 120  # frames (~2 seconds) between turret shots
 ENEMY_PROJECTILE_BASE_DAMAGE = 8  # turret shot damage
 ENEMY_MIN_SHOOT_COOLDOWN = 50  # fastest turret fire rate

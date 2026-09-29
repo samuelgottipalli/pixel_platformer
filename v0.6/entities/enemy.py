@@ -63,7 +63,7 @@ class Enemy:
         """
         self.max_health = max(1, round(ENEMY_BASE_HEALTH * health))
         self.health = self.max_health
-        self.damage = ENEMY_BASE_DAMAGE * damage
+        self.damage = max(1, round(ENEMY_BASE_DAMAGE * damage))
         self.speed *= speed
         self.projectile_damage = max(1, round(ENEMY_PROJECTILE_BASE_DAMAGE * projectile_damage))
         self.projectile_speed *= projectile_speed

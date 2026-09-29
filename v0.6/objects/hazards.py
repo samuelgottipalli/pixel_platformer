@@ -27,7 +27,8 @@ class Hazard:
         hazard_size = get_object_size("enemy" if hazard_type != HazardType.MOVING_PLATFORM.value else "moving_platform")
         self.width = hazard_size["width"]
         self.height = hazard_size["height"]
-        self.damage = 1
+        from config.settings import FALLING_BLOCK_DAMAGE, SPIKE_DAMAGE
+        self.damage = FALLING_BLOCK_DAMAGE if hazard_type == HazardType.FALLING_BLOCK.value else SPIKE_DAMAGE
 
         # Falling block state
         self.dy = 0

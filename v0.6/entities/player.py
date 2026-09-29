@@ -71,6 +71,7 @@ class Player:
         # Power-ups
         self.invincible = False
         self.invincible_timer = 0
+        self.hurt_timer = 0  # brief invulnerability after taking a hit
         self.speed_boost = False
         self.speed_boost_timer = 0
 
@@ -133,7 +134,7 @@ class Player:
         self._check_collision_y(tiles)
 
         # Check hazards
-        if not self.invincible:
+        if self.can_be_hurt():
             self._check_hazard_collision(hazards)
         
         # Update weapon cooldown
@@ -154,6 +155,9 @@ class Player:
 
         if self.shoot_cooldown > 0:
             self.shoot_cooldown -= 1
+
+        if self.hurt_timer > 0:
+            self.hurt_timer -= 1
 
         if self.melee_timer > 0:
             self.melee_timer -= 1
@@ -366,14 +370,28 @@ class Player:
             )
         return pygame.Rect(0, 0, 0, 0)
 
+    def can_be_hurt(self):
+        """False while invincible (power-up/respawn) or just after a hit"""
+        return not self.invincible and self.hurt_timer == 0
+
     def take_damage(self, damage):
-        """Take damage. Handle death if health depletes"""
-        if not self.invincible:
-            self.health -= damage
-            if self.audio:
-                self.audio.player_hurt()
-            if self.health <= 0:
-                self.die()
+        """
+        Take a hit. After a hit the player can't be hurt again for
+        PLAYER_HURT_INVULNERABILITY frames, so touching an enemy or hazard
+        costs one hit instead of damage every frame.
+        Returns True if the damage was applied.
+        """
+        from config.settings import PLAYER_HURT_INVULNERABILITY
+
+        if not self.can_be_hurt():
+            return False
+        self.health -= damage
+        self.hurt_timer = PLAYER_HURT_INVULNERABILITY
+        if self.audio:
+            self.audio.player_hurt()
+        if self.health <= 0:
+            self.die()
+        return True
 
     def die(self):
         """Handle player death"""
@@ -419,8 +437,8 @@ class Player:
         """Render player to screen with texture"""
         from utils.textures import TextureManager
 
-        # Invincibility flicker
-        if self.invincible and (pygame.time.get_ticks() // 100) % 2:
+        # Invincibility / just-hurt flicker
+        if (self.invincible or self.hurt_timer) and (pygame.time.get_ticks() // 100) % 2:
             return
 
         rect = pygame.Rect(

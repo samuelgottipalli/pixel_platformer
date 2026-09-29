@@ -267,6 +267,31 @@ class GameplayTests(GameTestCase):
         g._update_projectiles()
         self.assertEqual(g.player.health, health - 7)
 
+    def test_touching_enemy_is_one_hit_then_brief_invulnerability(self):
+        g = self.playing_game(level=1)
+        enemy = next(e for e in g.level.enemies if e.type == "ground")
+        g.player.dy = 0  # not stomping
+        health = g.player.health
+        for _ in range(30):  # stay in contact for half a second
+            g.player.x, g.player.y = enemy.x, enemy.y
+            g._handle_enemy_player_collision(enemy)
+            g.player._update_timers()
+        self.assertEqual(g.player.health, health - enemy.damage)
+        self.assertEqual(g.total_damage_taken, enemy.damage)
+        for _ in range(40):  # invulnerability wears off after 60 frames
+            g.player._update_timers()
+        g._handle_enemy_player_collision(enemy)
+        self.assertEqual(g.player.health, health - 2 * enemy.damage)
+
+    def test_spikes_hit_once_per_contact(self):
+        g = self.playing_game()
+        from objects.hazards import Hazard
+        spike = Hazard(g.player.x, g.player.y, "spike")
+        health = g.player.health
+        for _ in range(20):
+            g.player._check_hazard_collision([spike])
+        self.assertEqual(g.player.health, health - 15)
+
     def test_collect_key(self):
         g = self.playing_game(level=1)
         g.level.keys.append(Key(g.player.x, g.player.y, (255, 0, 0)))

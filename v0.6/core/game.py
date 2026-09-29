@@ -1092,8 +1092,7 @@ class Game:
 
             # Check player collision
             if self.player.get_rect().colliderect(proj.get_rect()):
-                if not self.player.invincible:
-                    self.player.take_damage(proj.damage)
+                if self.player.take_damage(proj.damage):
                     self.total_damage_taken += proj.damage
                     self.boss_damage_taken += proj.damage
                 proj.active = False
@@ -1109,8 +1108,7 @@ class Game:
             if effect.type != "minion_spawn":
                 damage_rect = effect.get_damage_rect()
                 if self.player.get_rect().colliderect(damage_rect):
-                    if not self.player.invincible:
-                        self.player.take_damage(effect.damage)
+                    if self.player.take_damage(effect.damage):
                         self.total_damage_taken += effect.damage
                         self.boss_damage_taken += effect.damage
 
@@ -1437,8 +1435,7 @@ class Game:
                 # When enemy dies from stomp:
                 if self.achievement_manager:
                     self.achievement_manager.add_enemy_kill('stomp')
-        else:
-            self.player.take_damage(enemy.damage)
+        elif self.player.take_damage(enemy.damage):
             self.total_damage_taken += enemy.damage
 
     def _create_enemy_death_particles(self, enemy):
@@ -1484,8 +1481,7 @@ class Game:
             # Enemy projectiles (turret shots) damage the player
             if proj.hostile:
                 if self.player.get_rect().colliderect(proj.get_rect()):
-                    if not self.player.invincible:
-                        self.player.take_damage(proj.damage)
+                    if self.player.take_damage(proj.damage):
                         self.total_damage_taken += proj.damage
                     proj.active = False
                 continue  # Enemy projectiles never hit enemies
