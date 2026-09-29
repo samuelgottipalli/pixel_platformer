@@ -43,6 +43,10 @@ class Shop:
         # Weapon list
         self.weapon_ids = get_all_weapon_ids()
 
+        # Clickable areas recorded while drawing: (rect, action). Clicks are
+        # tested against exactly what was drawn last frame.
+        self._targets = []
+
     def draw(self, surface, player_data, mouse_pos=None):
         """
         Draw shop interface
@@ -53,6 +57,7 @@ class Shop:
             mouse_pos: Mouse position for hover effects
         """
         screen_width, screen_height = get_screen_size()
+        self._targets = []
 
         # Background
         surface.fill(BLACK)
@@ -80,9 +85,9 @@ class Shop:
 
         # Controls hint
         if self.current_tab == 0:
-            hint_text = "TAB: Switch Tab  |  UP/DOWN: Weapon  |  LEFT/RIGHT: Unlock/Power/Speed  |  ENTER: Buy  |  ESC: Exit"
+            hint_text = "Click a price to buy  |  TAB: Tab  |  UP/DOWN: Weapon  |  LEFT/RIGHT: Power/Speed  |  ENTER: Buy  |  ESC: Exit"
         else:
-            hint_text = "TAB: Switch Tab  |  UP/DOWN: Section  |  ENTER: Buy next upgrade  |  ESC: Exit"
+            hint_text = "Click a price to buy  |  TAB: Tab  |  UP/DOWN: Section  |  ENTER: Buy next upgrade  |  ESC: Exit"
         hint = self.font_tiny.render(hint_text, True, UI_TEXT_DIM)
         surface.blit(hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 40))
 
@@ -105,6 +110,7 @@ class Shop:
             border = UI_HIGHLIGHT if is_active else UI_BORDER
 
             tab_rect = pygame.Rect(tab_x, tab_y, tab_width, tab_height)
+            self._targets.append((tab_rect, {'tab': i}))
             pygame.draw.rect(surface, color, tab_rect, border_radius=5)
             pygame.draw.rect(surface, border, tab_rect, 2, border_radius=5)
 
@@ -150,10 +156,11 @@ class Shop:
                 weapon_state,
                 player_data.get('coins', 0),
                 y,
-                is_selected
+                is_selected,
+                index=i,
             )
 
-    def _draw_weapon_item(self, surface, weapon_id, weapon_state, player_coins, y, is_selected):
+    def _draw_weapon_item(self, surface, weapon_id, weapon_state, player_coins, y, is_selected, index=0):
         """Draw individual weapon item"""
         screen_width, _ = get_screen_size()
         x = 80
@@ -172,6 +179,7 @@ class Shop:
         border_width = 4 if is_selected else 2
 
         item_rect = pygame.Rect(x, y, width, height)
+        self._targets.append((item_rect, {'weapon': index}))
         pygame.draw.rect(surface, UI_BG, item_rect, border_radius=8)
         pygame.draw.rect(surface, border_color, item_rect, border_width, border_radius=8)
 
@@ -195,8 +203,12 @@ class Shop:
                 color
             )
             surface.blit(unlock_text, (x + 20, y + 65))
+            self._targets.append((
+                pygame.Rect(x + 15, y + 60, unlock_text.get_width() + 10, 28),
+                {'weapon': index, 'upgrade': 'unlock', 'buy': True},
+            ))
 
-            if is_selected and self.selected_upgrade == 'unlock':
+            if is_selected:  # Enter unlocks a locked weapon
                 # Highlight unlock option
                 pygame.draw.rect(
                     surface,
@@ -220,6 +232,10 @@ class Shop:
 
             power_render = self.font_small.render(power_text, True, color)
             surface.blit(power_render, (x + 30, upgrade_y))
+            self._targets.append((
+                pygame.Rect(x + 25, upgrade_y - 4, power_render.get_width() + 10, 28),
+                {'weapon': index, 'upgrade': 'power', 'buy': power_cost is not None},
+            ))
 
             if is_selected and self.selected_upgrade == 'power' and power_cost is not None:
                 pygame.draw.rect(
@@ -243,6 +259,10 @@ class Shop:
 
             speed_render = self.font_small.render(speed_text, True, color)
             surface.blit(speed_render, (speed_x, speed_y))
+            self._targets.append((
+                pygame.Rect(speed_x - 5, speed_y - 4, speed_render.get_width() + 10, 28),
+                {'weapon': index, 'upgrade': 'speed', 'buy': speed_cost is not None},
+            ))
 
             if is_selected and self.selected_upgrade == 'speed' and speed_cost is not None:
                 pygame.draw.rect(
@@ -274,6 +294,7 @@ class Shop:
         player_coins = player_data.get('coins', 0)
         upgrades = player_data.get('upgrades', {})
 
+        self._drawing_category = 0
         self._draw_stat_section(
             surface,
             "HEALTH UPGRADES",
@@ -284,6 +305,7 @@ class Shop:
             player_coins,
             self.selected_stat_category == 0,
         )
+        self._drawing_category = 1
         self._draw_stat_section(
             surface,
             "EXTRA LIVES",
@@ -309,6 +331,10 @@ class Shop:
             text = f"{item['name']} (+{item['hp_restore']} HP) - {item['cost']} coins"
             render = self.font_small.render(text, True, color)
             surface.blit(render, (170, item_y))
+            self._targets.append((
+                pygame.Rect(165, item_y - 4, render.get_width() + 10, 30),
+                {'category': 2, 'item': i, 'buy': True},
+            ))
             if self.selected_stat_category == 2 and i == self.selected_stat_item:
                 pygame.draw.rect(surface, YELLOW, (165, item_y - 2, render.get_width() + 10, 25), 2)
 
@@ -334,6 +360,11 @@ class Shop:
                 text, color = f"{item['name']} - {item['cost']} coins (buy previous first)", UI_TEXT_DIM
             render = self.font_small.render(text, True, color)
             surface.blit(render, (170, item_y))
+            if i == owned:  # only the next tier is for sale
+                self._targets.append((
+                    pygame.Rect(165, item_y - 4, render.get_width() + 10, 30),
+                    {'category': self._drawing_category, 'buy': True},
+                ))
 
             if is_selected and i == owned:
                 pygame.draw.rect(surface, YELLOW, (165, item_y - 2, render.get_width() + 10, 25), 2)
@@ -341,6 +372,30 @@ class Shop:
         if owned >= len(items):
             maxed = self.font_small.render("MAXED", True, CYAN)
             surface.blit(maxed, (170 + 330, y + 40))
+
+    def click(self, pos):
+        """
+        Handle a mouse click. Selects whatever was clicked and returns True
+        if it was a price (the caller then attempts the purchase).
+        """
+        hit = None
+        for rect, action in self._targets:
+            if rect.collidepoint(pos):
+                hit = action  # later targets are drawn on top (more specific)
+        if hit is None:
+            return False
+        if 'tab' in hit:
+            if hit['tab'] != self.current_tab:
+                self.switch_tab()
+            return False
+        if 'weapon' in hit:
+            self.selected_weapon = hit['weapon']
+            if hit.get('upgrade') in ('power', 'speed'):
+                self.selected_upgrade = hit['upgrade']
+        if 'category' in hit:
+            self.selected_stat_category = hit['category']
+            self.selected_stat_item = hit.get('item', 0)
+        return hit.get('buy', False)
 
     # Navigation methods
     def switch_tab(self):
@@ -366,16 +421,12 @@ class Shop:
     def navigate_left(self):
         """Navigate upgrade type left (weapons only)"""
         if self.current_tab == 0:
-            options = ['unlock', 'power', 'speed']
-            current_idx = options.index(self.selected_upgrade)
-            self.selected_upgrade = options[max(0, current_idx - 1)]
+            self.selected_upgrade = 'power'
 
     def navigate_right(self):
         """Navigate upgrade type right (weapons only)"""
         if self.current_tab == 0:
-            options = ['unlock', 'power', 'speed']
-            current_idx = options.index(self.selected_upgrade)
-            self.selected_upgrade = options[min(len(options) - 1, current_idx + 1)]
+            self.selected_upgrade = 'speed'
 
     def get_selected_purchase(self, player_data):
         """
@@ -389,7 +440,7 @@ class Shop:
             weapons_data = player_data.get('weapons', {})
             weapon_state = weapons_data.get(weapon_id, {'unlocked': weapon_id == 'standard'})
 
-            if not weapon_state.get('unlocked', False) and self.selected_upgrade == 'unlock':
+            if not weapon_state.get('unlocked', False):
                 return {
                     'type': 'weapon_unlock',
                     'weapon_id': weapon_id,

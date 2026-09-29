@@ -112,6 +112,7 @@ class Game:
 
         # Game state - START AT PROFILE SELECT
         self.state = GameState.PROFILE_SELECT
+        self.confirm_quit = False  # ESC on profile select asks before quitting
 
         # Menu selections
         self.menu_selection = 0  # Main menu selection (0=New Game, 1=Continue, 2=Level Map, 3=Options, 4=Quit)
@@ -283,6 +284,10 @@ class Game:
             if idx >= 0:
                 self.menu_selection = idx
                 self._handle_menu_selection()
+
+        elif self.state == GameState.SHOP:
+            if self.shop.click(self.mouse_pos):
+                self._attempt_purchase()
 
         elif self.state == GameState.LEVEL_MAP:
             rows = self.menu.get_level_map_row_rects(len(self.levels))
@@ -693,7 +698,8 @@ class Game:
             bought, message = True, f"+{restore} HP"
         elif purchase['type'] == 'weapon_unlock':
             bought = self.player.unlock_weapon(purchase['weapon_id'])
-            message = f"{name} unlocked!"
+            equip_key = self.shop.weapon_ids.index(purchase['weapon_id']) + 1
+            message = f"{name} unlocked! Press {equip_key} in game to equip it."
         elif purchase['type'] == 'weapon_power':
             bought = self.player.upgrade_weapon_power(purchase['weapon_id'])
             message = f"{name} power upgraded!"
@@ -748,10 +754,19 @@ class Game:
         - Load Profile (L key or select from list)
         """
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_q or event.key == pygame.K_ESCAPE:  # Quit game
-                self.running = False
+            if event.key in (pygame.K_q, pygame.K_ESCAPE):
+                # ESC is "back" everywhere else, so quitting needs a second press
+                if self.confirm_quit:
+                    self.running = False
+                else:
+                    self.confirm_quit = True
+                    self._show_popup("Press ESC again to quit the game (any other key cancels)", duration=180)
+                return
+            if self.confirm_quit:
+                self.confirm_quit = False
+                self.show_popup = False
 
-            elif event.key == pygame.K_n:  # New profile
+            if event.key == pygame.K_n:  # New profile
                 self.profile_action = "new"
                 self.player_name = ""
                 self.char_selection = 0
@@ -813,6 +828,7 @@ class Game:
 
     def _load_selected_profile_to_menu(self):
         """Load selected profile and go to main menu"""
+        self.confirm_quit = False
         if self.profiles:
             self.current_profile = self.profiles[self.profile_selection]
 

@@ -126,6 +126,19 @@ class ProfileTests(GameTestCase):
         frames(g, 3)
         self.assertEqual(g.state, GameState.PROFILE_SELECT)
 
+    def test_esc_on_profile_screen_asks_before_quitting(self):
+        g = self.new_game()
+        key(pygame.K_ESCAPE)
+        frames(g)
+        self.assertTrue(g.running, "a single ESC must not quit")
+        key(pygame.K_DOWN)  # any other key cancels
+        key(pygame.K_ESCAPE)
+        frames(g)
+        self.assertTrue(g.running)
+        key(pygame.K_ESCAPE)
+        frames(g)
+        self.assertFalse(g.running)
+
     def test_create_profile_with_keyboard(self):
         g = self.new_game()
         key(pygame.K_n)
@@ -507,6 +520,42 @@ class PauseAndShopTests(GameTestCase):
             key(pygame.K_DOWN)
         frames(g)
         self.assertEqual(g.shop.weapon_ids[g.shop.selected_weapon], "explosive")
+
+    def test_enter_unlocks_locked_weapon_without_choosing_unlock(self):
+        g = self.playing_game()
+        g.state = GameState.PAUSED
+        g._enter_shop()
+        g.player.coins = 500
+        g._refresh_shop_data()
+        key(pygame.K_DOWN)  # Dual Shot; selection starts on "power"
+        key(pygame.K_RETURN)
+        frames(g)
+        self.assertIsNotNone(g.player.weapons["dual_back"])
+        self.assertEqual(g.player.coins, 450)
+
+    def test_shop_mouse_clicks(self):
+        g = self.playing_game()
+        g.state = GameState.PAUSED
+        g._enter_shop()
+        g.player.coins = 1000
+        g._refresh_shop_data()
+        frames(g)
+
+        def click_target(match):
+            rect = next(r for r, action in g.shop._targets if match(action))
+            pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=rect.center, button=1))
+            frames(g)
+
+        click_target(lambda a: a.get("weapon") == 2 and a.get("upgrade") == "unlock")  # Spread Shot
+        self.assertIsNotNone(g.player.weapons["spread"])
+        self.assertEqual(g.player.coins, 900)
+        click_target(lambda a: a.get("weapon") == 0 and a.get("upgrade") == "speed")
+        self.assertEqual(g.player.weapons["standard"].speed_level, 2)
+        click_target(lambda a: a == {"tab": 1})
+        self.assertEqual(g.shop.current_tab, 1)
+        health = g.player.max_health
+        click_target(lambda a: a.get("category") == 0 and a.get("buy"))
+        self.assertEqual(g.player.max_health, health + 25)
 
     def test_esc_from_shop_returns_to_pause(self):
         g = self.playing_game()
