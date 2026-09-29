@@ -37,6 +37,9 @@ class SaveManager:
                     "lives": player.lives,
                     "coins": player.coins,
                     "score": player.score,
+                    "coins_earned": player.coins_earned,
+                    "banked_score": player.banked_score,
+                    "banked_coins": player.banked_coins,
                     "keys": player.keys,
                     "max_jumps": player.max_jumps,
                     "weapons": player.get_weapon_state(),
@@ -100,6 +103,10 @@ class SaveManager:
         player.lives = p["lives"]
         player.coins = p["coins"]
         player.score = p["score"]
+        # Older saves lack these; treat everything so far as already counted
+        player.coins_earned = p.get("coins_earned", p["coins"])
+        player.banked_score = p.get("banked_score", p["score"])
+        player.banked_coins = p.get("banked_coins", player.coins_earned)
         player.keys = p["keys"]
         player.max_jumps = p.get("max_jumps", 2)
         # Saves from before the weapon system have no weapon data

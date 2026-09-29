@@ -59,7 +59,11 @@ class Player:
         self.health = PLAYER_MAX_HEALTH
         self.max_health = PLAYER_MAX_HEALTH
         self.lives = PLAYER_START_LIVES
-        self.coins = 0
+        self.coins = 0          # spendable balance
+        self.coins_earned = 0   # total coin value collected this run
+        # Score/coins already added to the profile totals (see Game._bank_profile_stats)
+        self.banked_score = 0
+        self.banked_coins = 0
         self.keys = []
         self.score = 0
         self.character = character

@@ -959,6 +959,7 @@ class Game:
             self.state = GameState.PLAYING
             self.audio.unpause_music()  # Resume music
         elif self.pause_selection == 2:  # Return to Main Menu
+            self._bank_profile_stats()
             self._save_game()  # Auto-save before returning
             self._save_game_session("QUIT")
             self.audio.stop_music()
@@ -966,6 +967,7 @@ class Game:
             self.state = GameState.MENU
             self.menu_selection = 0
         elif self.pause_selection == 3:  # Quit to Profile Select
+            self._bank_profile_stats()
             self._save_game()
             self._save_game_session("QUIT")
             self.current_profile = None
@@ -1310,6 +1312,7 @@ class Game:
                     coin.collected = True
                     self.coins_collected += 1
                     self.player.coins += coin.value
+                    self.player.coins_earned += coin.value
                     self.player.score += coin.value * SCORE_COIN
                     self._create_coin_particles(coin)
 
@@ -1358,7 +1361,7 @@ class Game:
                         # Calculate coin percentage for entire Act
                         # (You'll need to sum up all coins across all levels)
                         self.achievement_manager.check_coin_percentage(
-                            self.player.coins, self.total_coins_in_act
+                            self.player.coins_earned, self.total_coins_in_act
                         )
                     self._transition_to_level(portal.destination)
 
@@ -1577,14 +1580,7 @@ class Game:
     def _transition_to_level(self, level_index):
         """Transition to new level"""
         # Update profile stats
-        if self.current_profile:
-            ProfileManager.update_profile_stats(
-                self.current_profile,
-                self.player.score,
-                self.player.coins,
-                completed_level=self.current_level_index,
-            )
-            ProfileManager.save_profiles(self.profiles)
+        self._bank_profile_stats(completed_level=self.current_level_index)
 
         # CHECK FOR VICTORY - Act 1 complete after Level 6 boss
         if self.current_level_index == 6 and level_index > 6:
@@ -1594,6 +1590,24 @@ class Game:
 
         # Otherwise, continue to next level
         self._load_level(level_index)
+
+    def _bank_profile_stats(self, completed_level=None):
+        """
+        Add this run's progress to the profile totals. Only the score and
+        coins earned since the last bank are added, so repeated level exits
+        (and Continue after quitting) never count the same points twice.
+        """
+        if not (self.current_profile and self.player):
+            return
+        p = self.player
+        ProfileManager.update_profile_stats(
+            self.current_profile,
+            p.score - p.banked_score,
+            p.coins_earned - p.banked_coins,
+            completed_level=completed_level,
+        )
+        p.banked_score, p.banked_coins = p.score, p.coins_earned
+        ProfileManager.save_profiles(self.profiles)
 
     def _save_game(self):
         """Save current game state"""
@@ -1613,10 +1627,7 @@ class Game:
 
         # Update final profile stats
         if self.current_profile:
-            ProfileManager.update_profile_stats(
-                self.current_profile, self.player.score, self.player.coins
-            )
-            ProfileManager.save_profiles(self.profiles)
+            self._bank_profile_stats()
 
             # Save game session to history
             self._save_game_session("GAME_OVER")
@@ -1643,7 +1654,7 @@ class Game:
             # Check coin achievement with accurate total
             if self.total_coins_in_act > 0:
                 self.achievement_manager.check_coin_percentage(
-                    self.player.coins, self.total_coins_in_act
+                    self.player.coins_earned, self.total_coins_in_act
                 )
 
         # Play victory music
@@ -2167,7 +2178,7 @@ class Game:
             difficulty=self.difficulty if hasattr(self, 'difficulty') else 'NORMAL',
             result=result,
             final_score=self.player.score,
-            coins_collected=self.player.coins,
+            coins_collected=self.player.coins_earned,
             levels_completed=self.current_level_index + 1,  # +1 because 0-indexed
             enemies_defeated=self.enemies_defeated,
             time_played_seconds=time_played,

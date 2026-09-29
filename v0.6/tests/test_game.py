@@ -518,6 +518,51 @@ class LevelMapTests(GameTestCase):
         self.assertEqual(ProfileManager.load_profiles()[0].levels_completed, 3)
 
 
+class ProfileStatsTests(GameTestCase):
+    def test_score_counted_once_across_level_exits(self):
+        g = self.playing_game()
+        g.player.score = 100
+        g._transition_to_level(1)
+        g.player.score = 250  # run score keeps growing
+        g._transition_to_level(2)
+        self.assertEqual(g.current_profile.total_score, 250)
+
+    def test_coins_collected_ignores_shop_spending(self):
+        g = self.playing_game(level=1)
+        coin = g.level.coins[0]
+        g.player.x, g.player.y = coin.x, coin.y
+        g._update_collectibles()
+        earned = g.player.coins_earned
+        self.assertGreater(earned, 0)
+        g.player.coins = 0  # spent everything in the shop
+        g._transition_to_level(2)
+        self.assertEqual(g.current_profile.total_coins_collected, earned)
+
+    def test_quit_and_continue_does_not_double_count(self):
+        g = self.playing_game()
+        g.player.score = 300
+        g.state = GameState.PAUSED
+        g.pause_selection = 2  # Save & Return to Menu (banks 300)
+        g._handle_pause_selection()
+        g.player = None
+        g.menu_selection = 1  # Continue
+        g._handle_menu_selection()
+        g.player.score += 50
+        g._transition_to_level(1)
+        self.assertEqual(g.current_profile.total_score, 350)
+
+    def test_game_over_adds_only_new_score(self):
+        g = self.playing_game()
+        g.player.score = 100
+        g._transition_to_level(1)
+        g.player.score = 180
+        g.player.lives = 0
+        g.player.die()
+        g._update()
+        self.assertEqual(g.state, GameState.GAME_OVER)
+        self.assertEqual(g.current_profile.total_score, 180)
+
+
 class WeaponAndSoundTests(GameTestCase):
     def test_u_key_upgrade_removed(self):
         g = self.playing_game()
