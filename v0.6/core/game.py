@@ -1193,12 +1193,10 @@ class Game:
         # Spawn portal to next level
         from objects.portal import Portal
 
-        portal = Portal(
-            self.boss.x + self.boss.width // 2 - 24,
-            self.boss.y + self.boss.height,
-            self.current_level_index + 1,
-            YELLOW,  # Gold portal
-        )
+        # The exit stands on the arena floor (it used to appear under the
+        # boss's body, which could put it inside or below the floor)
+        x, y = self._boss_exit_position()
+        portal = Portal(x, y, self.current_level_index + 1, YELLOW)  # Gold portal
         self.level.portals.append(portal)
 
         # Victory particles
@@ -1213,6 +1211,24 @@ class Game:
                     60,
                 )
             )
+
+    def _boss_exit_position(self):
+        """
+        Top-left for the exit portal after a boss fight: standing on the
+        arena floor, as close to the middle as possible, clear of platforms.
+        """
+        from config.layout_manager import get_object_size
+        size = get_object_size("portal")
+        width, height = size["width"], size["height"]
+        tiles = [t["rect"] for t in self.level.tiles if t.get("solid", True)]
+        floor = max(r.top for r in tiles)  # the arena floor is the lowest surface
+        center = self.level.width // 2 - width // 2
+        for offset in range(0, self.level.width // 2, 16):
+            for x in (center + offset, center - offset):
+                rect = pygame.Rect(x, floor - height, width, height)
+                if rect.collidelist(tiles) == -1:
+                    return rect.topleft
+        return center, floor - height
 
     def _update_game(self):
         """Update game logic"""

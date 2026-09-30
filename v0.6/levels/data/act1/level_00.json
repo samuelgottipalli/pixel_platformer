@@ -449,7 +449,7 @@
     {"x": 6050, "y": 500, "value": 2}
   ],
   "powerups": [
-    {"x": 2250, "y": 580, "type": "health"},
+    {"x": 2379, "y": 568, "type": "health"},
     {"x": 4000, "y": 500, "type": "health"},
     {"x": 5500, "y": 450, "type": "health"}
   ],

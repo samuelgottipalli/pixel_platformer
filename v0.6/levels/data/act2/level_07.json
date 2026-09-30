@@ -486,7 +486,7 @@
   ],
   "powerups": [
     {"x": 3744, "y": 600, "type": "health"},
-    {"x": 7786, "y": 600, "type": "health"}
+    {"x": 7864, "y": 608, "type": "health"}
   ],
   "keys": [],
   "portals": [

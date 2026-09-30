@@ -95,6 +95,10 @@ class LevelChecker:
         self.coins = [pygame.Rect(*scale(c["x"], c["y"]), coin["width"], coin["height"])
                       for c in level_data.get("coins", [])]
         self.coins_seen = set()
+        powerup = get_object_size("powerup")
+        self.powerups = [pygame.Rect(*scale(p["x"], p["y"]), powerup["width"], powerup["height"])
+                         for p in level_data.get("powerups", [])]
+        self.powerups_seen = set()
         self.currents = [
             (pygame.Rect(*scale(c["x"], c["y"]), c["w"], c["h"]), c["dx"])
             for c in level_data.get("currents", [])
@@ -117,10 +121,18 @@ class LevelChecker:
         p.set_level_physics(self.data)  # gravity scale / underwater swimming
         return p
 
-    def _touch(self, rect):
+    def _touch(self, rect, pending):
+        """
+        Record items touched this run in `pending`; they only count as
+        collectible if the run ends safely (see _run). The portal counts at
+        once: touching it ends the level.
+        """
         for i, c in enumerate(self.coins):
             if i not in self.coins_seen and rect.colliderect(c):
-                self.coins_seen.add(i)
+                pending[0].add(i)
+        for i, p in enumerate(self.powerups):
+            if i not in self.powerups_seen and rect.colliderect(p):
+                pending[1].add(i)
         if not self.portal_reached and any(rect.colliderect(p) for p in self.portals):
             self.portal_reached = True
 
@@ -138,6 +150,8 @@ class LevelChecker:
         was_on_wall = False
         off_wall_frames = 0
         cleared_wall = False  # climb scripts stop wall-jumping after topping a wall
+        pending = (set(), set())   # coins / power-ups touched, not yet safe
+        died = False
         for f in range(SIM_FRAMES):
             if f % 8 == 0:
                 tiles = self._near_tiles(p.x)
@@ -179,16 +193,27 @@ class LevelChecker:
             p.push_dx = current_push(self.currents, p.get_rect())
             p.update(keys, tiles, [])
             rect = p.get_rect()
-            self._touch(rect)
+            self._touch(rect, pending)
             if p.y > self.height + 100:
+                died = True
                 break
             if p.on_ground and f > 0:
                 landed.append((p.x, p.y))
+                self._commit(pending)  # landed safely after grabbing them
                 if style not in ("walk",) and f > last_jump + 2 and (jumps or style != "drop_jump"):
                     # Landed after the airborne part; walking scripts keep going
                     if style in ("plain", "late", "climb", "climb_drop", "zigzag", "swim") and f > 3:
                         break
+        if not died and (p.on_ground or p.in_water):
+            self._commit(pending)  # still standing (or swimming) at the end
         return landed
+
+    def _commit(self, pending):
+        """Items touched during a run that ended safely are collectible"""
+        self.coins_seen |= pending[0]
+        self.powerups_seen |= pending[1]
+        pending[0].clear()
+        pending[1].clear()
 
     def _spot_key(self, x, y):
         return (int(x) // BUCKET, int(round(y)))
@@ -218,6 +243,9 @@ class LevelChecker:
 
     def unreachable_coins(self):
         return [(c.x, c.y) for i, c in enumerate(self.coins) if i not in self.coins_seen]
+
+    def unreachable_powerups(self):
+        return [(p.x, p.y) for i, p in enumerate(self.powerups) if i not in self.powerups_seen]
 
 
 def check_level(level_data):
@@ -251,6 +279,7 @@ def check_level_file(args):
         "has_portal": bool(c.portals), "portal_reached": c.portal_reached,
         "coins_seen": len(c.coins_seen), "coins": len(c.coins),
         "coverage": c.coin_coverage(), "unreachable": c.unreachable_coins(),
+        "unreachable_powerups": c.unreachable_powerups(),
         "spots": len(c.spots), "seconds": time.time() - start,
     }
 
@@ -274,6 +303,8 @@ def main():
         portal = "REACHABLE" if r["portal_reached"] else "UNREACHABLE" if r["has_portal"] else "n/a (boss)"
         print(f"Level {r['index']} {r['name']}: portal {portal} | coins {r['coins_seen']}/{r['coins']}"
               f" | spots {r['spots']} | {r['seconds']:.1f}s")
+        if r["unreachable_powerups"]:
+            print("   unreachable power-ups (x,y):", r["unreachable_powerups"])
         if r["unreachable"]:
             print("   unreachable coins (x,y):", r["unreachable"][:25], "..." if len(r["unreachable"]) > 25 else "")
 

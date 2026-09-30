@@ -798,14 +798,32 @@ class LevelDesignTests(GameTestCase):
                     continue
                 self.assertTrue(result["portal_reached"], "exit is unreachable")
                 self.assertEqual(result["unreachable"], [], "coins the player can't collect")
+                self.assertEqual(result["unreachable_powerups"], [], "power-ups the player can't collect")
 
-    def test_no_coin_inside_a_brick(self):
+    def test_no_coin_or_powerup_inside_a_brick(self):
         g = self.new_game()
         for level in g.levels:
             tiles = [pygame.Rect(t["x"], t["y"], 32, 32) for t in level["tiles"] if t.get("solid", True)]
-            for coin in level.get("coins", []):
-                with self.subTest(level=level["index"], coin=(coin["x"], coin["y"])):
-                    self.assertEqual(pygame.Rect(coin["x"], coin["y"], 16, 16).collidelist(tiles), -1)
+            for key, size in (("coins", 16), ("powerups", 24)):
+                for item in level.get(key, []):
+                    with self.subTest(level=level["index"], item=(key, item["x"], item["y"])):
+                        self.assertEqual(pygame.Rect(item["x"], item["y"], size, size).collidelist(tiles), -1)
+
+    def test_boss_exit_stands_on_the_arena_floor(self):
+        for level_index in (6, 12, 18, 24):
+            g = self.playing_game(level=level_index)
+            self.make_invincible(g)
+            g.boss.x, g.boss.y = 600, 560   # boss low, near the floor
+            g._on_boss_defeated()
+            portal = g.level.portals[-1].get_rect()
+            tiles = [t["rect"] for t in g.level.tiles if t.get("solid", True)]
+            floor = max(r.top for r in tiles)
+            with self.subTest(level=level_index):
+                self.assertEqual(portal.bottom, floor, "portal stands on the floor")
+                self.assertEqual(portal.collidelist(tiles), -1, "portal is not inside a wall/platform")
+                # the player can walk into it from the floor
+                g.player.x, g.player.y = portal.x, floor - g.player.height
+                self.assertTrue(g.player.get_rect().colliderect(portal))
 
     def test_portals_lead_to_the_next_level(self):
         g = self.new_game()
