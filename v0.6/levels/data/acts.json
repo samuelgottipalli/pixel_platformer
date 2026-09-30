@@ -12,5 +12,44 @@
       "act1/level_05.json",
       "act1/level_06.json"
     ]
+  },
+  {
+    "number": 2,
+    "name": "Nature's Fury",
+    "theme": "NATURE",
+    "levels": [
+      "act2/level_07.json",
+      "act2/level_08.json",
+      "act2/level_09.json",
+      "act2/level_10.json",
+      "act2/level_11.json",
+      "act2/level_12.json"
+    ]
+  },
+  {
+    "number": 3,
+    "name": "Cosmic Voyage",
+    "theme": "SPACE",
+    "levels": [
+      "act3/level_13.json",
+      "act3/level_14.json",
+      "act3/level_15.json",
+      "act3/level_16.json",
+      "act3/level_17.json",
+      "act3/level_18.json"
+    ]
+  },
+  {
+    "number": 4,
+    "name": "Depths Unknown",
+    "theme": "UNDERGROUND",
+    "levels": [
+      "act4/level_19.json",
+      "act4/level_20.json",
+      "act4/level_21.json",
+      "act4/level_22.json",
+      "act4/level_23.json",
+      "act4/level_24.json"
+    ]
   }
 ]

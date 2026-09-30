@@ -545,6 +545,18 @@ class Game:
         self.level_selection = min(act["levels"][-1]["index"], self._playable_level_count() - 1)
         self.audio.menu_navigate()
 
+    def start_playtest(self, level_index):
+        """
+        Jump straight into a level (level builder's playtest). Uses a
+        throwaway profile that is never written to the profiles list.
+        """
+        self.current_profile = PlayerProfile(name="__playtest__", levels_completed=len(self.levels))
+        self.difficulty_selection = 1
+        self.start_level_index = max(0, min(level_index, len(self.levels) - 1))
+        self._start_new_game()
+        self.current_profile.levels_completed = len(self.levels)
+        pygame.display.set_caption(f"Playtest: {level_title(self.level_data)}")
+
     def _playable_level_count(self):
         """Levels 0..levels_completed are playable (each unlocks the next)"""
         completed = self.current_profile.levels_completed if self.current_profile else 0
@@ -2015,8 +2027,9 @@ class Game:
 
     def _get_level_and_area_names(self):
         """Get current level and area names for HUD"""
-        area_name = "BOSS ARENA" if self.level_data.get("boss") else self._get_area_name(self.player.x)
-        return level_title(self.level_data), area_name
+        if self.boss and not self.boss.defeated:
+            return "", ""  # the boss health bar occupies the top of the screen
+        return level_title(self.level_data), self._get_area_name(self.player.x)
 
     def _handle_settings_events(self, event):
         """Handle settings screen input"""

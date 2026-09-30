@@ -24,6 +24,8 @@ def main():
     """Main entry point"""
     try:
         game = Game()
+        if "--playtest" in sys.argv:  # used by the level builder
+            game.start_playtest(int(sys.argv[sys.argv.index("--playtest") + 1]))
         game.run()
     except Exception as e:
         # Keep a crash log so a crash is never mistaken for the game "just

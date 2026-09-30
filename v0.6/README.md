@@ -2,8 +2,8 @@
 
 A nostalgic 2D side-scrolling platformer inspired by NES classics.
 
-**Version:** 0.4 Alpha  
-**Status:** Act 1 Complete (7 levels + boss fight)
+**Version:** 0.7 Alpha  
+**Status:** Acts 1-4 playable (25 levels, 4 boss fights)
 
 ---
 
@@ -29,7 +29,8 @@ python main.py
 ✅ **Boss Battles** - Multi-phase epic encounters  
 ✅ **3 Difficulty Modes** - Easy, Normal, Hard  
 ✅ **Save System** - Continue your adventure  
-✅ **Act 1 Complete** - 7 levels, 2-3 hours of gameplay
+✅ **4 Acts** - 25 levels across sci-fi, forest, space and cave/underwater themes  
+✅ **Level Builder** - Edit and create levels, check them, playtest them
 
 ---
 
@@ -62,14 +63,16 @@ Press **F1** during gameplay for full controls reference.
 ## Project Structure
 
 ```
-v0.4/
+v0.6/
 ├── main.py              # Entry point
+├── level_builder.py     # Level builder (python level_builder.py)
 ├── setup.py             # Setup script
 ├── config/              # Game settings
 ├── core/                # Game loop & camera
 ├── entities/            # Player, enemies, bosses
 ├── objects/             # Collectibles & hazards
-├── levels/              # Level data
+├── levels/              # Level loading; levels/data/actN/*.json = the levels
+├── tools/               # Level checker, coin fixer, Act 2-4 generator
 ├── ui/                  # Menus & HUD
 ├── utils/               # Helpers & utilities
 └── save_system/         # Profiles & saves
@@ -79,13 +82,34 @@ v0.4/
 
 ## Current Content
 
-**Act 1 (Free):** 7 levels  
-- Tutorial level  
-- 5 progressive challenge levels  
-- Epic boss fight  
-- 2-3 hours of gameplay  
+| Act | Name | Levels | Theme | Boss |
+|-----|------|--------|-------|------|
+| 1 (Free) | The Awakening | 0-6 (tutorial + 5 + boss) | Sci-fi | Guardian |
+| 2 | Nature's Fury | 7-12 | Forest | Forest Guardian |
+| 3 | Cosmic Voyage | 13-18 | Space | Void Sentinel |
+| 4 | Depths Unknown | 19-24 | Caves / underwater | Ancient Evil |
 
-**Planned:** Acts 2-4 (18 additional levels)
+Enemies (and their turret weapons) get tougher every level; tune the rates in
+`ENEMY_LEVEL_SCALING` in `config/settings.py`.
+
+---
+
+## Level Builder
+
+```bash
+python level_builder.py        # open the first level
+python level_builder.py 12     # open level 12
+```
+
+Place tiles, coins, enemies, hazards, power-ups, the exit portal and the start
+point; press **H** in the builder for all keys. **C** checks the level (is the
+exit reachable? which coins can't be collected?), **F** fixes coins
+automatically, **P** saves and playtests the level in the game.
+
+Levels are JSON files in `levels/data/actN/`, listed in `levels/data/acts.json`.
+Acts 2-4 were made with `tools/level_generator.py` (section-based, every level
+verified completable); it never overwrites existing level files unless you pass
+`--force`, so builder edits are safe.
 
 ---
 
@@ -111,8 +135,9 @@ exit is reachable. When editing levels, the checker also works on its own and
 lists any unreachable coins:
 
 ```bash
-python tests/level_checker.py        # all levels
-python tests/level_checker.py 3      # just Level 3
+python tools/level_checker.py        # all levels (in parallel)
+python tools/level_checker.py 3      # just Level 3
+python tools/fix_coins.py            # move uncollectible coins to reachable spots
 ```
 
 ---
@@ -122,7 +147,7 @@ python tests/level_checker.py 3      # just Level 3
 - ✅ Phase 1: Foundation Complete
 - 🚧 Phase 2: Content Expansion (In Progress)
 - ⏳ Phase 3: Advanced Mechanics
-- ⏳ Phase 4: Additional Acts
+- ✅ Phase 4: Additional Acts (first pass: generated levels, no new enemy types or swimming yet)
 - ⏳ Phase 5: Polish & Audio
 - ⏳ Phase 6: Release & Distribution
 

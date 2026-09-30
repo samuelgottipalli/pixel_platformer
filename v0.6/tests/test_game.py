@@ -813,6 +813,97 @@ class LevelDesignTests(GameTestCase):
                 self.assertEqual(portal["dest"], level["index"] + 1, level["name"])
 
 
+class ActTests(GameTestCase):
+    def test_four_acts_with_a_boss_each(self):
+        g = self.new_game()
+        self.assertEqual([a["number"] for a in g.acts], [1, 2, 3, 4])
+        self.assertEqual(len(g.levels), 25)
+        bosses = [level["boss"] for level in g.levels if level.get("boss")]
+        self.assertEqual(bosses, ["guardian", "forest", "void", "ancient"])
+        for act in g.acts:
+            self.assertTrue(act["levels"][-1].get("boss"), f"Act {act['number']} must end with its boss")
+
+    def test_every_boss_spawns_and_can_be_defeated(self):
+        for level_index in (12, 18, 24):
+            g = self.playing_game(level=level_index)
+            self.make_invincible(g)
+            frames(g, 30)
+            self.assertIsNotNone(g.boss, level_index)
+            g.boss.health, g.boss.phase, g.boss.invuln_timer = 1, 3, 0
+            for _ in range(300):
+                g.projectiles = [Projectile(g.boss.x + 5, g.boss.y + 5, 1, 0, 5, (255, 255, 0))]
+                g._update()
+                if g.boss_defeated:
+                    break
+            self.assertTrue(g.boss_defeated, level_index)
+
+    def test_act_boss_leads_into_the_next_act(self):
+        g = self.playing_game(level=6)
+        g._transition_to_level(7)
+        self.assertEqual(g.state, GameState.PLAYING)
+        self.assertEqual(g.level_data["act"], 2)
+        self.assertIn("NATURE'S FURY", g.popup.message)
+
+    def test_final_boss_wins_the_game(self):
+        g = self.playing_game(level=24)
+        g._transition_to_level(25)
+        self.assertEqual(g.state, GameState.VICTORY)
+
+    def test_every_theme_draws(self):
+        g = self.playing_game()
+        for index in (0, 7, 13, 19, 21):
+            g._load_level(index)
+            frames(g, 3)
+
+    def test_level_map_switches_acts(self):
+        g = self.playing_game()
+        g.current_profile.levels_completed = 9
+        g.state = GameState.LEVEL_MAP
+        g.level_selection = 0
+        key(pygame.K_RIGHT)
+        frames(g)
+        self.assertEqual(g.level_data["act"], 1)  # (current level unchanged)
+        self.assertEqual(g.menu.act_of_level(g.acts, g.level_selection), 1)
+        key(pygame.K_RIGHT)  # Act 3 still locked
+        frames(g)
+        self.assertEqual(g.menu.act_of_level(g.acts, g.level_selection), 1)
+
+    def test_playtest_starts_in_the_requested_level(self):
+        g = self.new_game()
+        g.start_playtest(15)
+        self.assertEqual((g.state, g.current_level_index), (GameState.PLAYING, 15))
+        self.assertNotIn("__playtest__", [p.name for p in ProfileManager.load_profiles()])
+
+
+class LevelBuilderTests(GameTestCase):
+    def test_builder_edit_undo_save(self):
+        reset_data()
+        import level_builder
+        b = level_builder.LevelBuilder(3)
+        tiles = len(b.data["tiles"])
+        b.tool = 0  # tile
+        b.stroke_active = True
+        b.snapshot()
+        self.assertTrue(b.place(40, 100))
+        self.assertEqual(len(b.data["tiles"]), tiles + 1)
+        b.undo()
+        self.assertEqual(len(b.data["tiles"]), tiles)
+        b.tool = 1  # coin
+        b.place(400, 300)
+        b.save()
+        saved = LevelLoaderForTests.load(b.files[3])
+        self.assertIn({"x": 400, "y": 288, "value": 1}, saved["coins"])
+        self.assertTrue(b.erase(405, 293))
+        b.draw()
+
+
+class LevelLoaderForTests:
+    @staticmethod
+    def load(filename):
+        from levels.level_loader import LevelLoader
+        return LevelLoader.load_from_file(filename)
+
+
 class BossAndEndingTests(GameTestCase):
     def test_boss_updates_once_per_frame(self):
         g = self.playing_game(level=6)
@@ -839,8 +930,8 @@ class BossAndEndingTests(GameTestCase):
         self.assertEqual(len(g.level.portals), portals + 1)
 
     def test_act_complete_victory(self):
-        g = self.playing_game(level=6)
-        g._transition_to_level(7)
+        g = self.playing_game(level=24)  # the final boss
+        g._transition_to_level(25)
         frames(g, 2)
         self.assertEqual(g.state, GameState.VICTORY)
         completed = ProfileManager.load_completed_games()

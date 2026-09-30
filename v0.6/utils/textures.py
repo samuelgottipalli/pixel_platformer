@@ -70,8 +70,8 @@ class TextureManager:
                 pygame.draw.circle(surface, dot_color, (x, y), dot_size)
 
     @staticmethod
-    def draw_brick_wall(surface, rect, mortar_color, brick_color):
-        """Draw brick wall pattern"""
+    def draw_brick_wall(surface, rect, mortar_color, brick_color, colorblind_mode=False):
+        """Draw brick wall pattern (already a distinct pattern, so colorblind_mode changes nothing)"""
         brick_height = 16
         brick_width = 32
         mortar_width = 2
@@ -256,16 +256,14 @@ class BackgroundManager:
         size = (screen_width, screen_height)
 
         def nebula(tile):
-            import random
-            rng = random.Random(7)
-            for _ in range(5):
-                x, y = rng.randrange(400), rng.randrange(400)
-                pygame.draw.circle(tile, (30, 22, 48), (x, y), 80)
-                pygame.draw.circle(tile, (22, 17, 36), (x + 20, y + 20), 55)
+            # A couple of faint, large clouds on a wide tile (so it rarely repeats)
+            for x, y, r in ((260, 220, 150), (940, 520, 190)):
+                pygame.draw.circle(tile, (17, 14, 30), (x, y), r)
+                pygame.draw.circle(tile, (21, 16, 36), (x + 30, y - 20), int(r * 0.6))
 
         surface.fill((10, 10, 20))
         B = BackgroundManager
-        B._scroll(surface, B._layer(("space_nebula", size), size, (400, 400), nebula), (400, 400),
+        B._scroll(surface, B._layer(("space_nebula", size), size, (1200, 800), nebula), (1200, 800),
                   camera_x // 10, camera_y // 10)
         far = B._dots(123, 60, [(120, 120, 150), (100, 100, 135)], [1, 1, 2])
         B._scroll(surface, B._layer(("space_far", size), size, (256, 256), far), (256, 256),
