@@ -7,12 +7,21 @@ import math
 import pygame
 
 from config.layout_manager import get_object_size
-from config.settings import (OUTLINE, PATTERN_CYAN, PATTERN_ORANGE, PATTERN_RED, CYAN, ENEMY_BASE_DAMAGE, ENEMY_BASE_HEALTH,
+from config.settings import (PATTERN_MAGENTA, PURPLE, OUTLINE, PATTERN_CYAN, PATTERN_ORANGE, PATTERN_RED, CYAN, ENEMY_BASE_DAMAGE, ENEMY_BASE_HEALTH,
                              ENEMY_MIN_SHOOT_COOLDOWN, ENEMY_PROJECTILE_BASE_DAMAGE,
                              get_enemy_flying_speed, get_enemy_ground_speed,
                              ENEMY_SHOOT_COOLDOWN, get_gravity, get_max_fall_speed, get_projectile_speed,
                              ORANGE, RED, WHITE)
 from utils.enums import EnemyType
+
+
+# Enemy types that walk on the ground (and fall with gravity)
+WALKERS = (EnemyType.GROUND.value, EnemyType.CHARGER.value, EnemyType.HOPPER.value)
+
+CHARGE_RANGE = 320      # px: a charger rushes a player this close and level with it
+CHARGE_SPEED = 2.4      # x normal speed while charging
+HOP_INTERVAL = 80       # frames between hops
+HOP_POWER = -11
 
 
 class Enemy:
@@ -44,8 +53,11 @@ class Enemy:
         self.projectile_damage = ENEMY_PROJECTILE_BASE_DAMAGE
         self.projectile_speed = get_projectile_speed() * 0.7  # slower than player shots
 
+        self.hop_timer = 0
+        self.charging = False
+
         # Set speed based on type
-        if self.type == EnemyType.GROUND.value:
+        if self.type in WALKERS:
             self.speed = get_enemy_ground_speed()
         elif self.type == EnemyType.FLYING.value:
             self.speed = get_enemy_flying_speed()
@@ -71,12 +83,16 @@ class Enemy:
             ENEMY_MIN_SHOOT_COOLDOWN, round(ENEMY_SHOOT_COOLDOWN * (1 - fire_rate))
         )
 
-    def update(self, tiles):
-        """Update enemy AI and movement"""
+    def update(self, tiles, player=None):
+        """Update enemy AI and movement (player: for enemies that react to it)"""
         if self.dead:
             return
 
-        if self.type == EnemyType.GROUND.value:
+        if self.type == EnemyType.CHARGER.value:
+            self._update_charger(tiles, player)
+        elif self.type == EnemyType.HOPPER.value:
+            self._update_hopper(tiles)
+        elif self.type == EnemyType.GROUND.value:
             self._update_ground_enemy(tiles)
         elif self.type == EnemyType.FLYING.value:
             self._update_flying_enemy()
@@ -101,6 +117,49 @@ class Enemy:
             if tile.get("solid", True) and self.get_rect().colliderect(tile["rect"]):
                 if self.dy > 0:
                     self.y = tile["rect"].top - self.height
+                    self.dy = 0
+
+    def _update_charger(self, tiles, player):
+        """Patrol; rush at the player when it is close and on the same level"""
+        self.charging = False
+        if player is not None:
+            dx = (player.x + player.width / 2) - (self.x + self.width / 2)
+            same_level = abs((player.y + player.height) - (self.y + self.height)) < 40
+            within_leash = abs(self.x - self.start_x) < self.patrol_distance * 2
+            if same_level and abs(dx) < CHARGE_RANGE and (within_leash or dx * (self.start_x - self.x) > 0):
+                self.charging = True
+                self.direction = 1 if dx > 0 else -1
+        if self.charging:
+            self.x += self.direction * self.speed * CHARGE_SPEED
+            self._apply_gravity(tiles)
+        else:
+            self._update_ground_enemy(tiles)
+
+    def _update_hopper(self, tiles):
+        """Bounce along the patrol path"""
+        on_ground = self.dy == 0
+        self.hop_timer += 1
+        if on_ground and self.hop_timer >= HOP_INTERVAL:
+            self.dy = HOP_POWER
+            self.hop_timer = 0
+        if not on_ground:
+            self.x += self.direction * self.speed * 1.5
+        if abs(self.x - self.start_x) > self.patrol_distance:
+            self.direction = 1 if self.x < self.start_x else -1
+        self._apply_gravity(tiles)
+
+    def _apply_gravity(self, tiles):
+        """Fall and land on tiles (shared by walking enemies)"""
+        self.dy += get_gravity()
+        self.dy = min(self.dy, get_max_fall_speed())
+        self.y += self.dy
+        for tile in tiles:
+            if tile.get("solid", True) and self.get_rect().colliderect(tile["rect"]):
+                if self.dy > 0:
+                    self.y = tile["rect"].top - self.height
+                    self.dy = 0
+                elif self.dy < 0:
+                    self.y = tile["rect"].bottom
                     self.dy = 0
 
     def _update_flying_enemy(self):
@@ -164,6 +223,21 @@ class Enemy:
             TextureManager.draw_checkered_rect(
                 surface, rect, ORANGE, PATTERN_ORANGE, check_size=8, colorblind_mode=colorblind_mode
             )
+        elif self.type == EnemyType.CHARGER.value:
+            # CHARGER: dotted, with horns (flashes its pattern while charging)
+            TextureManager.draw_dotted_rect(
+                surface, rect, RED, PATTERN_ORANGE if self.charging else PATTERN_RED,
+                dot_size=3, spacing=7, colorblind_mode=colorblind_mode
+            )
+            for hx in (rect.x + 4, rect.right - 10):
+                pygame.draw.polygon(surface, OUTLINE, [(hx, rect.y), (hx + 6, rect.y), (hx + 3, rect.y - 8)])
+        elif self.type == EnemyType.HOPPER.value:
+            # HOPPER: grid, with springy legs
+            TextureManager.draw_grid_rect(
+                surface, rect, PURPLE, PATTERN_MAGENTA, grid_size=8, colorblind_mode=colorblind_mode
+            )
+            for lx in (rect.x + 6, rect.right - 6):
+                pygame.draw.line(surface, OUTLINE, (lx, rect.bottom), (lx - 3, rect.bottom + 5), 2)
 
         # Thick border
         pygame.draw.rect(surface, OUTLINE, rect, 2)

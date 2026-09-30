@@ -55,6 +55,7 @@ from ui.shop import Shop
 from config.weapon_catalog import get_weapon_info
 from entities.explosive_projectile import ExplosiveProjectile
 from utils.achievement_manager import AchievementManager
+from utils.entitlements import act_available
 from utils.enums import GameState, EnemyType
 
 
@@ -567,6 +568,9 @@ class Game:
         if level_index >= self._playable_level_count():
             self._show_popup("Complete the previous level to unlock this one!")
             return
+        if not act_available(self.levels[level_index]["act"]):
+            self._show_popup("Acts 2-4 are part of the full version.")
+            return
         self.audio.menu_select()
         self.start_level_index = level_index
         self.audio.stop_music()
@@ -612,7 +616,11 @@ class Game:
             self.audio.stop_music()
             if self.current_profile:
                 save_data = SaveManager.load_game(self.current_profile.name)
-                if save_data:
+                saved_level = save_data["current_level"] if save_data else 0
+                if save_data and not act_available(self.levels[min(saved_level, len(self.levels) - 1)]["act"]):
+                    self.audio.play_music('menu')
+                    self._show_popup("Your save continues in Act 2. Acts 2-4 are part of the full version.")
+                elif save_data:
                     # Load from save
                     self.player = Player(100, 100, self.current_profile.character, audio=self.audio)
                     self.current_level_index = save_data["current_level"]
@@ -1213,6 +1221,9 @@ class Game:
         # Handle player input
         self._handle_player_input(keys)
 
+        # Water currents push the player sideways
+        self.player.push_dx = self.level.current_push(self.player.get_rect())
+
         # Update player
         margin = 128  # more than anything moves in one frame
         self.player.update(
@@ -1241,6 +1252,8 @@ class Game:
         self._update_projectiles()
         self._update_particles()
 
+        self._update_oxygen()
+
         # Check death
         if self.player.y > self.level.height + 100:
             self.player.die()
@@ -1248,6 +1261,25 @@ class Game:
         # Check game over
         if self.player.lives < 0:
             self._game_over()
+
+    def _update_oxygen(self):
+        """Underwater: oxygen runs down, air pockets refill it, no air hurts"""
+        from config.settings import OXYGEN_DAMAGE, OXYGEN_MAX, OXYGEN_REFILL_RATE
+        p = self.player
+        if not p.in_water:
+            return
+        if p.get_rect().collidelist(self.level.air_pockets) != -1:
+            p.oxygen = min(OXYGEN_MAX, p.oxygen + OXYGEN_REFILL_RATE)
+            self.oxygen_damage_timer = 0
+        elif p.oxygen > 0:
+            p.oxygen -= 1
+        else:
+            self.oxygen_damage_timer = getattr(self, "oxygen_damage_timer", 0) + 1
+            if self.oxygen_damage_timer >= 60:
+                self.oxygen_damage_timer = 0
+                p.hurt_timer = 0  # drowning damage ignores hit invulnerability
+                if p.take_damage(OXYGEN_DAMAGE):
+                    self.total_damage_taken += OXYGEN_DAMAGE
 
     def _handle_player_input(self, keys):
         """Handle player action input"""
@@ -1401,7 +1433,7 @@ class Game:
 
         for enemy in self.level.enemies:
             if not enemy.dead:
-                enemy.update(self.level.tiles_near(enemy.x - 64, enemy.x + enemy.width + 64))
+                enemy.update(self.level.tiles_near(enemy.x - 96, enemy.x + enemy.width + 96), self.player)
 
                 # Turret shooting logic
                 if enemy.type == EnemyType.TURRET.value and enemy.can_shoot():
@@ -1577,6 +1609,8 @@ class Game:
                 self.player.y = self.level.spawn_y
                 self.player.spawn_x = self.level.spawn_x
                 self.player.spawn_y = self.level.spawn_y
+                self.player.set_level_physics(self.levels[level_index])
+                self.oxygen_damage_timer = 0
 
             self.projectiles = []
             self.particles = []
@@ -1619,9 +1653,26 @@ class Game:
             self._game_complete()
             return
 
+        # End of the free version: keep progress so Continue resumes here later
+        if not act_available(self.levels[level_index]["act"]):
+            self._end_of_free_version(level_index)
+            return
+
         # Otherwise, continue to next level (and announce a new act)
         self._load_level(level_index)
         self._announce_act_start()
+
+    def _end_of_free_version(self, next_level_index):
+        """Act 1 beaten without the full version: save at the next act's start"""
+        self.current_level_index = next_level_index
+        self.player.x, self.player.y = 100, 100
+        self._save_game()
+        self._save_game_session("COMPLETED")
+        self.audio.stop_music()
+        self.audio.play_music('menu')
+        self.state = GameState.MENU
+        self.menu_selection = 0
+        self._show_popup("Act 1 complete! Acts 2-4 are part of the full version. Your progress is saved.", duration=360)
 
     def _announce_act_start(self):
         """Show the act title when a level is the first of an act (not Act 1)"""
@@ -1833,6 +1884,7 @@ class Game:
 
         # Draw tiles
         self._draw_tiles()
+        self._draw_water_features()
 
         # Draw game objects
         self._draw_hazards()
@@ -1966,6 +2018,31 @@ class Game:
 
                 # Border
                 pygame.draw.rect(self.screen, TILE_OUTLINE, rect, 1)
+
+    def _draw_water_features(self):
+        """Air pockets (bubbles of air) and currents (drifting streaks)"""
+        if not (self.level.air_pockets or self.level.currents):
+            return
+        ticks = pygame.time.get_ticks()
+        for zone in self.level.air_pockets:
+            rect = self.camera.apply_rect(zone)
+            if rect.right < 0 or rect.left > self.screen_width:
+                continue
+            bubble = pygame.Surface(rect.size, pygame.SRCALPHA)
+            pygame.draw.ellipse(bubble, (150, 200, 230, 45), bubble.get_rect())
+            pygame.draw.ellipse(bubble, (170, 215, 235, 120), bubble.get_rect(), 2)
+            self.screen.blit(bubble, rect.topleft)
+            label = self.font_small.render("AIR", True, (170, 215, 235))
+            self.screen.blit(label, (rect.centerx - label.get_width() // 2, rect.centery - label.get_height() // 2))
+        for zone, dx in self.level.currents:
+            rect = self.camera.apply_rect(zone)
+            if rect.right < 0 or rect.left > self.screen_width:
+                continue
+            step = 60
+            offset = int(ticks / 16 * (1 if dx > 0 else -1)) % step
+            for y in range(rect.top + 10, rect.bottom, 28):
+                for x in range(rect.left + offset, rect.right, step):
+                    pygame.draw.line(self.screen, (70, 110, 150), (x, y), (x + (18 if dx > 0 else -18), y), 2)
 
     def _draw_hazards(self):
         """Draw hazards"""

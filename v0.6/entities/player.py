@@ -102,6 +102,22 @@ class Player:
 
         # Stat upgrades bought in the shop this run (tiers owned)
         self.upgrades = {'health': 0, 'lives': 0}
+
+        # Level physics (set from level data when a level loads)
+        self.gravity_scale = 1.0   # < 1 on low-gravity levels
+        self.in_water = False      # underwater levels: swim instead of jump
+        self.push_dx = 0.0         # water current pushing the player this frame
+        self.swim_cooldown = 0
+        from config.settings import OXYGEN_MAX
+        self.oxygen = OXYGEN_MAX
+
+    def set_level_physics(self, level_data):
+        """Apply a level's physics: "gravity" scale and "water" flag"""
+        from config.settings import OXYGEN_MAX
+        self.gravity_scale = level_data.get("gravity", 1.0)
+        self.in_water = bool(level_data.get("water", False))
+        self.oxygen = OXYGEN_MAX
+        self.push_dx = 0.0
         self.weapon_cooldown = 0  # Shooting cooldown timer
 
     def update(self, keys, tiles, hazards):
@@ -118,16 +134,24 @@ class Player:
         # Movement
         self._handle_movement(keys)
 
-        # Apply gravity
-        self.dy += get_gravity()
-        self.dy = min(self.dy, get_max_fall_speed())
+        # Apply gravity (lower in water and on low-gravity levels)
+        from config.settings import WATER_GRAVITY_SCALE, WATER_MAX_FALL_SCALE
+        gravity = get_gravity() * self.gravity_scale
+        max_fall = get_max_fall_speed()
+        if self.in_water:
+            gravity *= WATER_GRAVITY_SCALE
+            max_fall *= WATER_MAX_FALL_SCALE
+        self.dy += gravity
+        self.dy = min(self.dy, max_fall)
+        if self.swim_cooldown > 0:
+            self.swim_cooldown -= 1
 
         # Wall slide
         if self.on_wall and not self.on_ground and self.dy > 0:
             self.dy = min(self.dy, 2)
 
-        # Update position with collision
-        self.x += self.dx
+        # Update position with collision (a water current adds to movement)
+        self.x += self.dx + self.push_dx
         self._check_collision_x(tiles)
 
         self.y += self.dy
@@ -136,7 +160,7 @@ class Player:
         # Check hazards
         if self.can_be_hurt():
             self._check_hazard_collision(hazards)
-        
+
         # Update weapon cooldown
         if self.weapon_cooldown > 0:
             self.weapon_cooldown -= 1
@@ -171,6 +195,9 @@ class Player:
         speed = get_player_speed() * (
             PLAYER_SPEED_BOOST_MULTIPLIER if self.speed_boost else 1
         )
+        if self.in_water:
+            from config.settings import WATER_SPEED_SCALE
+            speed *= WATER_SPEED_SCALE
 
         if check_key_pressed(keys, MOVE_LEFT):
             self.dx = -speed
@@ -188,13 +215,14 @@ class Player:
         self.on_wall = False
         player_rect = self.get_rect()
 
+        moving = self.dx + self.push_dx  # includes any water current
         for tile in tiles:
             if tile.get("solid", True) and player_rect.colliderect(tile["rect"]):
-                if self.dx > 0:
+                if moving > 0:
                     self.x = tile["rect"].left - self.width
                     self.on_wall = True
                     self.wall_direction = 1
-                elif self.dx < 0:
+                elif moving < 0:
                     self.x = tile["rect"].right
                     self.on_wall = True
                     self.wall_direction = -1
@@ -226,7 +254,16 @@ class Player:
                     self.take_damage(hazard.damage)
 
     def jump(self):
-        """Attempt to jump. Returns True if successful"""
+        """Attempt to jump (or swim a stroke underwater). Returns True if successful"""
+        if self.in_water:
+            from config.settings import SWIM_STROKE_COOLDOWN, SWIM_STROKE_POWER
+            if self.swim_cooldown > 0:
+                return False
+            self.dy = SWIM_STROKE_POWER
+            self.swim_cooldown = SWIM_STROKE_COOLDOWN
+            if self.audio:
+                self.audio.player_jump()
+            return True
         if self.on_ground:
             self.dy = get_jump_power()
             self.jump_count = 1
@@ -294,28 +331,28 @@ class Player:
             self.current_weapon_id = weapon_id
             return True
         return False
-    
+
     def unlock_weapon(self, weapon_id):
         """Unlock a new weapon"""
         if weapon_id not in self.weapons or self.weapons[weapon_id] is None:
             self.weapons[weapon_id] = create_weapon(weapon_id, 1, 1)
             return True
         return False
-    
+
     def upgrade_weapon_power(self, weapon_id):
         """Upgrade weapon power"""
         weapon = self.weapons.get(weapon_id)
         if weapon:
             return weapon.upgrade_power()
         return False
-    
+
     def upgrade_weapon_speed(self, weapon_id):
         """Upgrade weapon speed"""
         weapon = self.weapons.get(weapon_id)
         if weapon:
             return weapon.upgrade_speed()
         return False
-    
+
     def get_weapon_state(self):
         """
         Get weapon state for saving/shop
@@ -336,7 +373,7 @@ class Player:
                     'speed_level': 0
                 }
         return weapon_state
-    
+
     def restore_weapon_state(self, weapon_state):
         """Restore weapons from save data"""
         for weapon_id, state in weapon_state.items():

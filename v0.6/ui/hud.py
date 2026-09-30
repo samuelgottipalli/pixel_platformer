@@ -32,6 +32,8 @@ class HUD:
             level_name: Current level name (e.g., "Level 1: The Awakening")
         """
         self._draw_health_bar(surface, player)
+        if getattr(player, "in_water", False):
+            self._draw_oxygen_bar(surface, player)
         self._draw_stats(surface, player)
         self._draw_level_info(surface, act_number, area_name, level_name)
 
@@ -70,6 +72,18 @@ class HUD:
             f"HP {max(0, int(player.health))}/{player.max_health}", True, WHITE
         )
         surface.blit(health_text, (x + health_width + 8, y))
+
+    def _draw_oxygen_bar(self, surface, player):
+        """Oxygen bar (underwater levels), under the stats on the left"""
+        from config.settings import OXYGEN_MAX
+        x, y, width, height = 15, 124, 150, 14
+        fraction = max(0.0, player.oxygen / OXYGEN_MAX)
+        color = CYAN if fraction > 0.25 else RED
+        pygame.draw.rect(surface, (20, 40, 60), (x, y, width, height), border_radius=3)
+        pygame.draw.rect(surface, color, (x, y, int(width * fraction), height), border_radius=3)
+        pygame.draw.rect(surface, UI_BORDER, (x, y, width, height), 1, border_radius=3)
+        label = self.font.render("AIR" if fraction > 0 else "NO AIR!", True, color)
+        surface.blit(label, (x + width + 8, y))
 
     def _draw_stats(self, surface, player):
         """Draw compact player statistics"""

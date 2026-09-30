@@ -72,6 +72,20 @@ ACTS = [
     },
 ]
 
+# Level-specific physics (by global level index)
+LEVEL_OPTIONS = {
+    14: {"gravity": 0.55},   # Zero Gravity: floaty, long jumps
+    21: {"water": True},     # Submerged Ruins: swimming, oxygen, currents
+    22: {"water": True},     # Abyssal Trench
+}
+
+# Share of "ground" enemies replaced by the newer types, per act
+ENEMY_MIX = {
+    2: {"charger": 0.30},
+    3: {"hopper": 0.30, "charger": 0.20},
+    4: {"charger": 0.30, "hopper": 0.30},
+}
+
 AREA_NAMES = {
     "flat": {"NATURE": "Forest Floor", "SPACE": "Hangar Deck", "UNDERGROUND": "Cave Floor", "UNDERWATER": "Sea Bed"},
     "stairs": {"NATURE": "Mossy Steps", "SPACE": "Gantry", "UNDERGROUND": "Rock Ledges", "UNDERWATER": "Coral Steps"},
@@ -97,8 +111,11 @@ AREA_NAMES = {
 class LevelBuilder:
     """Accumulates level objects while sections are laid out left to right"""
 
-    def __init__(self, rng, d, theme):
+    def __init__(self, rng, d, theme, enemy_mix=None, water=False):
         self.rng, self.d, self.theme = rng, d, theme
+        self.enemy_mix = enemy_mix or {}
+        self.water = water
+        self.air_pockets, self.currents = [], []
         self.tiles, self.enemies, self.hazards = [], [], []
         self.coins, self.powerups, self.areas = [], [], []
         self.x = 0
@@ -135,6 +152,13 @@ class LevelBuilder:
             self.coins.append({"x": x + spacing * (i + 1) - 8, "y": top - 34, "value": value})
 
     def enemy(self, kind, x, y, patrol=120):
+        if kind == "ground":
+            roll = self.rng.random()
+            for variant, share in self.enemy_mix.items():
+                if roll < share:
+                    kind = variant
+                    break
+                roll -= share
         e = {"x": x, "y": y, "type": kind}
         if kind != "turret":
             e["patrol"] = patrol
@@ -158,6 +182,12 @@ class LevelBuilder:
     def count(self, low, high):
         """Enemy count scaled by difficulty"""
         return low + int(round(self.d * (high - low)))
+
+    def air_pocket(self, x, y, w=160, h=128):
+        self.air_pockets.append({"x": x, "y": y, "w": w, "h": h})
+
+    def current(self, x, y, w, h, dx):
+        self.currents.append({"x": x, "y": y, "w": w, "h": h, "dx": dx})
 
     def area(self, kind, x0, x1):
         name = AREA_NAMES.get(kind, {}).get(self.theme) or AREA_NAMES.get(kind, {}).get("NATURE", kind.title())
@@ -385,20 +415,31 @@ class LevelBuilder:
         return portal
 
 
-def build_level(name, index, d, theme, sections, seed):
+def build_level(name, index, d, theme, sections, seed, act=None):
     """Generate one level's data dict"""
-    b = LevelBuilder(random.Random(seed), d, theme)
+    options = LEVEL_OPTIONS.get(index, {})
+    water = options.get("water", False)
+    b = LevelBuilder(random.Random(seed), d, theme, ENEMY_MIX.get(act), water)
     b.ground(0, 512)
     b.coin_row(160, G - 40, 4, spacing=64)
     b.area("flat", 0, 512)
     b.areas[-1]["name"] = "Start"
     b.x = 512
-    for kind in sections:
+    if water:
+        b.air_pocket(200, G - 200)
+    for n, kind in enumerate(sections):
         start = b.x
         getattr(b, "s_" + kind)()
         b.area(kind, start, b.x)
+        if water:
+            # an air pocket in every section, near its middle, above the path
+            b.air_pocket((start + b.x) // 2 - 80, G - 240)
+            if kind in ("moving", "pit"):
+                b.current(start + 160, G - 320, b.x - start - 320, 280, 1.5)    # helps you across
+            elif kind == "tunnel":
+                b.current(start + 96, G - 160, b.x - start - 192, 160, -1.2)    # pushes back
     portal = b.exit(index + 1)
-    return {
+    data = {
         "name": name,
         "width": b.x,
         "height": 720,
@@ -415,6 +456,11 @@ def build_level(name, index, d, theme, sections, seed):
         "portals": [portal],
         "areas": b.areas,
     }
+    data.update({k: v for k, v in options.items()})
+    if water:
+        data["air_pockets"] = b.air_pockets
+        data["currents"] = b.currents
+    return data
 
 
 def build_boss_arena(name, boss, theme, seed):
@@ -468,7 +514,8 @@ def generate(force=False, only=None, verbose=True):
             else:
                 name, d, theme, sections = plan
                 for attempt in range(40):
-                    data = build_level(name, index, d, theme, sections, seed=index * 100 + attempt)
+                    data = build_level(name, index, d, theme, sections, seed=index * 100 + attempt,
+                                       act=spec["number"])
                     fix_coins(data)
                     result = check_level(data)
                     if result.portal_reached and not result.unreachable_coins():

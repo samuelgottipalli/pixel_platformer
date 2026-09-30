@@ -50,6 +50,18 @@ class Level:
         self.keys = self._create_keys(level_data.get("keys", []))
         self.portals = self._create_portals(level_data.get("portals", []))
 
+        # Underwater levels: air pockets refill oxygen, currents push sideways
+        scale = LayoutManager.scale_dimension
+        self.air_pockets = [
+            pygame.Rect(*LayoutManager.scale_position(a["x"], a["y"]), scale(a["w"]), scale(a["h"]))
+            for a in level_data.get("air_pockets", [])
+        ]
+        self.currents = [
+            (pygame.Rect(*LayoutManager.scale_position(c["x"], c["y"]), scale(c["w"]), scale(c["h"])),
+             c["dx"] * LayoutManager.get_scale_factor())
+            for c in level_data.get("currents", [])
+        ]
+
     def _create_tiles(self, tile_data):
         """Create tile list from data with textures"""
         from utils.textures import TextureManager
@@ -76,6 +88,10 @@ class Level:
             tiles.append(tile_dict)
 
         return tiles
+
+    def current_push(self, rect):
+        """Sideways push from water currents overlapping rect"""
+        return current_push(self.currents, rect)
 
     TILE_BUCKET = 256  # px width of each spatial-index column
 
@@ -186,3 +202,8 @@ class Level:
             enemy.health = enemy.max_health
             enemy.x = enemy.start_x
             enemy.y = enemy.start_y
+
+
+def current_push(currents, rect):
+    """Sum of the push (dx) of every current zone overlapping rect"""
+    return sum(dx for zone, dx in currents if zone.colliderect(rect))

@@ -515,12 +515,15 @@ class Menu:
 
         # Act tabs (locked acts are dimmed)
         for i, (act, rect) in enumerate(zip(acts, self.get_level_map_act_tab_rects(len(acts)))):
-            unlocked = act["levels"][0]["index"] < playable
+            from utils.entitlements import act_available
+            owned = act_available(act["number"])
+            unlocked = owned and act["levels"][0]["index"] < playable
             active = i == shown
             pygame.draw.rect(surface, UI_SELECTED_BG if active else UI_BG, rect, border_radius=6)
             pygame.draw.rect(surface, UI_HIGHLIGHT if active else UI_BORDER, rect, 2, border_radius=6)
             color = UI_HIGHLIGHT if active else (UI_TEXT if unlocked else UI_TEXT_DIM)
-            label = self.font_small.render(f"ACT {act['number']}" + ("" if unlocked else "  (locked)"), True, color)
+            suffix = "" if unlocked else ("  (locked)" if owned else "  (full)")
+            label = self.font_small.render(f"ACT {act['number']}" + suffix, True, color)
             surface.blit(label, (rect.centerx - label.get_width() // 2, rect.centery - label.get_height() // 2))
 
         act = acts[shown]

@@ -2,7 +2,7 @@
 
 A nostalgic 2D side-scrolling platformer inspired by NES classics.
 
-**Version:** 0.7 Alpha  
+**Version:** 0.8 Alpha  
 **Status:** Acts 1-4 playable (25 levels, 4 boss fights)
 
 ---
@@ -90,7 +90,23 @@ v0.6/
 | 4 | Depths Unknown | 19-24 | Caves / underwater | Ancient Evil |
 
 Enemies (and their turret weapons) get tougher every level; tune the rates in
-`ENEMY_LEVEL_SCALING` in `config/settings.py`.
+`ENEMY_LEVEL_SCALING` in `config/settings.py`. Act 2 adds **chargers** (rush
+you when you're level with them), Act 3 adds **hoppers** (bounce in arcs).
+
+Special levels: **Zero Gravity** (14) has low gravity; **Submerged Ruins** (21)
+and **Abyssal Trench** (22) are underwater: press Jump to swim a stroke, watch
+the **AIR** meter and refill it in air pockets, and ride (or fight) the
+currents. Levels opt in with `"gravity"`, `"water"`, `"air_pockets"` and
+`"currents"` in their JSON.
+
+### Free and full version
+
+Act 1 is free; Acts 2-4 are the full version. There is no store integration
+yet: the full version is unlocked by `data/full_version.json` containing
+`{"unlocked": true}` (or `PLATFORMER_FULL_VERSION=1`). When publishing, replace
+`full_version_unlocked()` in `utils/entitlements.py` with the store's
+ownership check. Free players who beat Act 1 keep their progress (saved at the
+start of Act 2).
 
 ---
 
@@ -146,8 +162,8 @@ python tools/fix_coins.py            # move uncollectible coins to reachable spo
 
 - ✅ Phase 1: Foundation Complete
 - 🚧 Phase 2: Content Expansion (In Progress)
-- ⏳ Phase 3: Advanced Mechanics
-- ✅ Phase 4: Additional Acts (first pass: generated levels, no new enemy types or swimming yet)
+- ✅ Phase 3: Advanced Mechanics (swimming, oxygen, currents, low gravity, new enemies)
+- ✅ Phase 4: Additional Acts (generated levels; needs human playtesting)
 - ⏳ Phase 5: Polish & Audio
 - ⏳ Phase 6: Release & Distribution
 

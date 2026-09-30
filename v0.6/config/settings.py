@@ -94,6 +94,16 @@ PLAYER_START_LIVES = 3
 PLAYER_MAX_JUMPS = 2
 PLAYER_INVINCIBILITY_DURATION = 120  # frames
 PLAYER_HURT_INVULNERABILITY = 60  # frames of invulnerability after taking a hit
+
+# Underwater levels ("water": true in the level data)
+WATER_GRAVITY_SCALE = 0.3      # sink slowly
+WATER_MAX_FALL_SCALE = 0.35
+WATER_SPEED_SCALE = 0.8        # walking/swimming is a bit slower
+SWIM_STROKE_POWER = -7.0       # upward push per swim stroke (jump key)
+SWIM_STROKE_COOLDOWN = 12      # frames between strokes
+OXYGEN_MAX = 1800              # frames of air (30 s at 60 FPS)
+OXYGEN_REFILL_RATE = 12        # per frame inside an air pocket
+OXYGEN_DAMAGE = 10             # damage per second once out of air
 PLAYER_SPEED_BOOST_DURATION = 600  # frames
 PLAYER_SPEED_BOOST_MULTIPLIER = 1.5
 

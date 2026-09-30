@@ -55,6 +55,13 @@ def _scripts():
 
 
 SCRIPTS = _scripts()
+# Underwater: hold a direction and keep swimming upward (strokes), or drift down
+SWIM_SCRIPTS = (
+    [(d, [], "swim") for d in (-1, 0, 1)]
+    + [(d, [], "walk") for d in (-1, 1)]
+    # swim N strokes, then drift down onto whatever is there
+    + [(d, list(range(0, 13 * k, 13)), "plain") for d in (-1, 1) for k in (2, 4, 6, 9)]
+)
 
 
 class LevelChecker:
@@ -88,6 +95,11 @@ class LevelChecker:
         self.coins = [pygame.Rect(*scale(c["x"], c["y"]), coin["width"], coin["height"])
                       for c in level_data.get("coins", [])]
         self.coins_seen = set()
+        self.currents = [
+            (pygame.Rect(*scale(c["x"], c["y"]), c["w"], c["h"]), c["dx"])
+            for c in level_data.get("currents", [])
+        ]
+        self.scripts = SCRIPTS + (SWIM_SCRIPTS if level_data.get("water") else [])
         self.portal_reached = False
         self.spots = set()
         self.spot_positions = {}  # spot key -> (x, y) where the player stood
@@ -102,6 +114,7 @@ class LevelChecker:
     def _new_player(self, x, y):
         from entities.player import Player
         p = Player(x, y)
+        p.set_level_physics(self.data)  # gravity scale / underwater swimming
         return p
 
     def _touch(self, rect):
@@ -140,6 +153,8 @@ class LevelChecker:
                 keys.down.add(MOVE_RIGHT[0])
 
             jump = f in jumps
+            if style == "swim" and f % 13 == 0:
+                jump = True  # keep stroking
             if p.on_wall:
                 was_on_wall, off_wall_frames = True, 0
             elif was_on_wall:
@@ -160,6 +175,8 @@ class LevelChecker:
             if jump and p.jump():
                 last_jump = f
 
+            from levels.level import current_push
+            p.push_dx = current_push(self.currents, p.get_rect())
             p.update(keys, tiles, [])
             rect = p.get_rect()
             self._touch(rect)
@@ -169,7 +186,7 @@ class LevelChecker:
                 landed.append((p.x, p.y))
                 if style not in ("walk",) and f > last_jump + 2 and (jumps or style != "drop_jump"):
                     # Landed after the airborne part; walking scripts keep going
-                    if style in ("plain", "late", "climb", "climb_drop", "zigzag") and f > 3:
+                    if style in ("plain", "late", "climb", "climb_drop", "zigzag", "swim") and f > 3:
                         break
         return landed
 
@@ -190,7 +207,7 @@ class LevelChecker:
                 continue
             self.spots.add(key)
             self.spot_positions[key] = (x, y)
-            for script in SCRIPTS:
+            for script in self.scripts:
                 for lx, ly in self._run(x, y, script):
                     if self._spot_key(lx, ly) not in self.spots:
                         frontier.append((lx, ly))

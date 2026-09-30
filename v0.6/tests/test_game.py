@@ -17,6 +17,7 @@ import unittest
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
+os.environ["PLATFORMER_FULL_VERSION"] = "1"  # tests play all acts; PaywallTests turn it off
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK_DIR = None
@@ -873,6 +874,106 @@ class ActTests(GameTestCase):
         g.start_playtest(15)
         self.assertEqual((g.state, g.current_level_index), (GameState.PLAYING, 15))
         self.assertNotIn("__playtest__", [p.name for p in ProfileManager.load_profiles()])
+
+
+class PaywallTests(GameTestCase):
+    def setUp(self):
+        os.environ.pop("PLATFORMER_FULL_VERSION", None)
+
+    def tearDown(self):
+        os.environ["PLATFORMER_FULL_VERSION"] = "1"
+
+    def test_free_version_stops_after_act_1_and_keeps_progress(self):
+        g = self.playing_game(level=6)
+        g._transition_to_level(7)
+        self.assertEqual(g.state, GameState.MENU)
+        self.assertIn("full version", g.popup.message)
+        self.assertEqual(g.current_profile.levels_completed, 7)
+        self.assertEqual(SaveManager.load_game("tester")["current_level"], 7)
+        g.menu_selection = 1  # Continue: still locked
+        g._handle_menu_selection()
+        self.assertEqual(g.state, GameState.MENU)
+
+    def test_locked_acts_cannot_be_started_from_the_level_map(self):
+        g = self.playing_game()
+        g.current_profile.levels_completed = 10
+        g.state = GameState.LEVEL_MAP
+        g._select_level_from_map(8)
+        self.assertEqual(g.state, GameState.LEVEL_MAP)
+        g._select_level_from_map(3)
+        self.assertEqual(g.state, GameState.DIFFICULTY_SELECT)
+
+    def test_unlocking_opens_the_rest(self):
+        from utils.entitlements import act_available, unlock_full_version
+        self.assertFalse(act_available(2))
+        unlock_full_version()
+        try:
+            self.assertTrue(act_available(4))
+        finally:
+            os.remove("data/full_version.json")
+
+
+class NewMechanicsTests(GameTestCase):
+    def test_low_gravity_level_jumps_higher(self):
+        g = self.playing_game(level=14)
+        self.assertLess(g.player.gravity_scale, 1)
+        g2 = self.playing_game(level=13)
+        self.assertEqual(g2.player.gravity_scale, 1)
+
+    def test_swimming_and_oxygen(self):
+        from config.settings import OXYGEN_MAX
+        g = self.playing_game(level=21)
+        p = g.player
+        self.assertTrue(p.in_water)
+        p.x, p.y, p.on_ground = 400, 300, False
+        self.assertTrue(p.jump())     # a stroke works in mid-water
+        self.assertFalse(p.jump())    # ...but not twice in a row
+        p.oxygen = 1
+        g.level.air_pockets = []
+        self.make_invincible(g)
+        p.invincible = False
+        health = p.health
+        for _ in range(70):
+            g._update_oxygen()
+        self.assertEqual(p.oxygen, 0)
+        self.assertLess(p.health, health, "running out of air hurts")
+        g.level.air_pockets = [p.get_rect()]
+        g._update_oxygen()
+        self.assertGreater(p.oxygen, 0, "air pockets refill oxygen")
+        self.assertLessEqual(p.oxygen, OXYGEN_MAX)
+
+    def test_water_current_pushes_player(self):
+        g = self.playing_game(level=21)
+        self.assertTrue(g.level.currents)
+        zone, dx = g.level.currents[0]
+        p = g.player
+        p.x, p.y = zone.centerx, zone.centery
+        start = p.x
+        g.player.push_dx = g.level.current_push(p.get_rect())
+        self.assertEqual(g.player.push_dx, dx)
+
+    def test_new_enemy_types_behave(self):
+        g = self.playing_game(level=1)
+        from entities.enemy import Enemy
+        tiles = g.level.tiles
+        charger = Enemy(1000, 608, "charger", 200)
+        g.player.x, g.player.y = 1150, 592
+        charger.update(tiles, g.player)
+        self.assertTrue(charger.charging)
+        self.assertGreater(charger.x, 1000)
+        hopper = Enemy(1000, 608, "hopper", 150)
+        heights = []
+        for _ in range(200):
+            hopper.update(tiles, g.player)
+            heights.append(hopper.y)
+        self.assertLess(min(heights), 608 - 40, "hopper jumps")
+        for enemy in (charger, hopper):
+            enemy.draw(g.screen, 0, 0)
+
+    def test_acts_use_new_enemies(self):
+        g = self.new_game()
+        types = {e["type"] for level in g.levels if level["act"] >= 2 for e in level.get("enemies", [])}
+        self.assertTrue({"charger", "hopper"} <= types)
 
 
 class LevelBuilderTests(GameTestCase):

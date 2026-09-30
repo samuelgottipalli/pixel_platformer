@@ -49,7 +49,7 @@ THEMES = list(THEME_TILE_COLORS)
 TOOLS = [
     ("tile", "Tile", None),
     ("coin", "Coin", None),
-    ("enemy", "Enemy", ["ground", "flying", "turret"]),
+    ("enemy", "Enemy", ["ground", "flying", "turret", "charger", "hopper"]),
     ("hazard", "Hazard", ["spike", "falling_block", "moving_platform"]),
     ("powerup", "Power-up", ["health", "double_jump", "speed", "invincible"]),
     ("portal", "Portal", None),
@@ -60,7 +60,7 @@ SIZES = {  # footprint of each object in level units
     "coin": (16, 16), "enemy": (32, 32), "hazard": (32, 32), "moving_platform": (96, 32),
     "powerup": (24, 24), "portal": (48, 64), "spawn": (28, 48),
 }
-ENEMY_COLORS = {"ground": RED, "flying": CYAN, "turret": ORANGE}
+ENEMY_COLORS = {"ground": RED, "flying": CYAN, "turret": ORANGE, "charger": RED, "hopper": PURPLE}
 POWERUP_COLORS = {"health": GREEN, "double_jump": CYAN, "speed": YELLOW, "invincible": PURPLE}
 
 

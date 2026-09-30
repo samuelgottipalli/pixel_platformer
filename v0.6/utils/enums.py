@@ -42,6 +42,8 @@ class EnemyType(Enum):
     GROUND = "ground"
     FLYING = "flying"
     TURRET = "turret"
+    CHARGER = "charger"  # ground enemy that rushes the player when level with it
+    HOPPER = "hopper"    # ground enemy that bounces in arcs
 
 
 class HazardType(Enum):
