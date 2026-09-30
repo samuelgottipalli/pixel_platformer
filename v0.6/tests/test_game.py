@@ -35,6 +35,14 @@ class _Keys:
 pygame.key.get_pressed = lambda: _Keys()
 
 
+def _ignore_for_copy(directory, names):
+    """Skip assets, the player's data/ folder and caches (but keep levels/data)"""
+    skip = shutil.ignore_patterns("assets", "tests", "__pycache__", "*.ipynb")(directory, names)
+    if os.path.abspath(directory) == PROJECT_DIR:
+        skip |= {"data"} & set(names)
+    return skip
+
+
 def setUpModule():
     global WORK_DIR, Game, GameState, Projectile, ExplosiveProjectile
     global ProfileManager, SaveManager, Key
@@ -43,7 +51,7 @@ def setUpModule():
         PROJECT_DIR,
         WORK_DIR,
         dirs_exist_ok=True,
-        ignore=shutil.ignore_patterns("assets", "data", "tests", "__pycache__", "*.ipynb"),
+        ignore=_ignore_for_copy,
     )
     os.chdir(WORK_DIR)
     sys.path.insert(0, WORK_DIR)
@@ -606,12 +614,12 @@ class LevelMapTests(GameTestCase):
         self.assertEqual(g.state, GameState.LEVEL_MAP)
         return g
 
-    def test_level_names_match_design(self):
-        from levels.level_names import LEVEL_NAMES, level_title
-        self.assertEqual(len(LEVEL_NAMES), 7)
-        self.assertEqual(level_title(0), "Tutorial: Training Facility")
-        self.assertEqual(level_title(3), "Level 3: The Ascent")
-        self.assertEqual(level_title(6, mark_boss=True), "Level 6: Guardian's Lair (BOSS)")
+    def test_level_titles_come_from_level_data(self):
+        from levels.level_names import level_title
+        g = self.new_game()
+        self.assertEqual(level_title(g.levels[0]), "Tutorial: Training Facility")
+        self.assertEqual(level_title(g.levels[3]), "Level 3: The Ascent")
+        self.assertEqual(level_title(g.levels[6], mark_boss=True), "Level 6: Guardian's Lair (BOSS)")
 
     def test_new_profile_can_only_play_tutorial(self):
         g = self.profile_game(levels_completed=0)
@@ -779,19 +787,30 @@ class LevelDesignTests(GameTestCase):
     """Every level must be completable with the real player physics"""
 
     def test_every_level_can_reach_its_exit(self):
-        g = self.new_game()  # Loads the 1280x720 layout + level data
-        shutil.copy(os.path.join(PROJECT_DIR, "tests", "level_checker.py"), WORK_DIR)
-        from level_checker import check_level
-        for i, data in enumerate(g.levels):
-            if not data.get("portals"):
-                self.assertEqual(i, 6, "only the boss arena may have no portal")
-                continue
-            with self.subTest(level=i):
-                result = check_level(data)
-                self.assertTrue(result.portal_reached, f"level {i} exit is unreachable")
-                self.assertGreaterEqual(result.coin_coverage(), 0.75,
-                                        f"level {i}: too many unreachable coins "
-                                        f"{result.unreachable_coins()[:10]}")
+        from tools.level_checker import check_all
+        g = self.new_game()
+        boss_levels = {level["index"] for level in g.levels if level.get("boss")}
+        for result in check_all(WORK_DIR):
+            with self.subTest(level=result["index"], name=result["name"]):
+                if not result["has_portal"]:
+                    self.assertIn(result["index"], boss_levels, "only boss arenas may have no portal")
+                    continue
+                self.assertTrue(result["portal_reached"], "exit is unreachable")
+                self.assertEqual(result["unreachable"], [], "coins the player can't collect")
+
+    def test_no_coin_inside_a_brick(self):
+        g = self.new_game()
+        for level in g.levels:
+            tiles = [pygame.Rect(t["x"], t["y"], 32, 32) for t in level["tiles"] if t.get("solid", True)]
+            for coin in level.get("coins", []):
+                with self.subTest(level=level["index"], coin=(coin["x"], coin["y"])):
+                    self.assertEqual(pygame.Rect(coin["x"], coin["y"], 16, 16).collidelist(tiles), -1)
+
+    def test_portals_lead_to_the_next_level(self):
+        g = self.new_game()
+        for level in g.levels:
+            for portal in level.get("portals", []):
+                self.assertEqual(portal["dest"], level["index"] + 1, level["name"])
 
 
 class BossAndEndingTests(GameTestCase):

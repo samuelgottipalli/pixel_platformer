@@ -9,8 +9,8 @@ some explored trajectory touches the exit portal.
 Hazard damage and enemies are ignored (the player can tank a few hits);
 moving platforms are approximated as static platforms along their path.
 
-CLI:  python tests/level_checker.py          (every level)
-      python tests/level_checker.py 3 5      (just levels 3 and 5)
+CLI:  python tools/level_checker.py          (every level)
+      python tools/level_checker.py 3 5      (just levels 3 and 5)
 """
 
 import os
@@ -19,7 +19,12 @@ import sys
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
+import time  # noqa: E402
+
 import pygame  # noqa: E402
+
+if __package__ in (None, ""):  # run as a script: make the game importable
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 BUCKET = 48          # x-resolution of standing spots
 SIM_FRAMES = 160     # max frames per input script
@@ -85,6 +90,7 @@ class LevelChecker:
         self.coins_seen = set()
         self.portal_reached = False
         self.spots = set()
+        self.spot_positions = {}  # spot key -> (x, y) where the player stood
 
     # -- simulation -------------------------------------------------------
     def _near_tiles(self, x):
@@ -183,6 +189,7 @@ class LevelChecker:
             if key in self.spots:
                 continue
             self.spots.add(key)
+            self.spot_positions[key] = (x, y)
             for script in SCRIPTS:
                 for lx, ly in self._run(x, y, script):
                     if self._spot_key(lx, ly) not in self.spots:
@@ -200,30 +207,58 @@ def check_level(level_data):
     return LevelChecker(level_data).check()
 
 
-def main():
-    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    os.chdir(here)
-    sys.path.insert(0, here)
-    sys.stdout.reconfigure(errors="replace")
-    args = sys.argv[1:]
+def init_headless(game_dir):
+    """Prepare a process to check levels without a window"""
+    os.chdir(game_dir)
+    if game_dir not in sys.path:
+        sys.path.insert(0, game_dir)
     pygame.init()
     pygame.display.set_mode((1280, 720))
     from config.settings import update_screen_size
     update_screen_size(1280, 720)  # the game always renders at 1280x720
+
+
+def check_level_file(args):
+    """
+    Worker for parallel checks: (game_dir, index, filename) ->
+    dict with the results (picklable, for multiprocessing).
+    """
+    game_dir, index, filename = args
+    init_headless(game_dir)
     from levels.level_loader import LevelLoader
-    import time
-    levels = LevelLoader.create_default_levels()
-    only = [int(a) for a in args]
-    for i, data in enumerate(levels):
-        if only and i not in only:
-            continue
-        t = time.time()
-        c = check_level(data)
-        miss = c.unreachable_coins()
-        print(f"Level {i}: portal {'REACHABLE' if c.portal_reached else 'UNREACHABLE' if c.portals else 'n/a (boss)'}"
-              f" | coins {len(c.coins_seen)}/{len(c.coins)} | spots {len(c.spots)} | {time.time() - t:.1f}s")
-        if miss:
-            print("   unreachable coins (x,y):", miss[:25], "..." if len(miss) > 25 else "")
+    data = LevelLoader.fix_spike_positions(LevelLoader.load_from_file(filename))
+    start = time.time()
+    c = check_level(data)
+    return {
+        "index": index, "file": filename, "name": data.get("name", ""),
+        "has_portal": bool(c.portals), "portal_reached": c.portal_reached,
+        "coins_seen": len(c.coins_seen), "coins": len(c.coins),
+        "coverage": c.coin_coverage(), "unreachable": c.unreachable_coins(),
+        "spots": len(c.spots), "seconds": time.time() - start,
+    }
+
+
+def check_all(game_dir, only=None, processes=None):
+    """Check every level (or indexes in `only`) in parallel; results in level order"""
+    import multiprocessing
+    from levels.level_loader import LevelLoader
+    files = [lvl["file"] for act in LevelLoader.load_acts() for lvl in act["levels"]]
+    jobs = [(game_dir, i, f) for i, f in enumerate(files) if not only or i in only]
+    with multiprocessing.Pool(processes or min(len(jobs), os.cpu_count() or 2)) as pool:
+        return pool.map(check_level_file, jobs)
+
+
+def main():
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.stdout.reconfigure(errors="replace")
+    init_headless(here)
+    only = [int(a) for a in sys.argv[1:]]
+    for r in check_all(here, only):
+        portal = "REACHABLE" if r["portal_reached"] else "UNREACHABLE" if r["has_portal"] else "n/a (boss)"
+        print(f"Level {r['index']} {r['name']}: portal {portal} | coins {r['coins_seen']}/{r['coins']}"
+              f" | spots {r['spots']} | {r['seconds']:.1f}s")
+        if r["unreachable"]:
+            print("   unreachable coins (x,y):", r["unreachable"][:25], "..." if len(r["unreachable"]) > 25 else "")
 
 
 if __name__ == "__main__":

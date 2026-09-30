@@ -5,7 +5,8 @@ Cleaner, more maintainable menu code with reusable components
 
 import pygame
 from config.layout_manager import get_screen_size, get_ui_element, get_font_size, get_scale_factor
-from config.settings import (GREEN, RED, UI_SELECTED_BG, 
+from config.settings import (
+    GRAY, GREEN, RED, UI_SELECTED_BG,
     BLACK,
     CHARACTER_COLORS,
     CYAN,
@@ -459,21 +460,38 @@ class Menu:
     # ========================================================================
 
     def get_level_map_row_rects(self, count):
-        """Clickable row rectangles on the level map (shared by draw and input)"""
+        """Clickable level rows on the level map (shared by draw and input)"""
         screen_width, _ = get_screen_size()
         row_width, row_height = 560, 42
         x = screen_width // 2 - row_width // 2
         return [
             pygame.Rect(x, y - 8, row_width, row_height)
-            for y in LayoutHelper.create_vertical_layout(180, count, 52)
+            for y in LayoutHelper.create_vertical_layout(215, count, 52)
         ]
 
-    def draw_level_map_screen(self, surface, current_profile, selection=0, mouse_pos=None):
+    def get_level_map_act_tab_rects(self, count):
+        """Clickable act tabs on the level map"""
+        screen_width, _ = get_screen_size()
+        tab_width, tab_height, gap = 170, 40, 14
+        total = count * tab_width + (count - 1) * gap
+        x0 = screen_width // 2 - total // 2
+        return [pygame.Rect(x0 + i * (tab_width + gap), 110, tab_width, tab_height) for i in range(count)]
+
+    @staticmethod
+    def act_of_level(acts, level_index):
+        """Index into acts of the act containing a global level index"""
+        for i, act in enumerate(acts):
+            if any(level["index"] == level_index for level in act["levels"]):
+                return i
+        return 0
+
+    def draw_level_map_screen(self, surface, acts, current_profile, selection=0, mouse_pos=None):
         """
-        Draw level map. Levels unlock one at a time: a level is playable once
-        the level before it has been completed (the tutorial is always open).
+        Draw level map: one act at a time (tabs), levels unlocking in order.
+        A level is playable once the level before it is completed (the
+        tutorial is always open); `selection` is a global level index.
         """
-        from levels.level_names import LEVEL_NAMES, level_title
+        from levels.level_names import level_title
 
         screen_width, screen_height = get_screen_size()
         screen = Screen(
@@ -488,49 +506,60 @@ class Menu:
 
         screen.draw_background(surface)
         screen.update_button_hover(mouse_pos)
-        screen.draw_title(surface, 60)
+        screen.draw_title(surface, 50)
 
+        total_levels = sum(len(act["levels"]) for act in acts)
         completed = current_profile.levels_completed if current_profile else 0
-        playable = min(len(LEVEL_NAMES), completed + 1)
+        playable = min(total_levels, completed + 1)
+        shown = self.act_of_level(acts, selection)
 
+        # Act tabs (locked acts are dimmed)
+        for i, (act, rect) in enumerate(zip(acts, self.get_level_map_act_tab_rects(len(acts)))):
+            unlocked = act["levels"][0]["index"] < playable
+            active = i == shown
+            pygame.draw.rect(surface, UI_SELECTED_BG if active else UI_BG, rect, border_radius=6)
+            pygame.draw.rect(surface, UI_HIGHLIGHT if active else UI_BORDER, rect, 2, border_radius=6)
+            color = UI_HIGHLIGHT if active else (UI_TEXT if unlocked else UI_TEXT_DIM)
+            label = self.font_small.render(f"ACT {act['number']}" + ("" if unlocked else "  (locked)"), True, color)
+            surface.blit(label, (rect.centerx - label.get_width() // 2, rect.centery - label.get_height() // 2))
+
+        act = acts[shown]
+        act_done = sum(1 for level in act["levels"] if level["index"] < completed)
         subtitle = self.font_small.render(
-            f"Completed: {min(completed, len(LEVEL_NAMES))} / {len(LEVEL_NAMES)}", True, UI_TEXT
+            f"{act['name']}  -  {act_done} / {len(act['levels'])} completed", True, UI_TEXT
         )
-        surface.blit(subtitle, (screen_width // 2 - subtitle.get_width() // 2, 130))
+        surface.blit(subtitle, (screen_width // 2 - subtitle.get_width() // 2, 168))
 
-        rows = self.get_level_map_row_rects(len(LEVEL_NAMES))
-        for i, rect in enumerate(rows):
+        rows = self.get_level_map_row_rects(len(act["levels"]))
+        for level, rect in zip(act["levels"], rows):
+            i = level["index"]
             if i < completed:
                 icon_type, icon_color, name_color = Icon.CHECKMARK, GREEN, UI_TEXT
             elif i < playable:
                 icon_type, icon_color, name_color = Icon.PLAY, YELLOW, UI_TEXT
             else:
-                icon_type, icon_color, name_color = Icon.LOCK, (150, 150, 150), UI_TEXT_DIM
+                icon_type, icon_color, name_color = Icon.LOCK, GRAY, UI_TEXT_DIM
 
             hovered = mouse_pos and i < playable and rect.collidepoint(mouse_pos)
             if i == selection or hovered:
-                pygame.draw.rect(surface, UI_BG, rect, border_radius=6)
+                pygame.draw.rect(surface, UI_SELECTED_BG, rect, border_radius=6)
                 pygame.draw.rect(surface, UI_HIGHLIGHT, rect, 2, border_radius=6)
                 if i < playable:
                     name_color = UI_HIGHLIGHT
 
             Icon.draw(surface, icon_type, rect.x + 16, rect.y + 11, 20, icon_color)
-            name_surf = self.font_small.render(level_title(i, mark_boss=True), True, name_color)
+            name_surf = self.font_small.render(level_title(level, mark_boss=True), True, name_color)
             surface.blit(name_surf, (rect.x + 56, rect.y + rect.height // 2 - name_surf.get_height() // 2))
 
         inst = self.font_tiny.render(
-            "UP/DOWN: Select  |  ENTER or Click: Play  |  Complete a level to unlock the next",
+            "LEFT/RIGHT: Act  |  UP/DOWN: Level  |  ENTER or Click: Play  |  Complete a level to unlock the next",
             True,
             UI_TEXT_DIM,
         )
-        surface.blit(
-            inst, (screen_width // 2 - inst.get_width() // 2, screen_height - 100)
-        )
+        surface.blit(inst, (screen_width // 2 - inst.get_width() // 2, screen_height - 90))
 
         hint = self.font_tiny.render("ESC/Back Button to return", True, UI_TEXT_DIM)
-        surface.blit(
-            hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 60)
-        )
+        surface.blit(hint, (screen_width // 2 - hint.get_width() // 2, screen_height - 60))
 
         screen.draw_buttons(surface)
         return screen

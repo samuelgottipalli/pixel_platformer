@@ -21,7 +21,7 @@ class HUD:
         self.font = pygame.font.Font(None, small_size)  # Stats font
         self.font_large = pygame.font.Font(None, large_size)  # Level name font
 
-    def draw(self, surface, player, current_level, area_name="", level_name=""):
+    def draw(self, surface, player, act_number=1, area_name="", level_name=""):
         """
         Draw HUD elements
         Args:
@@ -33,7 +33,7 @@ class HUD:
         """
         self._draw_health_bar(surface, player)
         self._draw_stats(surface, player)
-        self._draw_level_info(surface, current_level, area_name, level_name)
+        self._draw_level_info(surface, act_number, area_name, level_name)
 
     def _draw_health_bar(self, surface, player):
         """Draw compact health bar"""
@@ -84,10 +84,9 @@ class HUD:
             text = self.font.render(text_str, True, color)
             surface.blit(text, (x, y))
 
-    def _draw_level_info(self, surface, current_level, area_name, level_name):
+    def _draw_level_info(self, surface, act_num, area_name, level_name):
         """Draw level and area information at top center"""
         # Get act and level info
-        act_num = 1  # For now, all levels are Act 1
 
         # Act + Level name
         if level_name:

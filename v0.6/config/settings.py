@@ -250,18 +250,20 @@ ENEMY_SHOOT_COOLDOWN = 120  # frames (~2 seconds) between turret shots
 ENEMY_PROJECTILE_BASE_DAMAGE = 8  # turret shot damage
 ENEMY_MIN_SHOOT_COOLDOWN = 50  # fastest turret fire rate
 
-# Enemies and their weapons get tougher every level.
-# Each value is the increase per level index (0.25 = +25% per level),
+# Enemies and their weapons get tougher every level (all 4 acts, 25 levels).
+# Each value is the increase per level index (0.2 = +20% per level),
 # applied on top of the difficulty multipliers in DIFFICULTY_MODIFIERS.
-# Example, Normal: enemy health 20 on the tutorial -> 45 on Level 5.
+# Example, Normal: enemy health 20 on the tutorial, 44 on Level 6 (Act 1
+# boss), ~90 in Act 3 and ~110 by the end of Act 4.
 ENEMY_LEVEL_SCALING = {
-    "health": 0.25,
-    "damage": 0.15,             # contact damage
-    "speed": 0.08,              # patrol speed
-    "projectile_damage": 0.15,  # turret shots
-    "projectile_speed": 0.06,
-    "fire_rate": 0.08,          # turret cooldown shrinks by this much per level
+    "health": 0.20,
+    "damage": 0.10,             # contact damage
+    "speed": 0.05,              # patrol speed
+    "projectile_damage": 0.10,  # turret shots
+    "projectile_speed": 0.04,
+    "fire_rate": 0.04,          # turret cooldown shrinks by this much per level
 }
+ENEMY_MAX_SPEED_MULTIPLIER = 1.6  # enemies never get fast enough to outrun the player
 
 # Character Colors
 CHARACTER_COLORS = [

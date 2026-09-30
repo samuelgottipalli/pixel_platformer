@@ -10,10 +10,12 @@ ENV/
 *.pyc
 test*.ipynb
 
-# Game data (player saves, profiles, achievements, history, settings) - any depth
-**/data/saves/
-**/data/achievements/
-**/data/*.json
+# Player data (saves, profiles, achievements, history, settings, crash log)
+# in each game folder's data/ - but not level data (levels/data/)
+/*/data/saves/
+/*/data/achievements/
+/*/data/*.json
+/*/data/*.bak
 Sound effects Pack 2/
 1*.ogg
 0*.ogg

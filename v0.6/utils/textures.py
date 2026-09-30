@@ -144,238 +144,179 @@ class TextureManager:
 
 
 class BackgroundManager:
-    """Manages themed backgrounds with parallax scrolling"""
+    """
+    Themed parallax backgrounds.
+
+    Each theme is a flat base color plus a few pre-rendered, tileable layers
+    that are blitted at camera-dependent offsets (cheap: a few blits per
+    frame). Layers are built once per screen size with a local RNG, so they
+    never touch the global random module.
+    """
+
+    _cache = {}
+
+    # --- helpers ---------------------------------------------------------
 
     @staticmethod
-    def draw_scifi_background(surface, camera_x, camera_y, screen_width, screen_height):
-        """Sci-fi tech background with grid and circuit nodes (two parallax layers)"""
-        grid, nodes = BackgroundManager._scifi_layers(screen_width, screen_height)
-        surface.fill(SCIFI_BG)
-        # Layer 1: large grid (far background, slow parallax)
-        surface.blit(grid, (-((camera_x // 4) % 64), -((camera_y // 4) % 64)))
-        # Layer 2: circuit board nodes (medium parallax)
-        surface.blit(nodes, (-((camera_x // 2) % 128), -((camera_y // 2) % 128)))
-
-    _layer_cache = {}
-
-    @staticmethod
-    def _scifi_layers(screen_width, screen_height):
-        """
-        Pre-render the tileable sci-fi layers once (one tile larger than the
-        screen so they can be offset for parallax). Drawing the grid line by
-        line every frame was the most expensive part of rendering.
-        """
-        key = ("scifi", screen_width, screen_height)
-        cache = BackgroundManager._layer_cache
+    def _layer(key, size, period, painter):
+        """Cached transparent layer: `size` plus one `period`, for scrolling"""
+        cache = BackgroundManager._cache
         if key not in cache:
-            grid = pygame.Surface((screen_width + 64, screen_height + 64))
-            grid.fill(SCIFI_BG)
-            for x in range(0, grid.get_width(), 64):
-                pygame.draw.line(grid, SCIFI_GRID, (x, 0), (x, grid.get_height()), 1)
-            for y in range(0, grid.get_height(), 64):
-                pygame.draw.line(grid, SCIFI_GRID, (0, y), (grid.get_width(), y), 1)
-
-            nodes = pygame.Surface((screen_width + 128, screen_height + 128))
-            nodes.fill((0, 0, 0))
-            nodes.set_colorkey((0, 0, 0))
-            for x in range(0, nodes.get_width() + 1, 128):
-                for y in range(0, nodes.get_height() + 1, 128):
-                    pygame.draw.circle(nodes, SCIFI_NODE, (x, y), 4, 1)
-                    pygame.draw.circle(nodes, SCIFI_GRID, (x, y), 8, 1)
-            cache[key] = (grid.convert() if pygame.display.get_surface() else grid, nodes)
+            pw, ph = period
+            surf = pygame.Surface((size[0] + pw, size[1] + ph))
+            surf.fill((0, 0, 0))
+            surf.set_colorkey((0, 0, 0))
+            tile = pygame.Surface((pw, ph))
+            tile.fill((0, 0, 0))
+            painter(tile)
+            for x in range(0, surf.get_width(), pw):
+                for y in range(0, surf.get_height(), ph):
+                    surf.blit(tile, (x, y))
+            cache[key] = surf
         return cache[key]
 
     @staticmethod
-    def draw_nature_background(
-        surface, camera_x, camera_y, screen_width, screen_height
-    ):
-        """Nature background with tree silhouettes and leaves"""
-        # Base color
-        surface.fill((40, 60, 40))
+    def _scroll(surface, layer, period, offset_x, offset_y):
+        """Blit a tiled layer scrolled by the given offsets"""
+        pw, ph = period
+        surface.blit(layer, (-(int(offset_x) % pw), -(int(offset_y) % ph)))
 
-        # Layer 1: Mountain silhouettes (very slow parallax)
-        mountain_offset = (camera_x // 8) % screen_width
-        for i in range(3):
-            x_offset = -mountain_offset + (i * screen_width // 3)
-            # Triangle mountains
-            points = [
-                (x_offset, screen_height),
-                (x_offset + 150, screen_height - 120),
-                (x_offset + 300, screen_height),
-            ]
-            pygame.draw.polygon(surface, (30, 50, 30), points)
-
-        # Layer 2: Diagonal texture (medium parallax)
-        line_offset_x = (camera_x // 3) % 32
-        for x in range(-100, screen_width + 100, 32):
-            adj_x = x - line_offset_x
-            pygame.draw.line(
-                surface,
-                (50, 70, 50),
-                (adj_x, 0),
-                (adj_x + screen_height, screen_height),
-                1,
-            )
-
-        # Layer 3: Leaf dots (fast parallax)
-        leaf_offset_x = (camera_x // 2) % 80
-        leaf_offset_y = (camera_y // 2) % 80
-
+    @staticmethod
+    def _dots(seed, count, colors, sizes, outline=False):
+        """Painter: random dots within the tile (wrapping at the edges)"""
         import random
 
-        random.seed(42)  # Consistent pattern
-        for _ in range(50):
-            x = random.randint(0, screen_width)
-            y = random.randint(0, screen_height)
-            adj_x = (x - leaf_offset_x) % screen_width
-            adj_y = (y - leaf_offset_y) % screen_height
-            # Small leaf dots
-            pygame.draw.circle(surface, (60, 80, 60), (adj_x, adj_y), 2)
+        def paint(tile):
+            rng = random.Random(seed)
+            w, h = tile.get_size()
+            for _ in range(count):
+                x, y = rng.randrange(w), rng.randrange(h)
+                size = rng.choice(sizes)
+                color = rng.choice(colors)
+                for dx in (-w, 0, w):
+                    for dy in (-h, 0, h):
+                        pygame.draw.circle(tile, color, (x + dx, y + dy), size, 1 if outline else 0)
+        return paint
+
+    # --- themes ----------------------------------------------------------
+
+    @staticmethod
+    def draw_scifi_background(surface, camera_x, camera_y, screen_width, screen_height):
+        """Sci-fi tech background: grid and circuit nodes"""
+        size = (screen_width, screen_height)
+
+        def grid(tile):
+            pygame.draw.line(tile, SCIFI_GRID, (0, 0), (0, 63))
+            pygame.draw.line(tile, SCIFI_GRID, (0, 0), (63, 0))
+
+        def nodes(tile):
+            for cx, cy in ((0, 0), (128, 0), (0, 128), (128, 128)):
+                pygame.draw.circle(tile, SCIFI_NODE, (cx, cy), 4, 1)
+                pygame.draw.circle(tile, SCIFI_GRID, (cx, cy), 8, 1)
+
+        surface.fill(SCIFI_BG)
+        B = BackgroundManager
+        B._scroll(surface, B._layer(("scifi_grid", size), size, (64, 64), grid), (64, 64),
+                  camera_x // 4, camera_y // 4)
+        B._scroll(surface, B._layer(("scifi_nodes", size), size, (128, 128), nodes), (128, 128),
+                  camera_x // 2, camera_y // 2)
+
+    @staticmethod
+    def draw_nature_background(surface, camera_x, camera_y, screen_width, screen_height):
+        """Forest: distant hills, tree trunks, drifting leaves"""
+        size = (screen_width, screen_height)
+
+        def hills(tile):
+            w, h = tile.get_size()
+            points = [(0, h)]
+            for x in range(0, w + 1, 16):
+                y = h - 150 - 60 * math.sin(x / w * 2 * math.pi) - 25 * math.sin(x / w * 6 * math.pi)
+                points.append((x, int(y)))
+            points.append((w, h))
+            pygame.draw.polygon(tile, (30, 48, 34), points)
+
+        def trunks(tile):
+            h = tile.get_height()
+            for x, width in ((40, 18), (190, 26), (330, 14)):
+                pygame.draw.rect(tile, (38, 50, 36), (x, 0, width, h))
+                pygame.draw.circle(tile, (40, 60, 42), (x + width // 2, 60), 70)
+
+        surface.fill((26, 40, 30))
+        B = BackgroundManager
+        B._scroll(surface, B._layer(("nature_hills", size), size, size, hills), size, camera_x // 8, 0)
+        B._scroll(surface, B._layer(("nature_trunks", size), size, (420, screen_height), trunks),
+                  (420, screen_height), camera_x // 4, 0)
+        leaves = B._dots(42, 40, [(58, 82, 58), (70, 92, 60)], [2, 3])
+        B._scroll(surface, B._layer(("nature_leaves", size), size, (240, 240), leaves), (240, 240),
+                  camera_x // 2, camera_y // 2 - pygame.time.get_ticks() // 60)
 
     @staticmethod
     def draw_space_background(surface, camera_x, camera_y, screen_width, screen_height):
-        """Space background with stars and nebula effect"""
-        # Base color
+        """Space: nebula clouds and two star fields"""
+        size = (screen_width, screen_height)
+
+        def nebula(tile):
+            import random
+            rng = random.Random(7)
+            for _ in range(5):
+                x, y = rng.randrange(400), rng.randrange(400)
+                pygame.draw.circle(tile, (30, 22, 48), (x, y), 80)
+                pygame.draw.circle(tile, (22, 17, 36), (x + 20, y + 20), 55)
+
         surface.fill((10, 10, 20))
-
-        # Layer 1: Nebula clouds (very slow parallax)
-        cloud_offset_x = (camera_x // 10) % 200
-        cloud_offset_y = (camera_y // 10) % 200
-
-        for i in range(5):
-            x = (i * 250 - cloud_offset_x) % screen_width
-            y = (i * 150 - cloud_offset_y) % screen_height
-            # Draw nebula blob
-            pygame.draw.circle(surface, (30, 20, 50), (x, y), 80)
-            pygame.draw.circle(surface, (20, 15, 35), (x + 20, y + 20), 60)
-
-        # Layer 2: Medium stars (medium parallax)
-        star_offset_x = (camera_x // 3) % screen_width
-        star_offset_y = (camera_y // 3) % screen_height
-
-        import random
-
-        random.seed(123)
-        for _ in range(100):
-            x = random.randint(0, screen_width)
-            y = random.randint(0, screen_height)
-            adj_x = (x - star_offset_x) % screen_width
-            adj_y = (y - star_offset_y) % screen_height
-            size = random.choice([1, 2, 3])
-            pygame.draw.circle(surface, (200, 200, 255), (adj_x, adj_y), size)
-
-        # Layer 3: Close stars (fast parallax)
-        close_star_offset_x = (camera_x // 2) % screen_width
-        close_star_offset_y = (camera_y // 2) % screen_height
-
-        random.seed(456)
-        for _ in range(50):
-            x = random.randint(0, screen_width)
-            y = random.randint(0, screen_height)
-            adj_x = (x - close_star_offset_x) % screen_width
-            adj_y = (y - close_star_offset_y) % screen_height
-            # Twinkling effect based on position
-            if ((adj_x + adj_y) // 50) % 2 == 0:
-                pygame.draw.circle(surface, WHITE, (adj_x, adj_y), 2)
+        B = BackgroundManager
+        B._scroll(surface, B._layer(("space_nebula", size), size, (400, 400), nebula), (400, 400),
+                  camera_x // 10, camera_y // 10)
+        far = B._dots(123, 60, [(120, 120, 150), (100, 100, 135)], [1, 1, 2])
+        B._scroll(surface, B._layer(("space_far", size), size, (256, 256), far), (256, 256),
+                  camera_x // 4, camera_y // 4)
+        near = B._dots(456, 18, [(170, 170, 195)], [2])
+        B._scroll(surface, B._layer(("space_near", size), size, (256, 256), near), (256, 256),
+                  camera_x // 2, camera_y // 2)
 
     @staticmethod
-    def draw_underground_background(
-        surface, camera_x, camera_y, screen_width, screen_height
-    ):
-        """Underground cave background with rock texture"""
-        # Base color
-        surface.fill((30, 20, 15))
+    def draw_underground_background(surface, camera_x, camera_y, screen_width, screen_height):
+        """Caves: rock strata, rock specks, stalactites"""
+        size = (screen_width, screen_height)
 
-        # Layer 1: Rock strata lines (slow parallax)
-        strata_offset = (camera_y // 5) % 40
+        def strata(tile):
+            w = tile.get_width()
+            points = [(x, int(20 + 8 * math.sin(x / w * 4 * math.pi))) for x in range(0, w + 1, 20)]
+            pygame.draw.lines(tile, (46, 34, 26), False, points, 2)
 
-        for y in range(-40, screen_height + 40, 40):
-            adj_y = y - strata_offset
-            # Wavy horizontal lines
-            points = []
-            for x in range(0, screen_width + 20, 20):
-                import math
+        def stalactites(tile):
+            for x, length in ((20, 60), (80, 35), (120, 80)):
+                pygame.draw.polygon(tile, (24, 18, 14), [(x - 18, 0), (x + 18, 0), (x, length)])
 
-                wave = math.sin((x + camera_x // 3) / 50) * 10
-                points.append((x, adj_y + wave))
-            if len(points) > 1:
-                pygame.draw.lines(surface, (50, 35, 25), False, points, 2)
-
-        # Layer 2: Rock dots (medium parallax)
-        rock_offset_x = (camera_x // 3) % 60
-        rock_offset_y = (camera_y // 3) % 60
-
-        import random
-
-        random.seed(789)
-        for _ in range(80):
-            x = random.randint(0, screen_width)
-            y = random.randint(0, screen_height)
-            adj_x = (x - rock_offset_x) % screen_width
-            adj_y = (y - rock_offset_y) % screen_height
-            size = random.choice([2, 3, 4])
-            pygame.draw.circle(surface, (60, 45, 35), (adj_x, adj_y), size)
-
-        # Layer 3: Stalactite shadows (fast parallax)
-        stalactite_offset = (camera_x // 2) % 150
-
-        for x in range(-150, screen_width + 150, 150):
-            adj_x = x - stalactite_offset
-            # Triangle pointing down
-            points = [(adj_x, 0), (adj_x - 20, 60), (adj_x + 20, 60)]
-            pygame.draw.polygon(surface, (25, 18, 13), points)
+        surface.fill((30, 22, 18))
+        B = BackgroundManager
+        B._scroll(surface, B._layer(("cave_strata", size), size, (400, 40), strata), (400, 40),
+                  camera_x // 5, camera_y // 5)
+        rocks = B._dots(789, 30, [(52, 40, 32), (58, 44, 34)], [2, 3, 4])
+        B._scroll(surface, B._layer(("cave_rocks", size), size, (240, 240), rocks), (240, 240),
+                  camera_x // 3, camera_y // 3)
+        B._scroll(surface, B._layer(("cave_stalactites", size), size, (150, screen_height), stalactites),
+                  (150, screen_height), camera_x // 2, 0)
 
     @staticmethod
-    def draw_underwater_background(
-        surface, camera_x, camera_y, screen_width, screen_height
-    ):
-        """Underwater background with caustic light patterns"""
-        # Base color
-        surface.fill((15, 30, 50))
+    def draw_underwater_background(surface, camera_x, camera_y, screen_width, screen_height):
+        """Underwater: light rays, caustics, rising bubbles"""
+        size = (screen_width, screen_height)
 
-        # Layer 1: Light rays from surface (very slow parallax)
-        ray_offset = (camera_x // 8) % 200
+        def rays(tile):
+            h = tile.get_height()
+            pygame.draw.polygon(tile, (22, 42, 64), [(40, 0), (70, h), (95, h), (62, 0)])
 
-        for i in range(5):
-            x = i * 250 - ray_offset
-            # Light ray
-            points = [
-                (x, 0),
-                (x + 30, screen_height),
-                (x + 50, screen_height),
-                (x + 20, 0),
-            ]
-            pygame.draw.polygon(surface, (25, 45, 70), points)
+        def caustics(tile):
+            pygame.draw.circle(tile, (26, 46, 72), (50, 50), 25, 1)
 
-        # Layer 2: Caustic patterns (medium parallax)
-        import math
-
-        caustic_offset_x = (camera_x // 3) % 100
-        caustic_offset_y = ((camera_y // 3) + pygame.time.get_ticks() // 50) % 100
-
-        for x in range(-100, screen_width + 100, 100):
-            for y in range(-100, screen_height + 100, 100):
-                adj_x = x - caustic_offset_x
-                adj_y = y - caustic_offset_y
-                # Wavy caustic lines
-                wave_x = math.sin((adj_y + pygame.time.get_ticks() / 500) / 20) * 30
-                pygame.draw.circle(
-                    surface, (30, 50, 80), (adj_x + int(wave_x), adj_y), 25, 1
-                )
-
-        # Layer 3: Bubbles (fast parallax)
-        bubble_offset_x = (camera_x // 2) % screen_width
-        bubble_offset_y = (
-            (camera_y // 2) - pygame.time.get_ticks() // 20
-        ) % screen_height
-
-        import random
-
-        random.seed(101112)
-        for _ in range(30):
-            x = random.randint(0, screen_width)
-            y = random.randint(0, screen_height)
-            adj_x = (x - bubble_offset_x) % screen_width
-            adj_y = (y + bubble_offset_y) % screen_height  # Bubbles rise
-            size = random.choice([3, 4, 5])
-            pygame.draw.circle(surface, (50, 80, 120), (adj_x, adj_y), size, 1)
+        surface.fill((14, 28, 46))
+        B = BackgroundManager
+        ticks = pygame.time.get_ticks()
+        B._scroll(surface, B._layer(("water_rays", size), size, (250, screen_height), rays),
+                  (250, screen_height), camera_x // 8, 0)
+        B._scroll(surface, B._layer(("water_caustics", size), size, (100, 100), caustics), (100, 100),
+                  camera_x // 3 + int(12 * math.sin(ticks / 700)), camera_y // 3 + ticks // 60)
+        bubbles = B._dots(101112, 12, [(46, 74, 110)], [3, 4, 5], outline=True)
+        B._scroll(surface, B._layer(("water_bubbles", size), size, (256, 256), bubbles), (256, 256),
+                  camera_x // 2, camera_y // 2 + ticks // 20)

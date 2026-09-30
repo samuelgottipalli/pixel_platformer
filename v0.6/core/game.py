@@ -20,7 +20,7 @@ from config.layout_manager import (
     get_object_size,
     get_ui_element,
 )
-from config.settings import (THEME_TILE_PATTERNS, TILE_OUTLINE, 
+from config.settings import (THEME_TILE_PATTERNS, TILE_OUTLINE,
     CYAN,
     FPS,
     MELEE_DAMAGE,
@@ -146,7 +146,8 @@ class Game:
         self.achievement_notifications = []
 
         # Load levels
-        self.levels = LevelLoader.create_default_levels()
+        self.acts = LevelLoader.load_acts()
+        self.levels = [level for act in self.acts for level in act["levels"]]
 
         # Game objects
         self.projectiles = []
@@ -195,10 +196,10 @@ class Game:
         self.secrets_found = 0
         self.coins_collected = 0
 
-        # Track total coins available in act for achievement
+        # Coin achievements are for Act 1: total coin value available in it
         self.total_coins_in_act = sum(
             coin.get("value", 1)
-            for level_data in self.levels
+            for level_data in self.acts[0]["levels"]
             for coin in level_data.get("coins", [])
         )
 
@@ -290,9 +291,15 @@ class Game:
                 self._attempt_purchase()
 
         elif self.state == GameState.LEVEL_MAP:
-            rows = self.menu.get_level_map_row_rects(len(self.levels))
-            for i, rect in enumerate(rows):
+            for position, rect in enumerate(self.menu.get_level_map_act_tab_rects(len(self.acts))):
                 if rect.collidepoint(self.mouse_pos):
+                    self._show_level_map_act(position)
+                    return
+            act = self.acts[self.menu.act_of_level(self.acts, self.level_selection)]
+            rows = self.menu.get_level_map_row_rects(len(act["levels"]))
+            for level, rect in zip(act["levels"], rows):
+                if rect.collidepoint(self.mouse_pos):
+                    i = level["index"]
                     if i < self._playable_level_count():
                         self.level_selection = i
                     self._select_level_from_map(i)
@@ -508,17 +515,35 @@ class Game:
         Track completions per difficulty
         """
         if event.type == pygame.KEYDOWN:
-            playable = self._playable_level_count()
+            act = self.acts[self.menu.act_of_level(self.acts, self.level_selection)]
+            first, last = act["levels"][0]["index"], act["levels"][-1]["index"]
+            last = min(last, self._playable_level_count() - 1)
             if controls.check_key_event(event, controls.MENU_UP):
-                self.level_selection = (self.level_selection - 1) % playable
+                self.level_selection = last if self.level_selection <= first else self.level_selection - 1
                 self.audio.menu_navigate()
             elif controls.check_key_event(event, controls.MENU_DOWN):
-                self.level_selection = (self.level_selection + 1) % playable
+                self.level_selection = first if self.level_selection >= last else self.level_selection + 1
                 self.audio.menu_navigate()
+            elif controls.check_key_event(event, controls.MENU_LEFT):
+                self._show_level_map_act(self.menu.act_of_level(self.acts, self.level_selection) - 1)
+            elif controls.check_key_event(event, controls.MENU_RIGHT):
+                self._show_level_map_act(self.menu.act_of_level(self.acts, self.level_selection) + 1)
             elif controls.check_key_event(event, controls.MENU_SELECT):
                 self._select_level_from_map(self.level_selection)
             elif event.key == pygame.K_ESCAPE:
                 self.state = GameState.MENU
+
+    def _show_level_map_act(self, act_position):
+        """Switch the level map to another act (if it has been reached)"""
+        if not 0 <= act_position < len(self.acts):
+            return
+        act = self.acts[act_position]
+        first = act["levels"][0]["index"]
+        if first >= self._playable_level_count():
+            self._show_popup(f"Finish Act {act['number'] - 1} to unlock Act {act['number']}!")
+            return
+        self.level_selection = min(act["levels"][-1]["index"], self._playable_level_count() - 1)
+        self.audio.menu_navigate()
 
     def _playable_level_count(self):
         """Levels 0..levels_completed are playable (each unlocks the next)"""
@@ -1352,9 +1377,8 @@ class Game:
             if self.player.get_rect().colliderect(portal.get_rect()):
                 if portal.check_unlock(self.player.keys):
                     # Update achievements
-                    if self.achievement_manager:
-                        # Calculate coin percentage for entire Act
-                        # (You'll need to sum up all coins across all levels)
+                    if self.achievement_manager and self.level_data["act"] == 1:
+                        # Coin achievements count coins collected across Act 1
                         self.achievement_manager.check_coin_percentage(
                             self.player.coins_earned, self.total_coins_in_act
                         )
@@ -1521,6 +1545,11 @@ class Game:
         """Update particle effects"""
         self.particles = [p for p in self.particles if p.update()]
 
+    @property
+    def level_data(self):
+        """Raw data (name, act, boss, areas...) of the current level"""
+        return self.levels[self.current_level_index]
+
     def _load_level(self, level_index):
         """Load level by index"""
         if 0 <= level_index < len(self.levels):
@@ -1547,11 +1576,9 @@ class Game:
         """Check if current level has a boss and spawn it"""
         from entities.boss import Boss
 
-        # Boss levels: 6, 12, 18, 24 (every 6 levels after tutorial)
-        boss_levels = {6: "guardian", 12: "forest", 18: "void", 24: "ancient"}
-
-        if self.current_level_index in boss_levels:
-            boss_type = boss_levels[self.current_level_index]
+        # Boss arenas name their boss in the level data ("boss": "guardian")
+        boss_type = self.level_data.get("boss")
+        if boss_type:
             # Spawn boss at center-top of screen
 
             self.boss = Boss(
@@ -1575,14 +1602,20 @@ class Game:
         # Update profile stats
         self._bank_profile_stats(completed_level=self.current_level_index)
 
-        # CHECK FOR VICTORY - Act 1 complete after Level 6 boss
-        if self.current_level_index == 6 and level_index > 6:
-            # Player beat the boss on level 6, game complete!
+        # Beating the final level (Act 4's boss) completes the game
+        if level_index >= len(self.levels):
             self._game_complete()
             return
 
-        # Otherwise, continue to next level
+        # Otherwise, continue to next level (and announce a new act)
         self._load_level(level_index)
+        self._announce_act_start()
+
+    def _announce_act_start(self):
+        """Show the act title when a level is the first of an act (not Act 1)"""
+        act = self.acts[self.level_data["act"] - 1]
+        if self.level_data["act"] > 1 and act["levels"][0]["index"] == self.current_level_index:
+            self._show_popup(f"ACT {act['number']}: {act['name'].upper()}", duration=180)
 
     def _bank_profile_stats(self, completed_level=None):
         """
@@ -1644,7 +1677,7 @@ class Game:
             if self.player.total_deaths == 0:  # Track this in player
                 self.achievement_manager.check_no_death_run()
 
-            # Check coin achievement with accurate total
+            # Check coin achievement (Act 1 coins)
             if self.total_coins_in_act > 0:
                 self.achievement_manager.check_coin_percentage(
                     self.player.coins_earned, self.total_coins_in_act
@@ -1712,7 +1745,7 @@ class Game:
             )
         elif self.state == GameState.LEVEL_MAP:
             self.current_screen = self.menu.draw_level_map_screen(
-                self.screen, self.current_profile, self.level_selection, self.mouse_pos
+                self.screen, self.acts, self.current_profile, self.level_selection, self.mouse_pos
             )
         elif self.state == GameState.PLAYING:
             # Draw game directly to screen
@@ -1817,7 +1850,7 @@ class Game:
         # Draw HUD
         level_name, area_name = self._get_level_and_area_names()
         self.hud.draw(
-            self.screen, self.player, self.current_level_index, area_name, level_name
+            self.screen, self.player, self.level_data["act"], area_name, level_name
         )
 
         # Draw debug info
@@ -1838,12 +1871,12 @@ class Game:
 
         # Get level info
         # Get area name based on position
-        area_name = self._get_area_name(self.current_level_index, self.player.x)
+        area_name = self._get_area_name(self.player.x) or "Unknown Area"
 
         # Debug info
         debug_info = [
             f"DEBUG MODE (F3 to toggle)",
-            f"Level: {level_title(self.current_level_index, mark_boss=True)}",
+            f"Level: {level_title(self.level_data, mark_boss=True)} (Act {self.level_data['act']})",
             f"Area: {area_name}",
             f"Position: ({int(self.player.x)}, {int(self.player.y)})",
             f"Camera: ({int(self.camera.x)}, {int(self.camera.y)})",
@@ -1858,76 +1891,12 @@ class Game:
             text = self.font_small.render(line, True, color)
             self.screen.blit(text, (20, y_offset + i * 25))
 
-    def _get_area_name(self, level_index, player_x):
-        """Get area name based on level and player position"""
-        # Level-specific area mappings
-        areas = {
-            0: [  # Tutorial
-                (0, 600, "Section 1: Basic Movement"),
-                (600, 1200, "Section 2: Jumping"),
-                (1200, 2000, "Section 3: Double Jump"),
-                (2000, 2800, "Section 4: Wall Jump"),
-                (2800, 3600, "Section 5: Combat - Shooting"),
-                (3600, 4200, "Section 6: Melee Combat"),
-                (4200, 5000, "Section 7: Hazards"),
-                (5000, 5800, "Section 8: Collectibles"),
-                (5800, 6400, "Section 9: Final Test"),
-            ],
-            1: [  # Level 1
-                (0, 1500, "Area 1: Introduction"),
-                (1500, 2800, "Area 2: Vertical Section"),
-                (2800, 4200, "Area 3: High Platforms"),
-                (4200, 5800, "Area 4: Underground Passage"),
-                (5800, 7000, "Area 5: Combat Zone"),
-                (7000, 8000, "Area 6: Final Ascent"),
-            ],
-            2: [  # Level 2
-                (0, 1500, "Area 1: Gentle Start"),
-                (1500, 2800, "Area 2: Tower Climb"),
-                (2800, 4200, "Area 3: High Platforms"),
-                (4200, 5800, "Area 4: Underground"),
-                (5800, 7000, "Area 5: Combat Arena"),
-                (7000, 8500, "Area 6: Final Gauntlet"),
-            ],
-            3: [  # Level 3
-                (0, 1800, "Area 1: Courtyard"),
-                (1800, 3200, "Area 2: First Tower"),
-                (3200, 4500, "Area 3: Bridge Section"),
-                (4500, 6000, "Area 4: Second Tower"),
-                (6000, 7500, "Area 5: Spire Section (3rd Tower)"),
-                (7500, 9000, "Area 6: Descent & Finale"),
-            ],
-            4: [  # Level 4
-                (0, 1500, "Area 1: Surface"),
-                (1500, 2800, "Area 2: Descent"),
-                (2800, 5000, "Area 3: Cave Systems"),
-                (5000, 6500, "Area 4: Underground Lake"),
-                (6500, 8000, "Area 5: Crystal Caverns"),
-                (8000, 9500, "Area 6: Ascent & Exit"),
-            ],
-            5: [  # Level 5
-                (0, 2000, "Area 1: Gauntlet Start"),
-                (2000, 3200, "Area 2: Wall Jump Tower"),
-                (3200, 4800, "Area 3: Precision Platforming"),
-                (4800, 6500, "Area 4: Combat Marathon"),
-                (6500, 8000, "Area 5: Hazard Gauntlet"),
-                (8000, 9500, "Area 6: Escape Sequence"),
-                (9500, 10000, "Area 7: Boss Door"),
-            ],
-            6: [  # Boss Level
-                (0, 1280, "Boss Arena: Guardian's Lair"),
-            ],
-        }
-
-        # Get areas for current level
-        level_areas = areas.get(level_index, [])
-
-        # Find which area player is in
-        for start_x, end_x, name in level_areas:
-            if start_x <= player_x < end_x:
-                return name
-
-        return "Unknown Area"
+    def _get_area_name(self, player_x):
+        """Area of the current level at player_x (from the level's "areas" data)"""
+        for area in self.level_data.get("areas", []):
+            if area["start"] <= player_x < area["end"]:
+                return area["name"]
+        return ""
 
     def _draw_tiles(self):
         """Draw level tiles with theme-based textures"""
@@ -2046,19 +2015,8 @@ class Game:
 
     def _get_level_and_area_names(self):
         """Get current level and area names for HUD"""
-        level_name = level_title(self.current_level_index)
-
-        # Simplified area detection
-        areas = {6: [(0, 1280, "BOSS ARENA")]}
-
-        area_name = ""
-        level_areas = areas.get(self.current_level_index, [])
-        for start_x, end_x, name in level_areas:
-            if start_x <= self.player.x < end_x:
-                area_name = name
-                break
-
-        return level_name, area_name
+        area_name = "BOSS ARENA" if self.level_data.get("boss") else self._get_area_name(self.player.x)
+        return level_title(self.level_data), area_name
 
     def _handle_settings_events(self, event):
         """Handle settings screen input"""

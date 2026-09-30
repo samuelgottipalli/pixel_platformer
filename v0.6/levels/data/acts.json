@@ -1,0 +1,16 @@
+[
+  {
+    "number": 1,
+    "name": "The Awakening",
+    "theme": "SCIFI",
+    "levels": [
+      "act1/level_00.json",
+      "act1/level_01.json",
+      "act1/level_02.json",
+      "act1/level_03.json",
+      "act1/level_04.json",
+      "act1/level_05.json",
+      "act1/level_06.json"
+    ]
+  }
+]

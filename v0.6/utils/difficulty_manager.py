@@ -4,7 +4,7 @@ Difficulty management system
 
 import math
 
-from config.settings import (DIFFICULTY_MODIFIERS, ENEMY_LEVEL_SCALING,
+from config.settings import (DIFFICULTY_MODIFIERS, ENEMY_LEVEL_SCALING, ENEMY_MAX_SPEED_MULTIPLIER,
                              PROGRESSIVE_DIFFICULTY_CURVE,
                              PROGRESSIVE_DIFFICULTY_ENABLED)
 
@@ -107,7 +107,7 @@ class DifficultyManager:
         return {
             "health": mods["enemy_health_multiplier"] * grow("health"),
             "damage": mods["enemy_damage_multiplier"] * grow("damage"),
-            "speed": mods["enemy_speed_multiplier"] * grow("speed"),
+            "speed": min(ENEMY_MAX_SPEED_MULTIPLIER, mods["enemy_speed_multiplier"] * grow("speed")),
             "projectile_damage": mods["enemy_damage_multiplier"] * grow("projectile_damage"),
             "projectile_speed": mods["enemy_speed_multiplier"] * grow("projectile_speed"),
             "fire_rate": rate["fire_rate"] * level,
